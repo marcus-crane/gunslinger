@@ -1,13 +1,42 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+  "fmt"
+  "log"
+  "os"
+  "os/signal"
+  "syscall"
+
+  "github.com/marcus-crane/swissarmy/database"
+  "github.com/marcus-crane/swissarmy/models"
+  "github.com/marcus-crane/swissarmy/routes"
+)
 
 func main() {
-  app := fiber.New()
+  if err := database.Connect(); err != nil {
+    log.Panic("Can't connect to database:", err.Error())
+  }
 
-  app.Get("/", func(c *fiber.Ctx) error {
-    return c.SendString("Hello, World!")
-  })
+  database.DBConn.AutoMigrate(&models.Song{})
 
-  app.Listen(":3000")
+  app := routes.New()
+
+  go func() {
+    if err := app.Listen(":3000"); err != nil {
+      log.Panic(err)
+    }
+  }()
+
+  c := make(chan os.Signal, 1)
+  signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+  _ = <-c
+  fmt.Println("Gracefully shutting down...")
+  _ = app.Shutdown()
+
+  fmt.Println("Running cleanup tasks")
+
+  // Shutdown task here
+
+  fmt.Println("swissarmy has successfully shut down.")
 }
