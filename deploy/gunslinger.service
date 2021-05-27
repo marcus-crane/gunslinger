@@ -1,0 +1,11 @@
+[Unit]
+Description=gunslinger
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=/home/marcus/gunslinger
+
+[Install]
+WantedBy=multi-user.target

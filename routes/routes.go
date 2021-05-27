@@ -8,7 +8,10 @@ import (
 )
 
 func New() *fiber.App {
-  app := fiber.New()
+  app := fiber.New(fiber.Config{
+    ServerHeader: "Gunslinger/1.0",
+    GETOnly: true,
+  })
   app.Use(cors.New())
 
   app.Get("/", func(c *fiber.Ctx) error {
