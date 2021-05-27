@@ -8,6 +8,7 @@ import (
   "syscall"
 
   "github.com/marcus-crane/swissarmy/database"
+  "github.com/marcus-crane/swissarmy/jobs"
   "github.com/marcus-crane/swissarmy/models"
   "github.com/marcus-crane/swissarmy/routes"
 )
@@ -18,6 +19,8 @@ func main() {
   }
 
   database.DBConn.AutoMigrate(&models.Song{})
+
+  jobs.BackgroundSetup()
 
   app := routes.New()
 
