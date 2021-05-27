@@ -9,7 +9,7 @@ import (
 func BackgroundSetup() {
   s := gocron.NewScheduler(time.UTC)
 
-  s.Every(5).Seconds().Do(GetCurrentlyPlaying)
+  s.Every(3601).Seconds().Do(RefreshAccessToken)
 
   s.StartAsync()
 }
