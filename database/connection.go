@@ -1,24 +1,24 @@
 package database
 
 import (
-  "time"
+	"time"
 
-  "gorm.io/gorm"
-  "gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var (
-  DBConn *gorm.DB
+	DBConn *gorm.DB
 )
 
 func Connect() (err error) {
-  DBConn, err = gorm.Open(sqlite.Open("gunslinger.db"), &gorm.Config{})
-  if err != nil {
-    return err
-  }
+	DBConn, err = gorm.Open(sqlite.Open("gunslinger.db"), &gorm.Config{})
+	if err != nil {
+		return err
+	}
 
-  sqlDB, err := DBConn.DB()
-  sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB, err := DBConn.DB()
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
-  return nil
+	return nil
 }
