@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
+
 	"github.com/marcus-crane/gunslinger/database"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
@@ -14,6 +16,11 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect to database:", err.Error())
 	}
