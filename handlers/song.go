@@ -5,8 +5,8 @@ import (
 
   "github.com/gofiber/fiber/v2"
 
-  "github.com/marcus-crane/swissarmy/database"
-  "github.com/marcus-crane/swissarmy/models"
+  "github.com/marcus-crane/gunslinger/database"
+  "github.com/marcus-crane/gunslinger/models"
 )
 
 type ResponseHTTP struct {

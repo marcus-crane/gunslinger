@@ -7,10 +7,10 @@ import (
   "os/signal"
   "syscall"
 
-  "github.com/marcus-crane/swissarmy/database"
-  "github.com/marcus-crane/swissarmy/jobs"
-  "github.com/marcus-crane/swissarmy/models"
-  "github.com/marcus-crane/swissarmy/routes"
+  "github.com/marcus-crane/gunslinger/database"
+  "github.com/marcus-crane/gunslinger/jobs"
+  "github.com/marcus-crane/gunslinger/models"
+  "github.com/marcus-crane/gunslinger/routes"
 )
 
 func main() {
@@ -41,5 +41,5 @@ func main() {
 
   // Shutdown task here
 
-  fmt.Println("swissarmy has successfully shut down.")
+  fmt.Println("gunslinger has successfully shut down.")
 }

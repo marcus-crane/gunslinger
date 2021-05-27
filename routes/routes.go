@@ -4,7 +4,7 @@ import (
   "github.com/gofiber/fiber/v2"
   "github.com/gofiber/fiber/v2/middleware/cors"
 
-  "github.com/marcus-crane/swissarmy/handlers"
+  "github.com/marcus-crane/gunslinger/handlers"
 )
 
 func New() *fiber.App {

@@ -12,7 +12,7 @@ var (
 )
 
 func Connect() (err error) {
-  DBConn, err = gorm.Open(sqlite.Open("swissarmy.db"), &gorm.Config{})
+  DBConn, err = gorm.Open(sqlite.Open("gunslinger.db"), &gorm.Config{})
   if err != nil {
     return err
   }

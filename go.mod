@@ -1,4 +1,4 @@
-module github.com/marcus-crane/swissarmy
+module github.com/marcus-crane/gunslinger
 
 go 1.16
 
