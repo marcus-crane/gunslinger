@@ -10,6 +10,8 @@ func BackgroundSetup() {
 	s := gocron.NewScheduler(time.UTC)
 
 	s.Every(3601).Seconds().Do(RefreshAccessToken)
+  s.Every(15).Seconds().Do(GetCurrentlyPlaying)
+  s.Every(1).Minute().Do(GetCurrentlyPlayingMedia)
 
 	s.StartAsync()
 }

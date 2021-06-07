@@ -6,22 +6,20 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+
+  "github.com/marcus-crane/gunslinger/models"
 )
 
-var currentToken Token
+var (
+  currentToken        models.Token
+  AudioPlaybackStatus models.Audio
+)
 
 const (
 	RefreshEndpoint = "https://accounts.spotify.com/api/token"
 	PlayerEndpoint  = "https://api.spotify.com/v1/me/player/currently-playing?market=NZ&additional_types=episode"
 	UserAgent       = "Now Playing/1.0 (utf9k.net)"
 )
-
-type Token struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
-	Scope       string `json:"scope"`
-}
 
 func RefreshAccessToken() {
 	refreshToken := os.Getenv("SPOTIFY_REFRESH_TOKEN")
@@ -39,7 +37,7 @@ func RefreshAccessToken() {
 		Form(args).
 		Add("Authorization", authHeader)
 
-	var tokenResponse Token
+	var tokenResponse models.Token
 
 	_, body, errs := tokenA.Bytes() // TODO: Check response code is what we hope for
 
@@ -55,7 +53,48 @@ func RefreshAccessToken() {
 
 	currentToken = tokenResponse
 
-	fmt.Println(currentToken.ExpiresIn)
-
 	fiber.ReleaseArgs(args)
+}
+
+func GetCurrentlyPlaying() {
+
+  if (currentToken.AccessToken == "") {
+    fmt.Println("No access token retrieved yet. Skipping out on getting currently playing songs.")
+    return
+  }
+
+  authHeader := fmt.Sprintf("Bearer %s", currentToken.AccessToken)
+
+  playerA := fiber.Get(PlayerEndpoint).
+    UserAgent(UserAgent).
+    Add("Authorization", authHeader)
+
+  var playerResponse models.Audio
+
+  code, body, errs := playerA.Bytes()
+
+  fmt.Println(code)
+
+  if len(errs) != 0 {
+    panic(errs)
+  }
+
+  if code != 200 {
+    return // A song isn't currently playing
+  }
+
+  err := json.Unmarshal(body, &playerResponse)
+
+  if err != nil {
+    fmt.Println("error: ", err)
+  }
+
+  progress := float64(playerResponse.Progress)
+  duration := float64(playerResponse.Item.Duration)
+
+  playerResponse.PercentDone = (progress / duration * 100)
+
+  AudioPlaybackStatus = playerResponse
+
+  fmt.Println("Refreshed Spotify player status")
 }

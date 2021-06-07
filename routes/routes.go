@@ -26,7 +26,8 @@ func New() *fiber.App {
 		return c.Next()
 	})
 
-	v1.Get("/songs", handlers.GetAllSongs)
+	v1.Get("/audio", handlers.GetAudioPlaybackState)
+  v1.Get("/media", handlers.GetMediaPlaybackState)
 
 	return app
 }

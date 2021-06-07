@@ -9,9 +9,9 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/marcus-crane/gunslinger/database"
+	// "github.com/marcus-crane/gunslinger/database"
 	"github.com/marcus-crane/gunslinger/jobs"
-	"github.com/marcus-crane/gunslinger/models"
+	// "github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/routes"
 )
 
@@ -21,17 +21,18 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	if err := database.Connect(); err != nil {
-		log.Panic("Can't connect to database:", err.Error())
-	}
+	// if err := database.Connect(); err != nil {
+	// 	log.Panic("Can't connect to database:", err.Error())
+	// }
 
-	database.DBConn.AutoMigrate(&models.Song{})
+	//database.DBConn.AutoMigrate(&models.Audio{})
 
 	jobs.BackgroundSetup()
 
 	app := routes.New()
 
 	go func() {
+    fmt.Println("Listening at http://localhost:3000")
 		if err := app.Listen(":3000"); err != nil {
 			log.Panic(err)
 		}
