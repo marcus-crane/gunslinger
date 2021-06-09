@@ -58,6 +58,7 @@ func main() {
 
 	app.Use(func (c *fiber.Ctx) error {
 		if c.Protocol() == "http" && !developerMode {
+			fmt.Println("Upgrading protocol")
 			upgradedUrl := fmt.Sprintf("https://%s%s", c.Hostname(), c.OriginalURL())
 			return c.Redirect(upgradedUrl)
 		}
