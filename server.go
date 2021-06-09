@@ -7,8 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joho/godotenv"
-
 	// "github.com/marcus-crane/gunslinger/database"
 	"github.com/marcus-crane/gunslinger/jobs"
 	// "github.com/marcus-crane/gunslinger/models"
@@ -16,11 +14,6 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	// if err := database.Connect(); err != nil {
 	// 	log.Panic("Can't connect to database:", err.Error())
 	// }
@@ -32,8 +25,8 @@ func main() {
 	app := routes.New()
 
 	go func() {
-    fmt.Println("Listening at http://localhost:3000")
-		if err := app.Listen(":3000"); err != nil {
+    fmt.Println("Listening at http://localhost:8080")
+		if err := app.Listen(":8080"); err != nil {
 			log.Panic(err)
 		}
 	}()
