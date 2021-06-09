@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -17,6 +18,8 @@ import (
 )
 
 func main() {
+
+	developerMode := os.Getenv("DEVELOPMENT") == "true"
 
 	err := godotenv.Load()
 
@@ -40,7 +43,7 @@ func main() {
 		log.Print("Running fiber in debug mode")
 	}
 
-	if os.Getenv("DEVELOPMENT") == "true" {
+	if developerMode {
 		engine.Reload(true)
 		log.Print("Running fiber in development mode")
 	}
@@ -54,7 +57,10 @@ func main() {
 	app.Static("/", "./static")
 
 	app.Use(func (c *fiber.Ctx) error {
-		log.Print(c.Protocol())
+		if c.Protocol() == "http" && developerMode {
+			upgradedUrl := fmt.Sprintf("https://%s%s", c.Hostname(), c.OriginalURL())
+			return c.Redirect(upgradedUrl)
+		}
 		return c.Next()
 	})
 
