@@ -19,7 +19,17 @@ import (
 
 func main() {
 
-	developerMode := os.Getenv("DEVELOPMENT") == "true"
+	developerMode := true
+
+	if os.Getenv("DEVELOPMENT") == "false" {
+		developerMode = false
+	}
+
+	if developerMode {
+		log.Print("Running in developer mode")
+	} else {
+		log.Print("Running in production mode")
+	}
 
 	err := godotenv.Load()
 
