@@ -5,9 +5,6 @@ app = "gunslinger"
 kill_signal = "SIGINT"
 kill_timeout = 5
 
-[build]
-  builtin = "go"
-
 [env]
   BACKGROUND_JOBS_ENABLED = true
   DEBUG = false
