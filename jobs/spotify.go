@@ -7,12 +7,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-  "github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 var (
-  currentToken        models.Token
-  AudioPlaybackStatus models.Audio
+	currentToken        models.Token
+	AudioPlaybackStatus models.Audio
 )
 
 const (
@@ -58,43 +58,43 @@ func RefreshAccessToken() {
 
 func GetCurrentlyPlaying() {
 
-  if (currentToken.AccessToken == "") {
-    fmt.Println("No access token retrieved yet. Skipping out on getting currently playing songs.")
-    return
-  }
+	if currentToken.AccessToken == "" {
+		fmt.Println("No access token retrieved yet. Skipping out on getting currently playing songs.")
+		return
+	}
 
-  authHeader := fmt.Sprintf("Bearer %s", currentToken.AccessToken)
+	authHeader := fmt.Sprintf("Bearer %s", currentToken.AccessToken)
 
-  playerA := fiber.Get(PlayerEndpoint).
-    UserAgent(UserAgent).
-    Add("Authorization", authHeader)
+	playerA := fiber.Get(PlayerEndpoint).
+		UserAgent(UserAgent).
+		Add("Authorization", authHeader)
 
-  var playerResponse models.Audio
+	var playerResponse models.Audio
 
-  code, body, errs := playerA.Bytes()
+	code, body, errs := playerA.Bytes()
 
-  fmt.Println(code)
+	fmt.Println(code)
 
-  if len(errs) != 0 {
-    panic(errs)
-  }
+	if len(errs) != 0 {
+		panic(errs)
+	}
 
-  if code != 200 {
-    return // A song isn't currently playing
-  }
+	if code != 200 {
+		return // A song isn't currently playing
+	}
 
-  err := json.Unmarshal(body, &playerResponse)
+	err := json.Unmarshal(body, &playerResponse)
 
-  if err != nil {
-    fmt.Println("error: ", err)
-  }
+	if err != nil {
+		fmt.Println("error: ", err)
+	}
 
-  progress := float64(playerResponse.Progress)
-  duration := float64(playerResponse.Item.Duration)
+	progress := float64(playerResponse.Progress)
+	duration := float64(playerResponse.Item.Duration)
 
-  playerResponse.PercentDone = (progress / duration * 100)
+	playerResponse.PercentDone = (progress / duration * 100)
 
-  AudioPlaybackStatus = playerResponse
+	AudioPlaybackStatus = playerResponse
 
-  fmt.Println("Refreshed Spotify player status")
+	fmt.Println("Refreshed Spotify player status")
 }

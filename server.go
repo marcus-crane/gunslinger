@@ -7,10 +7,10 @@ import (
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
-  "github.com/gofiber/fiber/v2/middleware/cors"
-  "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/template/html"
-  "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/routes"
@@ -36,17 +36,17 @@ func main() {
 	engine := html.New("./views", ".html")
 
 	if os.Getenv("DEBUG") == "true" {
-  	engine.Debug(true)
-  	log.Print("Running fiber in debug mode")
-  }
+		engine.Debug(true)
+		log.Print("Running fiber in debug mode")
+	}
 
-  if os.Getenv("DEVELOPMENT") == "true" {
-  	engine.Reload(true)
-  	log.Print("Running fiber in development mode")
-  }
+	if os.Getenv("DEVELOPMENT") == "true" {
+		engine.Reload(true)
+		log.Print("Running fiber in development mode")
+	}
 
 	app := fiber.New(fiber.Config{
-    Views: engine,
+		Views:        engine,
 		ServerHeader: "Gunslinger/1.0",
 		GETOnly:      true,
 	})
@@ -61,7 +61,7 @@ func main() {
 	app = routes.Register(app)
 
 	go func() {
-    log.Print("Listening at http://localhost:8080")
+		log.Print("Listening at http://localhost:8080")
 		if err := app.Listen(":8080"); err != nil {
 			log.Panic(err)
 		}

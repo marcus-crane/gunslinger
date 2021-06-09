@@ -1,12 +1,12 @@
 package models
 
 type Audio struct {
-	AudioType        string       `json:"currently_playing_type"`
-	Timestamp        float64      `json:"timestamp"`
-	CurrentlyPlaying bool         `json:"is_playing"`
-	Progress         int          `json:"progress_ms"`
-	PercentDone      float64      `json:"percent_done"`
-	Item             AudioItem    `json:"item"`
+	AudioType        string    `json:"currently_playing_type"`
+	Timestamp        float64   `json:"timestamp"`
+	CurrentlyPlaying bool      `json:"is_playing"`
+	Progress         int       `json:"progress_ms"`
+	PercentDone      float64   `json:"percent_done"`
+	Item             AudioItem `json:"item"`
 }
 
 type Podcast struct {
@@ -29,7 +29,7 @@ type AudioItem struct {
 	Podcast    Podcast      `json:"show"`
 	Album      Album        `json:"album"`
 	PreviewURL string       `json:"preview_url"`
-	Duration         int    `json:"duration_ms"`
+	Duration   int          `json:"duration_ms"`
 }
 
 type ExternalURLs struct {
