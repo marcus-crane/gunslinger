@@ -7,7 +7,9 @@ import (
 )
 
 func GetIndex(c *fiber.Ctx) error {
-	return c.Render("index", fiber.Map{})
+	return c.Render("index", fiber.Map{
+		"Title": "Howdy pardner",
+	})
 }
 
 func GetAPIRoot(c *fiber.Ctx) error {
