@@ -7,19 +7,19 @@ import (
 )
 
 func GetIndex(c *fiber.Ctx) error {
-	return c.JSON(models.ResponseHTTP{
-		Success: true,
-	})
+	return c.Render("index", fiber.Map{})
 }
 
 func GetAPIRoot(c *fiber.Ctx) error {
 	return c.JSON(models.ResponseHTTP{
 		Success: true,
+		Data: "This is the base of the API",
 	})
 }
 
 func GetV1Root(c *fiber.Ctx) error {
 	return c.JSON(models.ResponseHTTP{
 		Success: true,
+		Data: "This is the v1 endpoint of the API",
 	})
 }

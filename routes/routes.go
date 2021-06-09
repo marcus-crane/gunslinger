@@ -8,8 +8,12 @@ import (
 
 func Register(app *fiber.App) *fiber.App {
 	app.Get("/", handlers.GetIndex)
-	api := app.Group("/api", handlers.GetAPIRoot)
-	v1 := api.Group("/v1", handlers.GetV1Root)
+
+	api := app.Group("/api")
+	api.Get("/", handlers.GetAPIRoot)
+
+	v1 := api.Group("/v1")
+	v1.Get("/", handlers.GetV1Root)
 
 	v1.Get("/audio", handlers.GetAudioPlaybackState)
 	v1.Get("/media", handlers.GetMediaPlaybackState)

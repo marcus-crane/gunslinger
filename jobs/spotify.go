@@ -80,6 +80,8 @@ func GetCurrentlyPlaying() {
 	}
 
 	if code != 200 {
+		fmt.Println("Non-200 code from Spotify. No audio playing most likely.")
+		AudioPlaybackStatus = models.Audio{}
 		return // A song isn't currently playing
 	}
 
@@ -96,5 +98,5 @@ func GetCurrentlyPlaying() {
 
 	AudioPlaybackStatus = playerResponse
 
-	fmt.Println("Refreshed Spotify player status")
+	fmt.Println("Updated Spotify playback status")
 }
