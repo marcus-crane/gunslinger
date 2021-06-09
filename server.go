@@ -51,6 +51,8 @@ func main() {
 		GETOnly:      true,
 	})
 
+	app.Static("/", "./static")
+
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
