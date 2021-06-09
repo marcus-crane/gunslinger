@@ -57,7 +57,7 @@ func main() {
 	app.Static("/", "./static")
 
 	app.Use(func (c *fiber.Ctx) error {
-		if c.Protocol() == "http" && developerMode {
+		if c.Protocol() == "http" && !developerMode {
 			upgradedUrl := fmt.Sprintf("https://%s%s", c.Hostname(), c.OriginalURL())
 			return c.Redirect(upgradedUrl)
 		}
