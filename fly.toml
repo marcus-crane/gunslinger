@@ -9,6 +9,14 @@ kill_timeout = 5
   builtin = "go"
 
 [env]
+  BACKGROUND_JOBS_ENABLED = true
+  DEBUG = false
+  DEVELOPMENT = false
+  LOG_LEVEL = "INFO"
+
+[[statics]]
+  guest_path = "/app/static"
+  url_prefix = "/static"
 
 [experimental]
   allowed_public_ports = []
