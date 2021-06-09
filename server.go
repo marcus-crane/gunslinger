@@ -53,6 +53,11 @@ func main() {
 
 	app.Static("/", "./static")
 
+	app.Use(func (c *fiber.Ctx) error {
+		log.Print(c.Protocol())
+		return c.Next()
+	})
+
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
