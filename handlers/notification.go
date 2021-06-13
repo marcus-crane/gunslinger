@@ -22,14 +22,14 @@ func NotifyPositiveSiteImpression(c *fiber.Ctx) error {
 	if err := c.BodyParser(impression); err != nil {
 		return c.JSON(models.ResponseHTTP{
 			Success: false,
-			Data:    "Hmm, something went horribly wrong. Try again?",
+			Data:    "Hmm, something went horribly wrong. Perhaps try again later?",
 		})
 	}
 
 	if impression.LikedURL == "" {
 		return c.JSON(models.ResponseHTTP{
 			Success: false,
-			Data:    "You forgot to include a URL!",
+			Data:    "You forgot to include a URL?! This seems buggy... or fishy?",
 		})
 	}
 
@@ -55,6 +55,6 @@ func NotifyPositiveSiteImpression(c *fiber.Ctx) error {
 	}
 	return c.JSON(models.ResponseHTTP{
 		Success: true,
-		Data:    "Passed on your thanks anonymously.",
+		Data:    "I received your thanks anonymously! Much appreciated.",
 	})
 }
