@@ -33,7 +33,7 @@ func NotifyPositiveSiteImpression(c *fiber.Ctx) error {
 		})
 	}
 
-	if !strings.HasPrefix(impression.LikedURL, "https://utf9k.net") {
+	if !strings.Contains(impression.LikedURL, "utf9k.net") {
 		return c.JSON(models.ResponseHTTP{
 			Success: true,
 			Data:    "Nice try but you shouldn't be thanking me for other people's websites.",
