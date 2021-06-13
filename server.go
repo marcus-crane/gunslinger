@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,6 +17,8 @@ import (
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/routes"
 )
+
+const idleTimeout = 5 * time.Second
 
 func main() {
 
@@ -61,7 +64,7 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views:        engine,
 		ServerHeader: "Gunslinger/1.0",
-		GETOnly:      true,
+		IdleTimeout:  idleTimeout,
 	})
 
 	app.Static("/", "./static")
@@ -78,7 +81,7 @@ func main() {
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
-    AllowOrigins: "https://utf9k.net, https://next.utf9k.net, http://localhost:1313",
+		AllowOrigins: "https://utf9k.net, https://next.utf9k.net, http://localhost:1313",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 

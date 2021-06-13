@@ -17,6 +17,7 @@ func Register(app *fiber.App) *fiber.App {
 
 	v1.Get("/audio", handlers.GetAudioPlaybackState)
 	v1.Get("/media", handlers.GetMediaPlaybackState)
+	v1.Post("/thanks", handlers.NotifyPositiveSiteImpression)
 
 	return app
 }
