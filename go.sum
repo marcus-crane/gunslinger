@@ -28,6 +28,16 @@ github.com/CloudyKit/jet/v6 v6.1.0 h1:hvO96X345XagdH1fAoBjpBYG4a1ghhL/QzalkduPuX
 github.com/CloudyKit/jet/v6 v6.1.0/go.mod h1:d3ypHeIRNo2+XyqnGA8s+aphtcVpjP5hPwP/Lzo7Ro4=
 github.com/Djarvur/go-err113 v0.0.0-20200511133814-5174e21577d5 h1:XTrzB+F8+SpRmbhAH8HLxhiiG6nYNwaBZjrFps1oWEk=
 github.com/Djarvur/go-err113 v0.0.0-20200511133814-5174e21577d5/go.mod h1:4UJr5HIiMZrwgkSPdsjy2uOQExX/WEILpIrO9UPGuXs=
+github.com/Henry-Sarabia/apicalypse v1.0.2 h1:rM2SrWlMgNwyuzP/Ty8dvc5iYb1pWVGa+kF0RvSPMoE=
+github.com/Henry-Sarabia/apicalypse v1.0.2/go.mod h1:elNsoPyACTUScwfjuZc1DLN68zFbeyDo2XlJkF1omts=
+github.com/Henry-Sarabia/blank v3.0.0+incompatible h1:3JfHWx7YVr1bA+9aK1J2w9TrFpwAHfPibHOq4qwicSc=
+github.com/Henry-Sarabia/blank v3.0.0+incompatible/go.mod h1:EKLnM7Lq0E08WmivZuJoo099i07THd4ISgOBs3wOKTw=
+github.com/Henry-Sarabia/igdb v1.0.3 h1:a/qxY5NKNuy6ak5QmG32LipLF+g/tGCYwxvRnZZC8M0=
+github.com/Henry-Sarabia/igdb v1.0.3/go.mod h1:LTutVBVku4QM89VFgZ+txxlvYztFEsh0VqMh0gpeOWM=
+github.com/Henry-Sarabia/igdb/v2 v2.0.0-alpha.4 h1:ZsyBtHcuEBVyrsP2oYIHELEAt/W18kp42B4BCsFL/IQ=
+github.com/Henry-Sarabia/igdb/v2 v2.0.0-alpha.4/go.mod h1:ooRt7UmyP40FAZncIkpM6fJ0LBUD3aMNRJQfLxGCCG8=
+github.com/Henry-Sarabia/sliceconv v1.0.2 h1:1zH/sJmocRZz1g1FrmU06GsbskWLWglj6IHhFB9TdBA=
+github.com/Henry-Sarabia/sliceconv v1.0.2/go.mod h1:FNvuZcThTpCgAjQQZjPSx7PkS/DYRT6jTV3oPQGP2lU=
 github.com/Joker/hpp v0.0.0-20180418125244-6893e659854a/go.mod h1:MzD2WMdSxvbHw5fM/OXOFily/lipJWRc9C1px0Mt0ZE=
 github.com/Joker/hpp v1.0.0 h1:65+iuJYdRXv/XyN62C1uEmmOx3432rNG/rKlX6V7Kkc=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=

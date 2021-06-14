@@ -3,6 +3,7 @@ module github.com/marcus-crane/gunslinger
 go 1.16
 
 require (
+	github.com/Henry-Sarabia/igdb/v2 v2.0.0-alpha.4 // indirect
 	github.com/go-co-op/gocron v1.6.0
 	github.com/gofiber/fiber/v2 v2.12.0
 	github.com/gofiber/template v1.6.11 // indirect

@@ -17,6 +17,9 @@ func Register(app *fiber.App) *fiber.App {
 
 	v1.Get("/audio", handlers.GetAudioPlaybackState)
 	v1.Get("/media", handlers.GetMediaPlaybackState)
+	v1.Get("/videogames", handlers.GetGameInFocus)
+	v1.Post("/videogames", handlers.UpdateGameInFocus)
+	v1.Delete("/videogames", handlers.ClearGameInFocus)
 	v1.Post("/thanks", handlers.NotifyPositiveSiteImpression)
 
 	return app
