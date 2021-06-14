@@ -23,6 +23,19 @@ type GameTitle struct {
 var currentGame CurrentGame
 
 func UpdateGameInFocus(c *fiber.Ctx) error {
+	if c.Query("token") == "" {
+		return c.JSON(models.ResponseHTTP{
+			Success: false,
+			Data:    "You forgot to provide your token",
+		})
+	}
+	if os.Getenv("AUTH_TOKEN") != c.Query("token") {
+		return c.JSON(models.ResponseHTTP{
+			Success: false,
+			Data:    "Get outta here!",
+		})
+	}
+
 	videogame := new(GameTitle)
 
 	if err := c.BodyParser(videogame); err != nil {
@@ -66,6 +79,18 @@ func UpdateGameInFocus(c *fiber.Ctx) error {
 }
 
 func ClearGameInFocus(c *fiber.Ctx) error {
+	if c.Query("token") == "" {
+		return c.JSON(models.ResponseHTTP{
+			Success: false,
+			Data:    "You forgot to provide your token",
+		})
+	}
+	if os.Getenv("AUTH_TOKEN") != c.Query("token") {
+		return c.JSON(models.ResponseHTTP{
+			Success: false,
+			Data:    "Get outta here!",
+		})
+	}
 	currentGame = CurrentGame{}
 	return c.JSON(models.ResponseHTTP{
 		Success: true,
