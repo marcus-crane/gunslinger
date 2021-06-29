@@ -19,8 +19,15 @@ type Artist struct {
 	Link ExternalURLs `json:"external_urls"`
 }
 
+type Image struct {
+	Height int    `json:"height"`
+	URL    string `json:"url"`
+	Width  int    `json:"width"`
+}
+
 type Album struct {
 	Artists []Artist `json:"artists"`
+	Images  []Image  `json:"images"`
 }
 
 type AudioItem struct {
