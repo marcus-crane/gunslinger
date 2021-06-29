@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gregdel/pushover"
 
 	"github.com/marcus-crane/gunslinger/models"
 )
@@ -77,6 +78,24 @@ func GetCurrentlyPlaying() {
 
 	if len(errs) != 0 {
 		panic(errs)
+	}
+
+	if code == 429 {
+		fmt.Println("Rate limited! Sending a pushover notification.")
+		app := pushover.New(os.Getenv("PUSHOVER_APP_TOKEN"))
+		recipient := pushover.NewRecipient(os.Getenv("PUSHOVER_USER_ID"))
+		message := &pushover.Message{
+			Message:    fmt.Sprintf("A 429 error code was detected when trying to request the currently playing song."),
+			Title:      "Gunslinger was rate limited by Spotify",
+			URL:        "https://developer.spotify.com/documentation/web-api/",
+			URLTitle:   "Spotify Web API documentation",
+			DeviceName: "iPhone12Pro",
+		}
+		_, err := app.SendMessage(message, recipient)
+		if err != nil {
+			// Just continue since the next block will handle things for us anyway
+			fmt.Println(err)
+		}
 	}
 
 	if code != 200 {
