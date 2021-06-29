@@ -26,8 +26,10 @@ type Image struct {
 }
 
 type Album struct {
-	Artists []Artist `json:"artists"`
-	Images  []Image  `json:"images"`
+	Artists []Artist     `json:"artists"`
+	Images  []Image      `json:"images"`
+	Name    string       `json:"name"`
+	Link    ExternalURLs `json:"external_urls"`
 }
 
 type AudioItem struct {
@@ -37,7 +39,7 @@ type AudioItem struct {
 	Album      Album        `json:"album"`
 	PreviewURL string       `json:"preview_url"`
 	Duration   int          `json:"duration_ms"`
-  Explicit   bool         `json:"explicit"`
+	Explicit   bool         `json:"explicit"`
 }
 
 type ExternalURLs struct {
