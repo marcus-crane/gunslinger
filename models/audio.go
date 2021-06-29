@@ -37,6 +37,7 @@ type AudioItem struct {
 	Album      Album        `json:"album"`
 	PreviewURL string       `json:"preview_url"`
 	Duration   int          `json:"duration_ms"`
+  Explicit   bool         `json:"explicit"`
 }
 
 type ExternalURLs struct {
