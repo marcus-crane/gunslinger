@@ -23,13 +23,13 @@ const (
 	userAgent             = "Now Playing/1.0 (utf9k.net)"
 )
 
-func getMediaImage(imageURL string) models.Images {
+func getMediaImage(imageURL string) models.Image {
   imageA := fiber.Get(
       fmt.Sprintf(imageURL),
     ).
     UserAgent(userAgent)
 
-  var imageResponse models.Images
+  var imageResponse models.Image
 
   code, body, errs := imageA.Bytes()
 
@@ -96,8 +96,17 @@ func GetCurrentlyPlayingMedia() {
       traktResponse.Show.IDs.TMDB,
       tmdbApiKey,
     )
-    showImages := getMediaImage(showURL)
-    MediaPlaybackStatus.Show.Images = showImages
+    showImage := getMediaImage(showURL)
+    MediaPlaybackStatus.Show.Poster = showImage
+
+    seasonURL := fmt.Sprintf(
+      SeasonImageEndpoint,
+      traktResponse.Show.IDs.TMDB,
+      traktResponse.Episode.SeasonNumber,
+      tmdbApiKey,
+    )
+    seasonImage := getMediaImage(seasonURL)
+    MediaPlaybackStatus.Episode.SeasonPoster = seasonImage
 
     episodeURL := fmt.Sprintf(
       EpisodeImageEndpoint,
@@ -106,8 +115,8 @@ func GetCurrentlyPlayingMedia() {
       traktResponse.Episode.EpisodeNumber,
       tmdbApiKey,
     )
-    episodeImages := getMediaImage(episodeURL)
-    MediaPlaybackStatus.Episode.Images = episodeImages
+    episodeImage := getMediaImage(episodeURL)
+    MediaPlaybackStatus.Episode.EpisodeStill = episodeImage
 
   }
 
