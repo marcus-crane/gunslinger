@@ -21,15 +21,15 @@ type Movie struct {
 	Year   int     `json:"year"`
 	Link   string  `json:"link"`
 	IDs    MediaID `json:"ids"`
-	Poster Image   `json:"image"`
+	Poster []Image `json:"movie_posters"`
 }
 
 type Show struct {
-	Title  string  `json:"title"`
-	Year   int     `json:"year"`
-	Link   string  `json:"link"`
-	IDs    MediaID `json:"ids"`
-	Poster Image   `json:"poster"`
+	Title     string   `json:"title"`
+	Year      int      `json:"year"`
+	Link      string   `json:"link"`
+	IDs       MediaID  `json:"ids"`
+	Backdrops []Image  `json:"show_backdrops"`
 }
 
 type Episode struct {
@@ -37,8 +37,20 @@ type Episode struct {
 	EpisodeNumber int     `json:"number"`
 	Link          string  `json:"link"`
 	IDs           MediaID `json:"ids"`
-	EpisodeStill  Image   `json:"episode_still"`
-	SeasonPoster  Image   `json:"season_poster"`
+	EpisodeStills []Image `json:"episode_stills"`
+	SeasonPosters []Image `json:"season_posters"`
+}
+
+type Backdrops struct {
+	Backdrops []Image `json:"backdrops"`
+}
+
+type Posters struct {
+	Posters []Image `json:"posters"`
+}
+
+type Stills struct {
+	Stills []Image `json:"stills"`
 }
 
 type Image struct {
