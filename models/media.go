@@ -9,7 +9,11 @@ type Media struct {
 }
 
 type MediaID struct {
-	Slug string `json:"slug"`
+	Trakt int    `json:"trakt"`
+	Slug  string `json:"slug"`
+	TVDB  int    `json:"tvdb"`
+	IMDB  string `json:"imdb"`
+	TMDB  int    `json:"tmdb"`
 }
 
 type Movie struct {
