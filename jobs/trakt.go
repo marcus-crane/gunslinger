@@ -16,8 +16,37 @@ var (
 
 const (
 	TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching"
+  EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images?api_key=%s"
+  SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images?api_key=%s"
+  ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images?api_key=%s"
+  MovieImageEndpoint    = "https://api.themoviedb.org/3/movie/%d/images?api_key=%s"
 	userAgent             = "Now Playing/1.0 (utf9k.net)"
 )
+
+func getMediaImage(imageURL string) models.Images {
+  imageA := fiber.Get(
+      fmt.Sprintf(imageURL),
+    ).
+    UserAgent(userAgent)
+
+  var imageResponse models.Images
+
+  code, body, errs := imageA.Bytes()
+
+  if len(errs) != 0 {
+    panic(errs)
+  }
+
+  fmt.Println(code)
+
+  err := json.Unmarshal(body, &imageResponse)
+
+  if err != nil {
+    fmt.Println("error: ", err)
+  }
+
+  return imageResponse
+}
 
 func GetCurrentlyPlayingMedia() {
 	clientID := os.Getenv("TRAKT_CLIENT_ID")
@@ -58,4 +87,38 @@ func GetCurrentlyPlayingMedia() {
 	}
 
 	MediaPlaybackStatus = traktResponse
+
+  tmdbApiKey := os.Getenv("TMDB_API_KEY")
+
+  if traktResponse.MediaType == "episode" {
+    showURL := fmt.Sprintf(
+      ShowImageEndpoint,
+      traktResponse.Show.IDs.TMDB,
+      tmdbApiKey,
+    )
+    showImages := getMediaImage(showURL)
+    MediaPlaybackStatus.Show.Images = showImages
+
+    episodeURL := fmt.Sprintf(
+      EpisodeImageEndpoint,
+      traktResponse.Show.IDs.TMDB,
+      traktResponse.Episode.SeasonNumber,
+      traktResponse.Episode.EpisodeNumber,
+      tmdbApiKey,
+    )
+    episodeImages := getMediaImage(episodeURL)
+    MediaPlaybackStatus.Episode.Images = episodeImages
+
+  }
+
+  if traktResponse.MediaType == "movie" {
+    movieURL := fmt.Sprintf(
+      MovieImageEndpoint,
+      traktResponse.Movie.IDs.TMDB,
+      tmdbApiKey,
+    )
+    movieImages := getMediaImage(movieURL)
+    MediaPlaybackStatus.Movie.Images = movieImages
+  }
+
 }

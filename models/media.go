@@ -17,17 +17,19 @@ type MediaID struct {
 }
 
 type Movie struct {
-	Title string  `json:"title"`
-	Year  int     `json:"year"`
-	Link  string  `json:"link"`
-	IDs   MediaID `json:"ids"`
+	Title  string  `json:"title"`
+	Year   int     `json:"year"`
+	Link   string  `json:"link"`
+	IDs    MediaID `json:"ids"`
+  Images Images  `json:"images"`
 }
 
 type Show struct {
-	Title string  `json:"title"`
-	Year  int     `json:"year"`
-	Link  string  `json:"link"`
-	IDs   MediaID `json:"ids"`
+	Title  string  `json:"title"`
+	Year   int     `json:"year"`
+	Link   string  `json:"link"`
+	IDs    MediaID `json:"ids"`
+  Images Images `json:"images"`
 }
 
 type Episode struct {
@@ -35,4 +37,17 @@ type Episode struct {
 	EpisodeNumber int     `json:"number"`
 	Link          string  `json:"link"`
 	IDs           MediaID `json:"ids"`
+  Images        Images  `json:"images"`
+}
+
+type Images struct {
+  ID     int     `json:"id"`
+  Stills []Still `json:"stills"`
+}
+
+type Still struct {
+  AspectRatio float64 `json:"aspect_ratio"`
+  Height      int     `json:"height"`
+  FilePath    string  `json:"file_path"`
+  Width       int     `json:"width"`
 }

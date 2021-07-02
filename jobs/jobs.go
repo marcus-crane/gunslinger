@@ -12,7 +12,7 @@ func SetupInBackground() *gocron.Scheduler {
 
 	s.Every(3601).Seconds().Do(RefreshAccessToken)
 	s.Every(1).Seconds().Do(GetCurrentlyPlaying)
-	s.Every(1).Minute().Do(GetCurrentlyPlayingMedia)
+	s.Every(30).Seconds().Do(GetCurrentlyPlayingMedia)
 
 	log.Print("Jobs scheduled. Scheduler not running yet.")
 
