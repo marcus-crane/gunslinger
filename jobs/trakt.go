@@ -16,36 +16,39 @@ var (
 
 const (
 	TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching"
-  EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images?api_key=%s"
-  SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images?api_key=%s"
-  ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images?api_key=%s"
-  MovieImageEndpoint    = "https://api.themoviedb.org/3/movie/%d/images?api_key=%s"
+	EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
+	SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images"
+	ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images"
+	MovieImageEndpoint    = "https://api.themoviedb.org/3/movie/%d/images"
 	userAgent             = "Now Playing/1.0 (utf9k.net)"
 )
 
 func getMediaImage(imageURL string) models.Image {
-  imageA := fiber.Get(
-      fmt.Sprintf(imageURL),
-    ).
-    UserAgent(userAgent)
+	tmdbApiKey := os.Getenv("TMDB_API_KEY")
 
-  var imageResponse models.Image
+	imageA := fiber.Get(imageURL).
+		UserAgent(userAgent).
+		Add("Content-Type", "application/json;charset=utf-8").
+		Add("Authorzation", fmt.Sprintf("Bearer %s", tmdbApiKey))
 
-  code, body, errs := imageA.Bytes()
+	var imageResponse models.Image
 
-  if len(errs) != 0 {
-    panic(errs)
-  }
+	code, body, errs := imageA.Bytes()
 
-  fmt.Println(code)
+	if len(errs) != 0 {
+		panic(errs)
+	}
 
-  err := json.Unmarshal(body, &imageResponse)
+	fmt.Printf("Fetch image %s", imageURL)
+	fmt.Println(code)
 
-  if err != nil {
-    fmt.Println("error: ", err)
-  }
+	err := json.Unmarshal(body, &imageResponse)
 
-  return imageResponse
+	if err != nil {
+		fmt.Println("error: ", err)
+	}
+
+	return imageResponse
 }
 
 func GetCurrentlyPlayingMedia() {
@@ -88,46 +91,47 @@ func GetCurrentlyPlayingMedia() {
 
 	MediaPlaybackStatus = traktResponse
 
-  tmdbApiKey := os.Getenv("TMDB_API_KEY")
+	fmt.Println("Updated media playback status")
 
-  if traktResponse.MediaType == "episode" {
-    showURL := fmt.Sprintf(
-      ShowImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-      tmdbApiKey,
-    )
-    showImage := getMediaImage(showURL)
-    MediaPlaybackStatus.Show.Poster = showImage
+	if traktResponse.MediaType == "episode" {
+		fmt.Println("Updating episode cover art")
+		showURL := fmt.Sprintf(
+			ShowImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+		)
+		fmt.Println(showURL)
+		fmt.Println("Show image url")
+		showImage := getMediaImage(showURL)
+		MediaPlaybackStatus.Show.Poster = showImage
 
-    seasonURL := fmt.Sprintf(
-      SeasonImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-      traktResponse.Episode.SeasonNumber,
-      tmdbApiKey,
-    )
-    seasonImage := getMediaImage(seasonURL)
-    MediaPlaybackStatus.Episode.SeasonPoster = seasonImage
+		seasonURL := fmt.Sprintf(
+			SeasonImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+			traktResponse.Episode.SeasonNumber,
+		)
+		seasonImage := getMediaImage(seasonURL)
+		fmt.Println(seasonImage)
+		MediaPlaybackStatus.Episode.SeasonPoster = seasonImage
 
-    episodeURL := fmt.Sprintf(
-      EpisodeImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-      traktResponse.Episode.SeasonNumber,
-      traktResponse.Episode.EpisodeNumber,
-      tmdbApiKey,
-    )
-    episodeImage := getMediaImage(episodeURL)
-    MediaPlaybackStatus.Episode.EpisodeStill = episodeImage
+		episodeURL := fmt.Sprintf(
+			EpisodeImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+			traktResponse.Episode.SeasonNumber,
+			traktResponse.Episode.EpisodeNumber,
+		)
+		episodeImage := getMediaImage(episodeURL)
+		MediaPlaybackStatus.Episode.EpisodeStill = episodeImage
+		return
+	}
 
-  }
-
-  if traktResponse.MediaType == "movie" {
-    movieURL := fmt.Sprintf(
-      MovieImageEndpoint,
-      traktResponse.Movie.IDs.TMDB,
-      tmdbApiKey,
-    )
-    movieImages := getMediaImage(movieURL)
-    MediaPlaybackStatus.Movie.Poster = movieImages
-  }
+	if traktResponse.MediaType == "movie" {
+		movieURL := fmt.Sprintf(
+			MovieImageEndpoint,
+			traktResponse.Movie.IDs.TMDB,
+		)
+		movieImages := getMediaImage(movieURL)
+		MediaPlaybackStatus.Movie.Poster = movieImages
+		return
+	}
 
 }
