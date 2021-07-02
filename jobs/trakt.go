@@ -127,7 +127,7 @@ func GetCurrentlyPlayingMedia() {
       tmdbApiKey,
     )
     movieImages := getMediaImage(movieURL)
-    MediaPlaybackStatus.Movie.Images = movieImages
+    MediaPlaybackStatus.Movie.Poster = movieImages
   }
 
 }
