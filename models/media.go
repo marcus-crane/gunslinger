@@ -6,6 +6,7 @@ type Media struct {
 	Episode   Episode `json:"episode"`
 	Show      Show    `json:"show"`
 	StartedAt string  `json:"started_at"`
+	ExpiresAt string  `json:"expires_at"`
 }
 
 type MediaID struct {
@@ -25,14 +26,15 @@ type Movie struct {
 }
 
 type Show struct {
-	Title     string   `json:"title"`
-	Year      int      `json:"year"`
-	Link      string   `json:"link"`
-	IDs       MediaID  `json:"ids"`
-	Backdrops []Image  `json:"show_backdrops"`
+	Title     string  `json:"title"`
+	Year      int     `json:"year"`
+	Link      string  `json:"link"`
+	IDs       MediaID `json:"ids"`
+	Backdrops []Image `json:"show_backdrops"`
 }
 
 type Episode struct {
+	Title         string  `json:"title"`
 	SeasonNumber  int     `json:"season"`
 	EpisodeNumber int     `json:"number"`
 	Link          string  `json:"link"`
