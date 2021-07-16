@@ -74,8 +74,6 @@ func GetCurrentlyPlaying() {
 
 	code, body, errs := playerA.Bytes()
 
-	fmt.Println(code)
-
 	if len(errs) != 0 {
 		panic(errs)
 	}
@@ -115,6 +113,4 @@ func GetCurrentlyPlaying() {
 	playerResponse.PercentDone = (progress / duration * 100)
 
 	AudioPlaybackStatus = playerResponse
-
-	fmt.Println("Updated Spotify playback status")
 }

@@ -69,12 +69,10 @@ func GetCurrentlyPlayingMedia() {
 		panic(errs)
 	}
 
-	fmt.Println(code)
-
 	err := json.Unmarshal(body, &traktResponse)
 
-	if err != nil {
-		fmt.Println("error: ", err)
+	if err != nil && code != 204 {
+		fmt.Println("Error fetching Trakt data: ", err)
 	}
 
 	if traktResponse.MediaType == "episode" {
