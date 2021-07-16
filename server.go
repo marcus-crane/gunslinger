@@ -81,7 +81,7 @@ func main() {
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "https://utf9k.net, https://next.utf9k.net, http://localhost:1313",
+		AllowOrigins: "https://utf9k.net, https://next.utf9k.net, https://utf9k.fly.dev, http://localhost:1313",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 

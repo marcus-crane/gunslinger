@@ -16,7 +16,7 @@ var (
 
 const (
 	AbsoluteImageLink     = "https://image.tmdb.org/t/p/w500%s"
-	TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching"
+	TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching?extended=full"
 	EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
 	SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images"
 	ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images"
