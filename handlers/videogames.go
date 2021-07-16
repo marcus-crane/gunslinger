@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -11,9 +12,15 @@ import (
 )
 
 type CurrentGame struct {
-	Title string `json:"title"`
-	Cover string `json:"image"`
-	URL   string `json:"url"`
+	Title string      `json:"title"`
+	Cover GameCover   `json:"cover"`
+	URL   string      `json:"url"`
+}
+
+type GameCover struct {
+	ImageURL string `json:"image_url"`
+	Height   int    `json:"height"`
+	Width    int    `json:"width"`
 }
 
 type GameTitle struct {
@@ -59,7 +66,7 @@ func UpdateGameInFocus(c *fiber.Ctx) error {
 
 	games, err := client.Games.Search(
 		videogame.Title,
-		igdb.SetFields("name", "url"),
+		igdb.SetFields("name", "url", "cover"),
 		igdb.SetLimit(1),
 	)
 
@@ -67,8 +74,23 @@ func UpdateGameInFocus(c *fiber.Ctx) error {
 		log.Panic(err)
 	}
 
+	cover, err := client.Covers.Get(
+		games[0].Cover,
+		igdb.SetFields("height", "width", "image_id"),
+	)
+
+	gameCover := GameCover{
+		ImageURL: fmt.Sprintf(
+			"https://images.igdb.com/igdb/image/upload/t_cover_big_2x/%s.jpg",
+			cover.ImageID,
+		),
+		Height: cover.Height,
+		Width: cover.Width,
+	}
+
 	currentGame = CurrentGame{
 		Title: games[0].Name,
+		Cover: gameCover,
 		URL:   games[0].URL,
 	}
 
