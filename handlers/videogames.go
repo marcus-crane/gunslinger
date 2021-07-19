@@ -12,9 +12,13 @@ import (
 )
 
 type CurrentGame struct {
-	Title string      `json:"title"`
-	Cover GameCover   `json:"cover"`
-	URL   string      `json:"url"`
+	Title             string    `json:"title"`
+	Cover             GameCover `json:"cover"`
+	URL               string    `json:"url"`
+	Storyline         string    `json:"storyline"`
+	Summary           string    `json:"summary"`
+	Genres            []int     `json:"genres"`
+	InvolvedCompanies []int     `json:"involved_companies"`
 }
 
 type GameCover struct {
@@ -66,7 +70,7 @@ func UpdateGameInFocus(c *fiber.Ctx) error {
 
 	games, err := client.Games.Search(
 		videogame.Title,
-		igdb.SetFields("name", "url", "cover"),
+		igdb.SetFields("name", "url", "cover", "genres", "involved_companies", "storyline", "summary"),
 		igdb.SetLimit(1),
 	)
 
@@ -85,13 +89,15 @@ func UpdateGameInFocus(c *fiber.Ctx) error {
 			cover.ImageID,
 		),
 		Height: cover.Height,
-		Width: cover.Width,
+		Width:  cover.Width,
 	}
 
 	currentGame = CurrentGame{
-		Title: games[0].Name,
-		Cover: gameCover,
-		URL:   games[0].URL,
+		Title:     games[0].Name,
+		Cover:     gameCover,
+		URL:       games[0].URL,
+		Storyline: games[0].Storyline,
+		Summary:   games[0].Summary,
 	}
 
 	return c.JSON(models.ResponseHTTP{

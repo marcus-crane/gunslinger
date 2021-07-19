@@ -23,13 +23,13 @@ type Movie struct {
 	Link     string   `json:"link"`
 	IDs      MediaID  `json:"ids"`
 	Poster   []Image  `json:"movie_posters"`
-  Tagline  string   `json:"tagline"`
-  Overview string   `json:"overview"`
-  Language string   `json:"language"`
-  Country  string   `json:"country"`
-  Runtime  int      `json:"runtime"`
-  Genres   []string `json:"genres"`
-  Rating   string   `json:"certification"`
+	Tagline  string   `json:"tagline"`
+	Overview string   `json:"overview"`
+	Language string   `json:"language"`
+	Country  string   `json:"country"`
+	Runtime  int      `json:"runtime"`
+	Genres   []string `json:"genres"`
+	Rating   string   `json:"certification"`
 }
 
 type Show struct {
@@ -38,13 +38,13 @@ type Show struct {
 	Link      string   `json:"link"`
 	IDs       MediaID  `json:"ids"`
 	Backdrops []Image  `json:"show_backdrops"`
-  Overview  string   `json:"overview"`
-  Runtime   int      `json:"runtime"`
-  Rating    string   `json:"rating"`
-  Country   string   `json:"country"`
-  Network   string   `json:"network"`
-  Language  string   `json:"language"`
-  Genres    []string `json:"genres"`
+	Overview  string   `json:"overview"`
+	Runtime   int      `json:"runtime"`
+	Rating    string   `json:"rating"`
+	Country   string   `json:"country"`
+	Network   string   `json:"network"`
+	Language  string   `json:"language"`
+	Genres    []string `json:"genres"`
 }
 
 type Episode struct {
@@ -55,9 +55,9 @@ type Episode struct {
 	IDs           MediaID `json:"ids"`
 	EpisodeStills []Image `json:"episode_stills"`
 	SeasonPosters []Image `json:"season_posters"`
-  Overview      string  `json:"overview"`
-  Aired         string  `json:"first_aired"`
-  Runtime       int     `json:"runtime"`
+	Overview      string  `json:"overview"`
+	Aired         string  `json:"first_aired"`
+	Runtime       int     `json:"runtime"`
 }
 
 type Backdrops struct {
