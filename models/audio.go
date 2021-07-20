@@ -10,8 +10,11 @@ type Audio struct {
 }
 
 type Podcast struct {
-	Name string       `json:"name"`
-	Link ExternalURLs `json:"external_urls"`
+	Name        string       `json:"name"`
+	Description string       `json:"description"`
+	Explicit    bool         `json:"explicit"`
+	Link        ExternalURLs `json:"external_urls"`
+	Images      []Cover      `json:"images"`
 }
 
 type Artist struct {
