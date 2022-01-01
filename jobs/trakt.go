@@ -3,11 +3,10 @@ package jobs
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/gofiber/fiber/v2"
-
 	"github.com/marcus-crane/gunslinger/models"
+	"os"
+	"time"
 )
 
 var (
@@ -96,12 +95,16 @@ func GetCurrentlyPlayingMedia() {
 
 	playingItem := models.MediaItem{
 		Populated: true,
-		//StartedAt:       traktResponse.StartedAt, Check type
-		Category: traktResponse.MediaType,
+		Category:  traktResponse.MediaType,
 	}
 
-	playbackProgress := models.MediaProgress{
-		//StartedAt:       traktResponse.StartedAt, Check type
+	var playbackProgress models.MediaProgress
+
+	// 2022-01-01T22:53:59.000Z
+	startedAt, err := time.Parse("2006-01-02T15:04:05.000Z", MediaPlaybackStatus.StartedAt)
+	if err != nil {
+		playingItem.StartedAt = float64(startedAt.UnixMilli())
+		playbackProgress.StartedAt = float64(startedAt.UnixMilli())
 	}
 
 	var (
@@ -151,9 +154,9 @@ func GetCurrentlyPlayingMedia() {
 		playingItem.TitleLink = MediaPlaybackStatus.Episode.Link
 		playingItem.Subtitle = MediaPlaybackStatus.Show.Title
 		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
-		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime
+		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime * 60000
 
-		playbackProgress.Duration = MediaPlaybackStatus.Episode.Runtime
+		playbackProgress.Duration = MediaPlaybackStatus.Episode.Runtime * 60000
 
 		var showImages []models.MediaImage
 		showImages = append(showImages, models.MediaImage{
@@ -178,7 +181,7 @@ func GetCurrentlyPlayingMedia() {
 
 		playingItem.Title = MediaPlaybackStatus.Movie.Title
 		playingItem.TitleLink = MediaPlaybackStatus.Movie.Link
-		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime
+		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime * 60000
 
 		var posterImages []models.MediaImage
 		for _, entry := range MediaPlaybackStatus.Movie.Poster {
@@ -191,7 +194,7 @@ func GetCurrentlyPlayingMedia() {
 		playingItem.Images = posterImages
 	}
 
-	playbackProgress.Duration = MediaPlaybackStatus.Movie.Runtime
+	playbackProgress.Duration = MediaPlaybackStatus.Movie.Runtime * 60000
 
 	CurrentPlaybackItem = playingItem
 
