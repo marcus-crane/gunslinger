@@ -90,6 +90,12 @@ func GetCurrentlyPlayingMedia() {
 
 	MediaPlaybackStatus = traktResponse
 
+	if MediaPlaybackStatus.StartedAt == "" {
+		if !CurrentPlaybackItem.IsActive && (CurrentPlaybackItem.Category == "episode" || CurrentPlaybackItem.Category == "movie") {
+			return // Nothing playing but we want to retain the last playing item
+		}
+	}
+
 	playingItem := models.MediaItem{
 		Populated: true,
 		//StartedAt:       traktResponse.StartedAt, Check type
