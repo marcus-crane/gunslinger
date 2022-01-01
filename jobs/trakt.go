@@ -1,187 +1,187 @@
 package jobs
 
 import (
-  "encoding/json"
-  "fmt"
-  "os"
+	"encoding/json"
+	"fmt"
+	"os"
 
-  "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 
-  "github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 var (
-  MediaPlaybackStatus models.Media
+	MediaPlaybackStatus models.Media
 )
 
 const (
-  AbsoluteImageLink     = "https://image.tmdb.org/t/p/w500%s"
-  TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching?extended=full"
-  EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
-  SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images"
-  ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images"
-  MovieImageEndpoint    = "https://api.themoviedb.org/3/movie/%d/images"
-  userAgent             = "Now Playing/1.0 (utf9k.net)"
+	AbsoluteImageLink     = "https://image.tmdb.org/t/p/w500%s"
+	TraktWatchingEndpoint = "https://api.trakt.tv/users/sentry/watching?extended=full"
+	EpisodeImageEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
+	SeasonImageEndpoint   = "https://api.themoviedb.org/3/tv/%d/season/%d/images"
+	ShowImageEndpoint     = "https://api.themoviedb.org/3/tv/%d/images"
+	MovieImageEndpoint    = "https://api.themoviedb.org/3/movie/%d/images"
+	userAgent             = "Now Playing/1.0 (utf9k.net)"
 )
 
 func getMediaImage(imageURL string) []byte {
-  tmdbApiKey := os.Getenv("TMDB_API_KEY")
+	tmdbApiKey := os.Getenv("TMDB_API_KEY")
 
-  imageA := fiber.Get(imageURL).
-    UserAgent(userAgent).
-    Add("Authorization", fmt.Sprintf("Bearer %s", tmdbApiKey))
+	imageA := fiber.Get(imageURL).
+		UserAgent(userAgent).
+		Add("Authorization", fmt.Sprintf("Bearer %s", tmdbApiKey))
 
-  code, body, errs := imageA.Bytes()
+	code, body, errs := imageA.Bytes()
 
-  if len(errs) != 0 {
-    panic(errs)
-  }
+	if len(errs) != 0 {
+		panic(errs)
+	}
 
-  if code != 200 {
-    fmt.Println("Received non-200 code when fetching image: ", code)
-    return []byte{}
-  }
+	if code != 200 {
+		fmt.Println("Received non-200 code when fetching image: ", code)
+		return []byte{}
+	}
 
-  return body
+	return body
 }
 
 func buildAbsoluteImageLink(images []models.Image) []models.Image {
-  for idx, image := range images {
-    images[idx].FilePath = fmt.Sprintf(AbsoluteImageLink, image.FilePath)
-  }
-  return images
+	for idx, image := range images {
+		images[idx].FilePath = fmt.Sprintf(AbsoluteImageLink, image.FilePath)
+	}
+	return images
 }
 
 func GetCurrentlyPlayingMedia() {
-  clientID := os.Getenv("TRAKT_CLIENT_ID")
+	clientID := os.Getenv("TRAKT_CLIENT_ID")
 
-  playerA := fiber.Get(TraktWatchingEndpoint).
-    UserAgent(UserAgent).
-    Add("Content-Type", "application/json").
-    Add("trakt-api-version", "2").
-    Add("trakt-api-key", clientID)
+	playerA := fiber.Get(TraktWatchingEndpoint).
+		UserAgent(UserAgent).
+		Add("Content-Type", "application/json").
+		Add("trakt-api-version", "2").
+		Add("trakt-api-key", clientID)
 
-  var traktResponse models.Media
+	var traktResponse models.Media
 
-  code, body, errs := playerA.Bytes()
+	code, body, errs := playerA.Bytes()
 
-  if len(errs) != 0 {
-    panic(errs)
-  }
+	if len(errs) != 0 {
+		panic(errs)
+	}
 
-  err := json.Unmarshal(body, &traktResponse)
+	err := json.Unmarshal(body, &traktResponse)
 
-  if err != nil && code != 204 {
-    fmt.Println("Error fetching Trakt data: ", err)
-  }
+	if err != nil && code != 204 {
+		fmt.Println("Error fetching Trakt data: ", err)
+	}
 
-  if traktResponse.MediaType == "episode" {
-    episodeLink := fmt.Sprintf(
-      "https://trakt.tv/shows/%s/seasons/%d/episodes/%d",
-      traktResponse.Show.IDs.Slug,
-      traktResponse.Episode.SeasonNumber,
-      traktResponse.Episode.EpisodeNumber,
-    )
-    traktResponse.Episode.Link = episodeLink
+	if traktResponse.MediaType == "episode" {
+		episodeLink := fmt.Sprintf(
+			"https://trakt.tv/shows/%s/seasons/%d/episodes/%d",
+			traktResponse.Show.IDs.Slug,
+			traktResponse.Episode.SeasonNumber,
+			traktResponse.Episode.EpisodeNumber,
+		)
+		traktResponse.Episode.Link = episodeLink
 
-    showLink := fmt.Sprintf("https://trakt.tv/shows/%s", traktResponse.Show.IDs.Slug)
-    traktResponse.Show.Link = showLink
-  }
+		showLink := fmt.Sprintf("https://trakt.tv/shows/%s", traktResponse.Show.IDs.Slug)
+		traktResponse.Show.Link = showLink
+	}
 
-  MediaPlaybackStatus = traktResponse
+	MediaPlaybackStatus = traktResponse
 
-  playingItem := models.MediaItem{
-    Populated: true,
-    //StartedAt:       traktResponse.StartedAt, Check type
-    Category: traktResponse.MediaType,
-  }
+	playingItem := models.MediaItem{
+		Populated: true,
+		//StartedAt:       traktResponse.StartedAt, Check type
+		Category: traktResponse.MediaType,
+	}
 
-  var (
-    backdrops models.Backdrops
-    posters   models.Posters
-    stills    models.Stills
-  )
+	var (
+		backdrops models.Backdrops
+		posters   models.Posters
+		stills    models.Stills
+	)
 
-  if traktResponse.MediaType == "episode" {
-    showURL := fmt.Sprintf(
-      ShowImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-    )
-    showImageResponse := getMediaImage(showURL)
-    err := json.Unmarshal(showImageResponse, &backdrops)
-    if err != nil {
-      fmt.Println("Error fetching show images from TMDB: ", err)
-    }
-    MediaPlaybackStatus.Show.Backdrops = buildAbsoluteImageLink(backdrops.Backdrops)
+	if traktResponse.MediaType == "episode" {
+		showURL := fmt.Sprintf(
+			ShowImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+		)
+		showImageResponse := getMediaImage(showURL)
+		err := json.Unmarshal(showImageResponse, &backdrops)
+		if err != nil {
+			fmt.Println("Error fetching show images from TMDB: ", err)
+		}
+		MediaPlaybackStatus.Show.Backdrops = buildAbsoluteImageLink(backdrops.Backdrops)
 
-    seasonURL := fmt.Sprintf(
-      SeasonImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-      traktResponse.Episode.SeasonNumber,
-    )
-    seasonImageResponse := getMediaImage(seasonURL)
-    err = json.Unmarshal(seasonImageResponse, &posters)
-    if err != nil {
-      fmt.Println("Error fetching season images from TMDB: ", err)
-    }
-    MediaPlaybackStatus.Episode.SeasonPosters = buildAbsoluteImageLink(posters.Posters)
+		seasonURL := fmt.Sprintf(
+			SeasonImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+			traktResponse.Episode.SeasonNumber,
+		)
+		seasonImageResponse := getMediaImage(seasonURL)
+		err = json.Unmarshal(seasonImageResponse, &posters)
+		if err != nil {
+			fmt.Println("Error fetching season images from TMDB: ", err)
+		}
+		MediaPlaybackStatus.Episode.SeasonPosters = buildAbsoluteImageLink(posters.Posters)
 
-    episodeURL := fmt.Sprintf(
-      EpisodeImageEndpoint,
-      traktResponse.Show.IDs.TMDB,
-      traktResponse.Episode.SeasonNumber,
-      traktResponse.Episode.EpisodeNumber,
-    )
-    episodeImageResponse := getMediaImage(episodeURL)
-    err = json.Unmarshal(episodeImageResponse, &stills)
-    if err != nil {
-      fmt.Println("Error fetching episode images from TMDB: ", err)
-    }
-    MediaPlaybackStatus.Episode.EpisodeStills = buildAbsoluteImageLink(stills.Stills)
+		episodeURL := fmt.Sprintf(
+			EpisodeImageEndpoint,
+			traktResponse.Show.IDs.TMDB,
+			traktResponse.Episode.SeasonNumber,
+			traktResponse.Episode.EpisodeNumber,
+		)
+		episodeImageResponse := getMediaImage(episodeURL)
+		err = json.Unmarshal(episodeImageResponse, &stills)
+		if err != nil {
+			fmt.Println("Error fetching episode images from TMDB: ", err)
+		}
+		MediaPlaybackStatus.Episode.EpisodeStills = buildAbsoluteImageLink(stills.Stills)
 
-    playingItem.Title = MediaPlaybackStatus.Episode.Title
-    playingItem.TitleLink = MediaPlaybackStatus.Episode.Link
-    playingItem.Subtitle = MediaPlaybackStatus.Show.Title
-    playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
-    playingItem.Duration = MediaPlaybackStatus.Episode.Runtime
+		playingItem.Title = MediaPlaybackStatus.Episode.Title
+		playingItem.TitleLink = MediaPlaybackStatus.Episode.Link
+		playingItem.Subtitle = MediaPlaybackStatus.Show.Title
+		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
+		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime
 
-    var showImages []models.MediaImage
-    showImages = append(showImages, models.MediaImage{
-      URL:    MediaPlaybackStatus.Episode.EpisodeStills[0].FilePath,
-      Height: MediaPlaybackStatus.Episode.EpisodeStills[0].Height,
-      Width:  MediaPlaybackStatus.Episode.EpisodeStills[0].Width,
-    })
-    playingItem.Images = showImages
-  }
+		var showImages []models.MediaImage
+		showImages = append(showImages, models.MediaImage{
+			URL:    MediaPlaybackStatus.Show.Backdrops[0].FilePath,
+			Height: MediaPlaybackStatus.Show.Backdrops[0].Height,
+			Width:  MediaPlaybackStatus.Show.Backdrops[0].Width,
+		})
+		playingItem.Images = showImages
+	}
 
-  if traktResponse.MediaType == "movie" {
-    movieURL := fmt.Sprintf(
-      MovieImageEndpoint,
-      traktResponse.Movie.IDs.TMDB,
-    )
-    movieImageResponse := getMediaImage(movieURL)
-    err = json.Unmarshal(movieImageResponse, &posters)
-    if err != nil {
-      fmt.Println("Error fetching movie images from TMDB: ", err)
-    }
-    MediaPlaybackStatus.Movie.Poster = buildAbsoluteImageLink(posters.Posters)
+	if traktResponse.MediaType == "movie" {
+		movieURL := fmt.Sprintf(
+			MovieImageEndpoint,
+			traktResponse.Movie.IDs.TMDB,
+		)
+		movieImageResponse := getMediaImage(movieURL)
+		err = json.Unmarshal(movieImageResponse, &posters)
+		if err != nil {
+			fmt.Println("Error fetching movie images from TMDB: ", err)
+		}
+		MediaPlaybackStatus.Movie.Poster = buildAbsoluteImageLink(posters.Posters)
 
-    playingItem.Title = MediaPlaybackStatus.Movie.Title
-    playingItem.TitleLink = MediaPlaybackStatus.Movie.Link
-    playingItem.Duration = MediaPlaybackStatus.Movie.Runtime
+		playingItem.Title = MediaPlaybackStatus.Movie.Title
+		playingItem.TitleLink = MediaPlaybackStatus.Movie.Link
+		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime
 
-    var posterImages []models.MediaImage
-    for _, entry := range MediaPlaybackStatus.Movie.Poster {
-      posterImages = append(posterImages, models.MediaImage{
-        URL:    entry.FilePath,
-        Height: entry.Height,
-        Width:  entry.Width,
-      })
-    }
-    playingItem.Images = posterImages
-  }
+		var posterImages []models.MediaImage
+		for _, entry := range MediaPlaybackStatus.Movie.Poster {
+			posterImages = append(posterImages, models.MediaImage{
+				URL:    entry.FilePath,
+				Height: entry.Height,
+				Width:  entry.Width,
+			})
+		}
+		playingItem.Images = posterImages
+	}
 
-  CurrentPlaybackItem = playingItem
+	CurrentPlaybackItem = playingItem
 
-  return
+	return
 }
