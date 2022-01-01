@@ -90,6 +90,12 @@ func GetCurrentlyPlayingMedia() {
 
 	MediaPlaybackStatus = traktResponse
 
+	playingItem := models.MediaItem{
+		Populated: true,
+		//StartedAt:       traktResponse.StartedAt, Check type
+		Category: traktResponse.MediaType,
+	}
+
 	var (
 		backdrops models.Backdrops
 		posters   models.Posters
@@ -132,7 +138,22 @@ func GetCurrentlyPlayingMedia() {
 			fmt.Println("Error fetching episode images from TMDB: ", err)
 		}
 		MediaPlaybackStatus.Episode.EpisodeStills = buildAbsoluteImageLink(stills.Stills)
-		return
+
+		playingItem.Title = MediaPlaybackStatus.Episode.Title
+		playingItem.TitleLink = MediaPlaybackStatus.Episode.Link
+		playingItem.Subtitle = MediaPlaybackStatus.Show.Title
+		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
+		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime
+
+		var showImages []models.MediaImage
+		for _, entry := range MediaPlaybackStatus.Show.Backdrops {
+			showImages = append(showImages, models.MediaImage{
+				URL:    entry.FilePath,
+				Height: entry.Height,
+				Width:  entry.Width,
+			})
+		}
+		playingItem.Images = showImages
 	}
 
 	if traktResponse.MediaType == "movie" {
@@ -146,7 +167,23 @@ func GetCurrentlyPlayingMedia() {
 			fmt.Println("Error fetching movie images from TMDB: ", err)
 		}
 		MediaPlaybackStatus.Movie.Poster = buildAbsoluteImageLink(posters.Posters)
-		return
+
+		playingItem.Title = MediaPlaybackStatus.Movie.Title
+		playingItem.TitleLink = MediaPlaybackStatus.Movie.Link
+		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime
+
+		var posterImages []models.MediaImage
+		for _, entry := range MediaPlaybackStatus.Movie.Poster {
+			posterImages = append(posterImages, models.MediaImage{
+				URL:    entry.FilePath,
+				Height: entry.Height,
+				Width:  entry.Width,
+			})
+		}
+		playingItem.Images = posterImages
 	}
 
+	CurrentPlaybackItem = playingItem
+
+	return
 }
