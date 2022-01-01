@@ -26,3 +26,11 @@ type MediaImage struct {
 	Height int    `json:"height"`
 	Width  int    `json:"width"`
 }
+
+type MediaProgress struct {
+	StartedAt       float64 `json:"started_at"`
+	IsActive        bool    `json:"is_active"`
+	Elapsed         int     `json:"elapsed_ms"`
+	Duration        int     `json:"duration_ms"`
+	PercentComplete float64 `json:"percent_complete"`
+}

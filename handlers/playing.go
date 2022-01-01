@@ -9,3 +9,7 @@ import (
 func GetCurrentlyPlaying(c *fiber.Ctx) error {
 	return c.JSON(jobs.CurrentPlaybackItem)
 }
+
+func GetCurrentProgress(c *fiber.Ctx) error {
+	return c.JSON(jobs.CurrentPlaybackProgress)
+}

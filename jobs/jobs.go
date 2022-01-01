@@ -9,7 +9,10 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 )
 
-var CurrentPlaybackItem models.MediaItem
+var (
+	CurrentPlaybackItem     models.MediaItem
+	CurrentPlaybackProgress models.MediaProgress
+)
 
 func SetupInBackground() *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)

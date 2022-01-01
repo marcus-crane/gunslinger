@@ -127,6 +127,14 @@ func GetCurrentlyPlaying() {
 		Category:        playerResponse.AudioType,
 	}
 
+	CurrentPlaybackProgress = models.MediaProgress{
+		StartedAt:       playerResponse.Timestamp,
+		IsActive:        playerResponse.CurrentlyPlaying,
+		PercentComplete: playerResponse.PercentDone,
+		Elapsed:         playerResponse.Progress,
+		Duration:        playerResponse.Item.Duration,
+	}
+
 	if playerResponse.AudioType == "track" {
 		playingItem.Subtitle = playerResponse.Item.Album.Name
 		playingItem.SubtitleLink = playerResponse.Item.Album.Link.SpotifyURL

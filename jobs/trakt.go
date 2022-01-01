@@ -96,6 +96,10 @@ func GetCurrentlyPlayingMedia() {
 		Category: traktResponse.MediaType,
 	}
 
+	playbackProgress := models.MediaProgress{
+		//StartedAt:       traktResponse.StartedAt, Check type
+	}
+
 	var (
 		backdrops models.Backdrops
 		posters   models.Posters
@@ -145,6 +149,8 @@ func GetCurrentlyPlayingMedia() {
 		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
 		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime
 
+		playbackProgress.Duration = MediaPlaybackStatus.Episode.Runtime
+
 		var showImages []models.MediaImage
 		showImages = append(showImages, models.MediaImage{
 			URL:    MediaPlaybackStatus.Show.Backdrops[0].FilePath,
@@ -180,6 +186,8 @@ func GetCurrentlyPlayingMedia() {
 		}
 		playingItem.Images = posterImages
 	}
+
+	playbackProgress.Duration = MediaPlaybackStatus.Movie.Runtime
 
 	CurrentPlaybackItem = playingItem
 

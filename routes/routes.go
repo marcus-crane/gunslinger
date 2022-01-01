@@ -26,6 +26,7 @@ func Register(app *fiber.App) *fiber.App {
 	v2.Get("/", handlers.GetV2Root)
 
 	v2.Get("/playing", handlers.GetCurrentlyPlaying)
+	v2.Get("/playing/progress", handlers.GetCurrentProgress)
 
 	return app
 }
