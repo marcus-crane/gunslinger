@@ -22,5 +22,10 @@ func Register(app *fiber.App) *fiber.App {
 	v1.Delete("/videogames", handlers.ClearGameInFocus)
 	v1.Post("/thanks", handlers.NotifyPositiveSiteImpression)
 
+	v2 := api.Group("/v2")
+	v2.Get("/", handlers.GetV2Root)
+
+	v2.Get("/playing", handlers.GetCurrentlyPlaying)
+
 	return app
 }

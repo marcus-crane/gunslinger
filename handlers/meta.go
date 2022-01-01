@@ -25,3 +25,10 @@ func GetV1Root(c *fiber.Ctx) error {
 		Data:    "This is the v1 endpoint of the API",
 	})
 }
+
+func GetV2Root(c *fiber.Ctx) error {
+	return c.JSON(models.ResponseHTTP{
+		Success: true,
+		Data:    "This is the v2 endpoint of the API",
+	})
+}

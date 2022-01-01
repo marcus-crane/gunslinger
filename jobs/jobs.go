@@ -5,7 +5,11 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
+
+	"github.com/marcus-crane/gunslinger/models"
 )
+
+var CurrentPlaybackItem models.MediaItem
 
 func SetupInBackground() *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)

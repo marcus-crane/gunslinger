@@ -113,4 +113,49 @@ func GetCurrentlyPlaying() {
 	playerResponse.PercentDone = (progress / duration * 100)
 
 	AudioPlaybackStatus = playerResponse
+
+	playingItem := models.MediaItem{
+		Populated:       true,
+		StartedAt:       playerResponse.Timestamp,
+		IsActive:        playerResponse.CurrentlyPlaying,
+		PercentComplete: playerResponse.PercentDone,
+		Elapsed:         playerResponse.Progress,
+		Duration:        playerResponse.Item.Duration,
+		PreviewURL:      playerResponse.Item.PreviewURL,
+		Title:           playerResponse.Item.Name,
+		TitleLink:       playerResponse.Item.Link.SpotifyURL,
+		Category:        playerResponse.AudioType,
+	}
+
+	if playerResponse.AudioType == "track" {
+		playingItem.Subtitle = playerResponse.Item.Album.Name
+		playingItem.SubtitleLink = playerResponse.Item.Album.Link.SpotifyURL
+
+		var trackImages []models.MediaImage
+		for _, entry := range playerResponse.Item.Album.Images {
+			trackImages = append(trackImages, models.MediaImage{
+				URL:    entry.URL,
+				Height: entry.Height,
+				Width:  entry.Width,
+			})
+		}
+		playingItem.Images = trackImages
+	}
+
+	if playerResponse.AudioType == "episode" {
+		playingItem.Subtitle = playerResponse.Item.Podcast.Name
+		playingItem.SubtitleLink = playerResponse.Item.Podcast.Link.SpotifyURL
+
+		var podcastImages []models.MediaImage
+		for _, entry := range playerResponse.Item.Podcast.Images {
+			podcastImages = append(podcastImages, models.MediaImage{
+				URL:    entry.URL,
+				Height: entry.Height,
+				Width:  entry.Width,
+			})
+		}
+		playingItem.Images = podcastImages
+	}
+
+	CurrentPlaybackItem = playingItem
 }

@@ -16,3 +16,4 @@ server
 # vendor/
 *.db
 .env
+.idea
