@@ -114,6 +114,10 @@ func GetCurrentlyPlaying() {
 
 	AudioPlaybackStatus = playerResponse
 
+	if !AudioPlaybackStatus.CurrentlyPlaying && !CurrentPlaybackItem.IsActive {
+		return // Nothing playing but we want to retain the last playing item
+	}
+
 	playingItem := models.MediaItem{
 		Populated:       true,
 		StartedAt:       playerResponse.Timestamp,
