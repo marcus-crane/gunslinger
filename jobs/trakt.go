@@ -87,6 +87,11 @@ func GetCurrentlyPlayingMedia() {
 		traktResponse.Show.Link = showLink
 	}
 
+	if traktResponse.MediaType == "movie" {
+		movieLink := fmt.Sprintf("https://www.imdb.com/title/%s/", traktResponse.Movie.IDs.IMDB)
+		traktResponse.Movie.Link = movieLink
+	}
+
 	MediaPlaybackStatus = traktResponse
 
 	if MediaPlaybackStatus.StartedAt == "" &&
@@ -195,7 +200,9 @@ func GetCurrentlyPlayingMedia() {
 
 		playingItem.Title = MediaPlaybackStatus.Movie.Title
 		playingItem.TitleLink = MediaPlaybackStatus.Movie.Link
+		playingItem.Subtitle = fmt.Sprintf("%d | %s", MediaPlaybackStatus.Movie.Year, MediaPlaybackStatus.Movie.Certification)
 		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime * 60000
+		playingItem.PreviewURL = MediaPlaybackStatus.Movie.Trailer
 
 		var posterImages []models.MediaImage
 		posterImages = append(posterImages, models.MediaImage{

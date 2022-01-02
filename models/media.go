@@ -18,18 +18,20 @@ type MediaID struct {
 }
 
 type Movie struct {
-	Title    string   `json:"title"`
-	Year     int      `json:"year"`
-	Link     string   `json:"link"`
-	IDs      MediaID  `json:"ids"`
-	Poster   []Image  `json:"movie_posters"`
-	Tagline  string   `json:"tagline"`
-	Overview string   `json:"overview"`
-	Language string   `json:"language"`
-	Country  string   `json:"country"`
-	Runtime  int      `json:"runtime"`
-	Genres   []string `json:"genres"`
-	Rating   string   `json:"certification"`
+	Title         string   `json:"title"`
+	Year          int      `json:"year"`
+	Link          string   `json:"link"`
+	IDs           MediaID  `json:"ids"`
+	Poster        []Image  `json:"movie_posters"`
+	Tagline       string   `json:"tagline"`
+	Overview      string   `json:"overview"`
+	Language      string   `json:"language"`
+	Trailer       string   `json:"trailer"`
+	Country       string   `json:"country"`
+	Runtime       int      `json:"runtime"`
+	Rating        float64  `json:"rating"`
+	Genres        []string `json:"genres"`
+	Certification string   `json:"certification"`
 }
 
 type Show struct {
