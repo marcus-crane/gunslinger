@@ -159,8 +159,8 @@ func GetCurrentlyPlaying() {
 	}
 
 	if playerResponse.AudioType == "track" {
-		playingItem.Subtitle = playerResponse.Item.Album.Name
-		playingItem.SubtitleLink = playerResponse.Item.Album.Link.SpotifyURL
+		playingItem.Subtitle = playerResponse.Item.Album.Artists[0].Name
+		playingItem.SubtitleLink = playerResponse.Item.Album.Artists[0].Link.SpotifyURL
 
 		var trackImages []models.MediaImage
 		for _, entry := range playerResponse.Item.Album.Images {
