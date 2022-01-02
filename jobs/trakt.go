@@ -198,13 +198,11 @@ func GetCurrentlyPlayingMedia() {
 		playingItem.Duration = MediaPlaybackStatus.Movie.Runtime * 60000
 
 		var posterImages []models.MediaImage
-		for _, entry := range MediaPlaybackStatus.Movie.Poster {
-			posterImages = append(posterImages, models.MediaImage{
-				URL:    entry.FilePath,
-				Height: entry.Height,
-				Width:  entry.Width,
-			})
-		}
+		posterImages = append(posterImages, models.MediaImage{
+			URL:    MediaPlaybackStatus.Movie.Poster[0].FilePath,
+			Height: MediaPlaybackStatus.Movie.Poster[0].Height,
+			Width:  MediaPlaybackStatus.Movie.Poster[0].Width,
+		})
 		playingItem.Images = posterImages
 	}
 
