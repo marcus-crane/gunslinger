@@ -40,7 +40,7 @@ type Show struct {
 	Backdrops []Image  `json:"show_backdrops"`
 	Overview  string   `json:"overview"`
 	Runtime   int      `json:"runtime"`
-	Rating    int      `json:"rating"`
+	Rating    float64  `json:"rating"`
 	Country   string   `json:"country"`
 	Network   string   `json:"network"`
 	Language  string   `json:"language"`
