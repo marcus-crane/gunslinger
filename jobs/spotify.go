@@ -129,7 +129,7 @@ func GetCurrentlyPlaying() {
 
 	var category string
 
-	if AudioPlaybackStatus.AudioType == "show" {
+	if AudioPlaybackStatus.AudioType == "episode" {
 		category = "podcast"
 	}
 
