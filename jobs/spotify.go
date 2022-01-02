@@ -114,8 +114,17 @@ func GetCurrentlyPlaying() {
 
 	AudioPlaybackStatus = playerResponse
 
-	if !AudioPlaybackStatus.CurrentlyPlaying && !CurrentPlaybackItem.IsActive {
-		return // Nothing playing but we want to retain the last playing item
+	if !AudioPlaybackStatus.CurrentlyPlaying &&
+		(CurrentPlaybackItem.Category == "music" || CurrentPlaybackItem.Category == "podcast") {
+		CurrentPlaybackItem.IsActive = false
+		CurrentPlaybackProgress.IsActive = false
+		return // Nothing playing but we want to retain the last played track
+	}
+
+	if !AudioPlaybackStatus.CurrentlyPlaying &&
+		!CurrentPlaybackItem.IsActive &&
+		(CurrentPlaybackItem.Category == "tv" || CurrentPlaybackItem.Category == "movie") {
+		return // Plex is playing so no point continuing
 	}
 
 	var category string

@@ -102,6 +102,12 @@ func GetCurrentlyPlayingMedia() {
 		return // Nothing playing but we want to retain the last playing item
 	}
 
+	if MediaPlaybackStatus.StartedAt == "" &&
+		CurrentPlaybackItem.IsActive &&
+		(CurrentPlaybackItem.Category == "music" || CurrentPlaybackItem.Category == "podcast") {
+		return // Spotify is playing so no point continuing
+	}
+
 	var category string
 
 	if traktResponse.MediaType == "movie" {
