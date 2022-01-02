@@ -110,12 +110,22 @@ func GetCurrentlyPlaying() {
 	progress := float64(playerResponse.Progress)
 	duration := float64(playerResponse.Item.Duration)
 
-	playerResponse.PercentDone = (progress / duration * 100)
+	playerResponse.PercentDone = progress / duration * 100
 
 	AudioPlaybackStatus = playerResponse
 
 	if !AudioPlaybackStatus.CurrentlyPlaying && !CurrentPlaybackItem.IsActive {
 		return // Nothing playing but we want to retain the last playing item
+	}
+
+	var category string
+
+	if AudioPlaybackStatus.AudioType == "show" {
+		category = "podcast"
+	}
+
+	if AudioPlaybackStatus.AudioType == "track" {
+		category = "music"
 	}
 
 	playingItem := models.MediaItem{
@@ -128,7 +138,7 @@ func GetCurrentlyPlaying() {
 		PreviewURL:      playerResponse.Item.PreviewURL,
 		Title:           playerResponse.Item.Name,
 		TitleLink:       playerResponse.Item.Link.SpotifyURL,
-		Category:        playerResponse.AudioType,
+		Category:        category,
 	}
 
 	CurrentPlaybackProgress = models.MediaProgress{
