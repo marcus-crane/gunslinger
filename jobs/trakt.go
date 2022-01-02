@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/marcus-crane/gunslinger/models"
+	"log"
 	"os"
 	"time"
 )
@@ -122,9 +123,10 @@ func GetCurrentlyPlayingMedia() {
 	// 2022-01-01T22:53:59.000Z
 	startedAt, err := time.Parse("2006-01-02T15:04:05.000Z", MediaPlaybackStatus.StartedAt)
 	if err != nil {
-		playingItem.StartedAt = float64(startedAt.UnixMilli())
-		playbackProgress.StartedAt = float64(startedAt.UnixMilli())
+		log.Printf("Failed to parse trakt timestamp %s", MediaPlaybackStatus.StartedAt)
 	}
+	playingItem.StartedAt = float64(startedAt.UnixMilli())
+	playbackProgress.StartedAt = float64(startedAt.UnixMilli())
 
 	var (
 		backdrops models.Backdrops
@@ -174,6 +176,7 @@ func GetCurrentlyPlayingMedia() {
 		playingItem.Subtitle = MediaPlaybackStatus.Show.Title
 		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
 		playingItem.Duration = MediaPlaybackStatus.Episode.Runtime * 60000
+		playingItem.PreviewURL = MediaPlaybackStatus.Show.Trailer
 
 		playbackProgress.Duration = MediaPlaybackStatus.Episode.Runtime * 60000
 

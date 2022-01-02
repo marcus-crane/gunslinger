@@ -43,6 +43,7 @@ type Show struct {
 	Overview  string   `json:"overview"`
 	Runtime   int      `json:"runtime"`
 	Rating    float64  `json:"rating"`
+	Trailer   string   `json:"trailer"`
 	Country   string   `json:"country"`
 	Network   string   `json:"network"`
 	Language  string   `json:"language"`
