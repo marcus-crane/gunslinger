@@ -97,7 +97,6 @@ func GetCurrentlyPlaying() {
 	}
 
 	if code != 200 {
-		AudioPlaybackStatus = models.Audio{}
 		return // A song isn't currently playing
 	}
 
