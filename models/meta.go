@@ -18,7 +18,6 @@ type MediaItem struct {
 	PercentComplete float64      `json:"percent_complete"`
 	PreviewURL      string       `json:"preview_url"`
 	Images          []MediaImage `json:"images"`
-	Populated       bool         `json:"populated"`
 }
 
 type MediaImage struct {

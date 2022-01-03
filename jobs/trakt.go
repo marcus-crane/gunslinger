@@ -103,9 +103,8 @@ func GetCurrentlyPlayingMedia() {
 	}
 
 	if MediaPlaybackStatus.StartedAt == "" &&
-		CurrentPlaybackItem.IsActive &&
 		(CurrentPlaybackItem.Category == "music" || CurrentPlaybackItem.Category == "podcast") {
-		return // Spotify is playing so no point continuing
+		return // Spotify is/was last active + trakt is not so no point continuing
 	}
 
 	var category string
