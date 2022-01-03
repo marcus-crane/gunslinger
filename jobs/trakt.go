@@ -176,7 +176,14 @@ func GetCurrentlyPlayingMedia() {
 		}
 		MediaPlaybackStatus.Episode.EpisodeStills = buildAbsoluteImageLink(stills.Stills)
 
-		playingItem.Title = MediaPlaybackStatus.Episode.Title
+		mergedTitle := fmt.Sprintf(
+			"%02dx%02d %s",
+			traktResponse.Episode.SeasonNumber,
+			traktResponse.Episode.EpisodeNumber,
+			traktResponse.Episode.Title,
+		)
+
+		playingItem.Title = mergedTitle
 		playingItem.TitleLink = MediaPlaybackStatus.Episode.Link
 		playingItem.Subtitle = MediaPlaybackStatus.Show.Title
 		playingItem.SubtitleLink = MediaPlaybackStatus.Show.Link
