@@ -118,7 +118,6 @@ func GetCurrentlyPlayingMedia() {
 	}
 
 	playingItem := models.MediaItem{
-		Populated: true,
 		IsActive:  true,
 		Category:  category,
 	}
