@@ -121,9 +121,8 @@ func GetCurrentlyPlaying() {
 	}
 
 	if !AudioPlaybackStatus.CurrentlyPlaying &&
-		!CurrentPlaybackItem.IsActive &&
 		(CurrentPlaybackItem.Category == "tv" || CurrentPlaybackItem.Category == "movie") {
-		return // Plex is playing so no point continuing
+		return // Plex is/was last active + trakt is not so no point continuing
 	}
 
 	var category string
@@ -137,7 +136,6 @@ func GetCurrentlyPlaying() {
 	}
 
 	playingItem := models.MediaItem{
-		Populated:       true,
 		StartedAt:       playerResponse.Timestamp,
 		IsActive:        playerResponse.CurrentlyPlaying,
 		PercentComplete: playerResponse.PercentDone,
