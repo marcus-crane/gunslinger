@@ -3,10 +3,10 @@ package jobs
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gregdel/pushover"
+	"log"
+	"os"
 
 	"github.com/marcus-crane/gunslinger/models"
 )
@@ -17,9 +17,10 @@ var (
 )
 
 const (
-	RefreshEndpoint = "https://accounts.spotify.com/api/token"
-	PlayerEndpoint  = "https://api.spotify.com/v1/me/player/currently-playing?market=NZ&additional_types=episode"
-	UserAgent       = "Now Playing/1.0 (utf9k.net)"
+	SlackStatusEndpoint = "https://slack.com/api/users.profile.set"
+	RefreshEndpoint     = "https://accounts.spotify.com/api/token"
+	PlayerEndpoint      = "https://api.spotify.com/v1/me/player/currently-playing?market=NZ&additional_types=episode"
+	UserAgent           = "Now Playing/1.0 (utf9k.net)"
 )
 
 func RefreshAccessToken() {
@@ -58,6 +59,8 @@ func RefreshAccessToken() {
 }
 
 func GetCurrentlyPlaying() {
+
+	slackToken := os.Getenv("SLACK_TOKEN")
 
 	if currentToken.AccessToken == "" {
 		fmt.Println("No access token retrieved yet. Skipping out on getting currently playing songs.")
@@ -112,6 +115,25 @@ func GetCurrentlyPlaying() {
 	playerResponse.PercentDone = progress / duration * 100
 
 	AudioPlaybackStatus = playerResponse
+
+	if !AudioPlaybackStatus.CurrentlyPlaying && CurrentPlaybackItem.IsActive {
+		// We are transitioning into stopped music state so stub out Slack status
+		status := fiber.Map{
+			"profile": fiber.Map{
+				"status_text":  "",
+				"status_emoji": "",
+			},
+		}
+		slackA := fiber.Post(SlackStatusEndpoint).
+			JSON(status).
+			UserAgent(UserAgent).
+			Add("Authorization", fmt.Sprintf("Bearer %s", slackToken)).
+			Add("Content-Type", "application/json; charset=utf-8")
+
+		_, body, errs := slackA.Bytes()
+		log.Print(errs)
+		log.Print(string(body))
+	}
 
 	if !AudioPlaybackStatus.CurrentlyPlaying &&
 		(CurrentPlaybackItem.Category == "music" || CurrentPlaybackItem.Category == "podcast") {
@@ -183,6 +205,24 @@ func GetCurrentlyPlaying() {
 			})
 		}
 		playingItem.Images = podcastImages
+	}
+
+	if playingItem.Title != CurrentPlaybackItem.Title || CurrentPlaybackItem.IsActive == false {
+		status := fiber.Map{
+			"profile": fiber.Map{
+				"status_text":  fmt.Sprintf("Listening to %s by %s", playingItem.Title, playingItem.Subtitle),
+				"status_emoji": ":spotify-new:",
+			},
+		}
+		slackA := fiber.Post(SlackStatusEndpoint).
+			JSON(status).
+			UserAgent(UserAgent).
+			Add("Authorization", fmt.Sprintf("Bearer %s", slackToken)).
+			Add("Content-Type", "application/json; charset=utf-8")
+
+		_, body, errs := slackA.Bytes()
+		log.Print(errs)
+		log.Print(string(body))
 	}
 
 	CurrentPlaybackItem = playingItem

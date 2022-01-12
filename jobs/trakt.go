@@ -118,8 +118,8 @@ func GetCurrentlyPlayingMedia() {
 	}
 
 	playingItem := models.MediaItem{
-		IsActive:  true,
-		Category:  category,
+		IsActive: true,
+		Category: category,
 	}
 
 	var playbackProgress models.MediaProgress

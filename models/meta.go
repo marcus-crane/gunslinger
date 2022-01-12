@@ -33,3 +33,9 @@ type MediaProgress struct {
 	Duration        int     `json:"duration_ms"`
 	PercentComplete float64 `json:"percent_complete"`
 }
+
+type SlackProfile struct {
+	StatusText       string  `json:"status_text"`
+	StatusEmoji      string  `json:"status_emoji"`
+	StatusExpiration float64 `json:"status_expiration"`
+}
