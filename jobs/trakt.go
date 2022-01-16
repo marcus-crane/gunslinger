@@ -193,9 +193,9 @@ func GetCurrentlyPlayingMedia() {
 
 		var showImages []models.MediaImage
 		showImages = append(showImages, models.MediaImage{
-			URL:    MediaPlaybackStatus.Show.Backdrops[0].FilePath,
-			Height: MediaPlaybackStatus.Show.Backdrops[0].Height,
-			Width:  MediaPlaybackStatus.Show.Backdrops[0].Width,
+			URL:    MediaPlaybackStatus.Episode.EpisodeStills[0].FilePath,
+			Height: MediaPlaybackStatus.Episode.EpisodeStills[0].Height,
+			Width:  MediaPlaybackStatus.Episode.EpisodeStills[0].Width,
 		})
 		playingItem.Images = showImages
 	}
