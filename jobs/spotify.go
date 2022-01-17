@@ -220,9 +220,9 @@ func GetCurrentlyPlaying() {
 			Add("Authorization", fmt.Sprintf("Bearer %s", slackToken)).
 			Add("Content-Type", "application/json; charset=utf-8")
 
-		_, body, errs := slackA.Bytes()
-		log.Print(errs)
-		log.Print(string(body))
+		//_, body, errs := slackA.Bytes()
+		//log.Print(errs)
+		//log.Print(string(body))
 	}
 
 	CurrentPlaybackItem = playingItem
