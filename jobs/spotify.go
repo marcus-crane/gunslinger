@@ -214,7 +214,7 @@ func GetCurrentlyPlaying() {
 				"status_emoji": ":spotify-new:",
 			},
 		}
-		slackA := fiber.Post(SlackStatusEndpoint).
+		_ := fiber.Post(SlackStatusEndpoint).
 			JSON(status).
 			UserAgent(UserAgent).
 			Add("Authorization", fmt.Sprintf("Bearer %s", slackToken)).
