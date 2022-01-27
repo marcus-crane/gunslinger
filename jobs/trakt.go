@@ -192,11 +192,19 @@ func GetCurrentlyPlayingMedia() {
 		playbackProgress.Duration = MediaPlaybackStatus.Episode.Runtime * 60000
 
 		var showImages []models.MediaImage
-		showImages = append(showImages, models.MediaImage{
-			URL:    MediaPlaybackStatus.Episode.EpisodeStills[0].FilePath,
-			Height: MediaPlaybackStatus.Episode.EpisodeStills[0].Height,
-			Width:  MediaPlaybackStatus.Episode.EpisodeStills[0].Width,
-		})
+		if len(MediaPlaybackStatus.Episode.EpisodeStills) > 0 {
+			showImages = append(showImages, models.MediaImage{
+				URL:    MediaPlaybackStatus.Episode.EpisodeStills[0].FilePath,
+				Height: MediaPlaybackStatus.Episode.EpisodeStills[0].Height,
+				Width:  MediaPlaybackStatus.Episode.EpisodeStills[0].Width,
+			})
+		} else {
+			showImages = append(showImages, models.MediaImage{
+				URL:    MediaPlaybackStatus.Show.Backdrops[0].FilePath,
+				Height: MediaPlaybackStatus.Show.Backdrops[0].Height,
+				Width:  MediaPlaybackStatus.Show.Backdrops[0].Width,
+			})
+		}
 		playingItem.Images = showImages
 	}
 
