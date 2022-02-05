@@ -17,6 +17,7 @@ type MediaItem struct {
 	Duration        int          `json:"duration_ms"`
 	PercentComplete float64      `json:"percent_complete"`
 	PreviewURL      string       `json:"preview_url"`
+	Image           string       `json:"image"`
 	Images          []MediaImage `json:"images"`
 }
 

@@ -10,6 +10,10 @@ func GetCurrentlyPlaying(c *fiber.Ctx) error {
 	return c.JSON(jobs.CurrentPlaybackItem)
 }
 
+func GetCurrentlyPlayingV3(c *fiber.Ctx) error {
+	return c.JSON(jobs.CurrentPlaybackItemV3)
+}
+
 func GetCurrentProgress(c *fiber.Ctx) error {
 	return c.JSON(jobs.CurrentPlaybackProgress)
 }
