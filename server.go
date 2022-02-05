@@ -81,7 +81,7 @@ func main() {
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "https://utf9k.net, http://localhost:1313",
+		AllowOrigins: "https://utf9k.net, https://deploy-preview-122--utf9k.netlify.app, http://localhost:1313",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
