@@ -92,6 +92,10 @@ func GetCurrentlyPlayingPlex() {
 		Image:    getImageBase64(mediaItem.Thumb),
 	}
 
+	if mediaItem.Player.State == "playing" {
+		playingItem.IsActive = true
+	}
+
 	if mediaItem.Type == "movie" {
 		playingItem.Subtitle = mediaItem.Director[0].Name
 	} else {

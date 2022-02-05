@@ -18,8 +18,13 @@ type Metadata struct {
 	Type             string     `json:"type"`
 	ViewOffset       string     `json:"viewOffset"`
 	Director         []Director `json:"Director"`
+	Player           Player     `json:"Player"`
 }
 
 type Director struct {
 	Name string `json:"tag"`
+}
+
+type Player struct {
+	State string `json:"state"`
 }
