@@ -68,6 +68,10 @@ func GetCurrentlyPlayingPlex() {
 		fmt.Println("Error fetching Plex data: ", err)
 	}
 
+	if len(plexResponse.MediaContainer.Metadata) == 0 {
+		return
+	}
+
 	mediaItem := plexResponse.MediaContainer.Metadata[0]
 
 	duration, err := strconv.Atoi(mediaItem.Duration)
