@@ -103,6 +103,4 @@ func GetCurrentlyPlayingPlex() {
 	}
 
 	CurrentPlaybackItemV3 = playingItem
-
-	return
 }
