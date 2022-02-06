@@ -72,7 +72,22 @@ func GetCurrentlyPlayingPlex() {
 		return
 	}
 
-	mediaItem := plexResponse.MediaContainer.Metadata[0]
+	index := 0
+
+	if len(plexResponse.MediaContainer.Metadata) > 1 {
+		containsPlayingItem := false
+		for idx, entry := range plexResponse.MediaContainer.Metadata {
+			if entry.Player.State == "playing" {
+				containsPlayingItem = true
+				index = idx
+			}
+		}
+		if !containsPlayingItem {
+			return
+		}
+	}
+
+	mediaItem := plexResponse.MediaContainer.Metadata[index]
 
 	duration, err := strconv.Atoi(mediaItem.Duration)
 	if err != nil {
