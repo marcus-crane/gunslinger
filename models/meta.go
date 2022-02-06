@@ -12,6 +12,7 @@ type MediaItem struct {
 	IsActive bool   `json:"is_active"`
 	Elapsed  int    `json:"elapsed_ms"`
 	Duration int    `json:"duration_ms"`
+	Source   string `json:"source"`
 	Image    string `json:"image"`
 }
 

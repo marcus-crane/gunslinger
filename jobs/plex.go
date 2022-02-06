@@ -75,17 +75,26 @@ func GetCurrentlyPlayingPlex() {
 
 	index := 0
 
-	if len(plexResponse.MediaContainer.Metadata) > 1 {
-		containsPlayingItem := false
-		for idx, entry := range plexResponse.MediaContainer.Metadata {
-			if entry.Player.State == "playing" {
-				containsPlayingItem = true
-				index = idx
-			}
+	containsPlayingItem := false
+	for idx, entry := range plexResponse.MediaContainer.Metadata {
+		if entry.Player.State == "playing" {
+			containsPlayingItem = true
+			// We may have multiple items in our queue at once
+			// For example, a paused song while watching a TV show
+			// so we need to figure out which item (if any) is the one
+			// to surface
+			index = idx
 		}
-		if !containsPlayingItem {
-			return
+	}
+	if !containsPlayingItem {
+		// We may have removed the item entirely from the play queue so it won't
+		// be in the API but we know if the source is Plex and nothing in Plex
+		// is playing (it would be in the API if it were) then it's safe to
+		// mark it as inactive
+		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "plex" {
+			CurrentPlaybackItem.IsActive = false
 		}
+		return
 	}
 
 	mediaItem := plexResponse.MediaContainer.Metadata[index]
@@ -105,7 +114,9 @@ func GetCurrentlyPlayingPlex() {
 		Category: mediaItem.Type,
 		Elapsed:  elapsed,
 		Duration: duration,
-		Image:    getImageBase64(mediaItem.Thumb),
+		Source:   "plex",
+		// TODO: Make use of the transcode endpoint or pull the thumbnail onto disc for caching
+		Image: getImageBase64(mediaItem.Thumb),
 	}
 
 	if mediaItem.Player.State == "playing" {
