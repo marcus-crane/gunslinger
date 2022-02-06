@@ -10,18 +10,13 @@ import (
 )
 
 var (
-	CurrentPlaybackItem     models.MediaItem
-	CurrentPlaybackItemV3   models.MediaItem
-	CurrentPlaybackProgress models.MediaProgress
+	CurrentPlaybackItem models.MediaItem
 )
 
 func SetupInBackground() *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
-	s.Every(3601).Seconds().Do(RefreshAccessToken)
-	s.Every(3).Seconds().Do(GetCurrentlyPlaying)
-	s.Every(10).Seconds().Do(GetCurrentlyPlayingMedia)
-	s.Every(3).Seconds().Do(GetCurrentlyPlayingPlex)
+	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex)
 	s.Every(30).Seconds().Do(GetPlaystationPresence)
 
 	log.Print("Jobs scheduled. Scheduler not running yet.")

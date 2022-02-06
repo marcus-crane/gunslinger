@@ -13,6 +13,7 @@ import (
 
 const (
 	plexSessionEndpoint = "/status/sessions"
+	UserAgent           = "Gunslinger/1.0 (gunslinger@utf9k.net)"
 )
 
 func buildPlexURL(endpoint string) string {
@@ -117,5 +118,5 @@ func GetCurrentlyPlayingPlex() {
 		playingItem.Subtitle = mediaItem.GrandparentTitle
 	}
 
-	CurrentPlaybackItemV3 = playingItem
+	CurrentPlaybackItem = playingItem
 }

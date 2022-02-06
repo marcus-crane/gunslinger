@@ -6,33 +6,13 @@ type ResponseHTTP struct {
 }
 
 type MediaItem struct {
-	Title           string       `json:"title"`
-	TitleLink       string       `json:"title_link"`
-	Subtitle        string       `json:"subtitle"`
-	SubtitleLink    string       `json:"subtitle_link"`
-	Category        string       `json:"category"`
-	StartedAt       float64      `json:"started_at"`
-	IsActive        bool         `json:"is_active"`
-	Elapsed         int          `json:"elapsed_ms"`
-	Duration        int          `json:"duration_ms"`
-	PercentComplete float64      `json:"percent_complete"`
-	PreviewURL      string       `json:"preview_url"`
-	Image           string       `json:"image"`
-	Images          []MediaImage `json:"images"`
-}
-
-type MediaImage struct {
-	URL    string `json:"url"`
-	Height int    `json:"height"`
-	Width  int    `json:"width"`
-}
-
-type MediaProgress struct {
-	StartedAt       float64 `json:"started_at"`
-	IsActive        bool    `json:"is_active"`
-	Elapsed         int     `json:"elapsed_ms"`
-	Duration        int     `json:"duration_ms"`
-	PercentComplete float64 `json:"percent_complete"`
+	Title    string `json:"title"`
+	Subtitle string `json:"subtitle"`
+	Category string `json:"category"`
+	IsActive bool   `json:"is_active"`
+	Elapsed  int    `json:"elapsed_ms"`
+	Duration int    `json:"duration_ms"`
+	Image    string `json:"image"`
 }
 
 type SlackProfile struct {

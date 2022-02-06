@@ -40,8 +40,8 @@ func GetPlaystationPresence() {
 	}
 
 	if len(presence.GameTitleInfoList) == 0 {
-		if CurrentPlaybackItemV3.Category == "gaming" {
-			CurrentPlaybackItemV3.IsActive = false
+		if CurrentPlaybackItem.Category == "gaming" {
+			CurrentPlaybackItem.IsActive = false
 		}
 		return
 	}
@@ -54,5 +54,5 @@ func GetPlaystationPresence() {
 		IsActive: true,
 	}
 
-	CurrentPlaybackItemV3 = playingItem
+	CurrentPlaybackItem = playingItem
 }
