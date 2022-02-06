@@ -48,7 +48,7 @@ func GetPlaystationPresence() {
 
   playingItem := models.MediaItem{
     Title:    presence.GameTitleInfoList[0].Name,
-    Subtitle: presence.GameTitleInfoList[0].Platform,
+    Subtitle: presence.PrimaryPlatformInfo.Platform,
     Category: "gaming",
     Image:    presence.GameTitleInfoList[0].TitleImage,
     IsActive: true,
