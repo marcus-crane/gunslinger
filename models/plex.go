@@ -14,6 +14,8 @@ type Metadata struct {
 	Duration         string     `json:"duration"`
 	GrandparentTitle string     `json:"grandparentTitle"`
 	Thumb            string     `json:"thumb"`
+	Index            string     `json:"index"`
+	ParentIndex      string     `json:"parentIndex"`
 	Title            string     `json:"title"`
 	Type             string     `json:"type"`
 	ViewOffset       string     `json:"viewOffset"`

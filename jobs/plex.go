@@ -123,6 +123,23 @@ func GetCurrentlyPlayingPlex() {
 		playingItem.IsActive = true
 	}
 
+	if mediaItem.Type == "episode" {
+		seasonNumber, err := strconv.Atoi(mediaItem.ParentIndex)
+		if err != nil {
+			panic(err)
+		}
+		episodeNumber, err := strconv.Atoi(mediaItem.Index)
+		if err != nil {
+			panic(err)
+		}
+		playingItem.Title = fmt.Sprintf(
+			"%02dx%02d %s",
+			seasonNumber,
+			episodeNumber,
+			mediaItem.Title,
+		)
+	}
+
 	if mediaItem.Type == "movie" {
 		playingItem.Subtitle = mediaItem.Director[0].Name
 	} else {
