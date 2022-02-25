@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/marcus-crane/gunslinger/models"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -60,6 +61,7 @@ func GetCurrentlyPlayingPlex() {
 	_, body, errs := sessionA.Bytes()
 
 	if len(errs) != 0 {
+		log.Error(errs)
 		panic(errs)
 	}
 
@@ -67,10 +69,6 @@ func GetCurrentlyPlayingPlex() {
 
 	if err != nil {
 		fmt.Println("Error fetching Plex data: ", err)
-	}
-
-	if len(plexResponse.MediaContainer.Metadata) == 0 {
-		return
 	}
 
 	index := 0
@@ -109,6 +107,14 @@ func GetCurrentlyPlayingPlex() {
 		panic(err)
 	}
 
+	thumbnail := mediaItem.Thumb
+
+	// Tracks generally don't have a unique cover so we should use the album cover instead
+	// This should hold true even for singles though
+	if mediaItem.Type == "track" {
+		thumbnail = mediaItem.ParentThumb
+	}
+
 	playingItem := models.MediaItem{
 		Title:    mediaItem.Title,
 		Category: mediaItem.Type,
@@ -116,7 +122,7 @@ func GetCurrentlyPlayingPlex() {
 		Duration: duration,
 		Source:   "plex",
 		// TODO: Make use of the transcode endpoint or pull the thumbnail onto disc for caching
-		Image: getImageBase64(mediaItem.Thumb),
+		Image: getImageBase64(thumbnail),
 	}
 
 	if mediaItem.Player.State == "playing" {
