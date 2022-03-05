@@ -74,14 +74,16 @@ func GetCurrentlyPlayingPlex() {
 	index := 0
 
 	containsPlayingItem := false
-	for idx, entry := range plexResponse.MediaContainer.Metadata {
-		if entry.Player.State == "playing" {
-			containsPlayingItem = true
-			// We may have multiple items in our queue at once
-			// For example, a paused song while watching a TV show
-			// so we need to figure out which item (if any) is the one
-			// to surface
-			index = idx
+	if plexResponse.MediaContainer.Size > 0 {
+		for idx, entry := range plexResponse.MediaContainer.Metadata {
+			if entry.Player.State == "playing" {
+				containsPlayingItem = true
+				// We may have multiple items in our queue at once
+				// For example, a paused song while watching a TV show
+				// so we need to figure out which item (if any) is the one
+				// to surface
+				index = idx
+			}
 		}
 	}
 	if !containsPlayingItem {
