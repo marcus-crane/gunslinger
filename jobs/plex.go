@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/marcus-crane/gunslinger/models"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -61,7 +60,6 @@ func GetCurrentlyPlayingPlex() {
 	_, body, errs := sessionA.Bytes()
 
 	if len(errs) != 0 {
-		log.Error(errs)
 		panic(errs)
 	}
 
