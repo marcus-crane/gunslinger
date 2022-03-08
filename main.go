@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/routes"
 )
@@ -25,6 +26,8 @@ func main() {
 	} else {
 		fmt.Println("Background jobs are disabled.")
 	}
+
+	events.Init()
 
 	router := routes.Register(http.NewServeMux())
 
