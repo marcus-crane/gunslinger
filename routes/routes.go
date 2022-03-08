@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rs/cors"
+
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 )
@@ -15,7 +17,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func Register(mux *http.ServeMux) *http.ServeMux {
+func Register(mux *http.ServeMux) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -51,5 +53,13 @@ func Register(mux *http.ServeMux) *http.ServeMux {
 	// v1.Post("/videogames", handlers.UpdateGameInFocus)
 	// v1.Delete("/videogames", handlers.ClearGameInFocus)
 
-	return mux
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:8080"},
+		AllowedMethods: []string{"GET"},
+		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
+	})
+
+	handler := c.Handler(mux)
+
+	return handler
 }
