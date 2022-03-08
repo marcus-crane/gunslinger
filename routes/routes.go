@@ -54,7 +54,7 @@ func Register(mux *http.ServeMux) http.Handler {
 	// v1.Delete("/videogames", handlers.ClearGameInFocus)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:8080"},
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:8080", "https://deploy-preview-128--utf9k.netlify.app"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
