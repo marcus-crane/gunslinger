@@ -51,23 +51,11 @@ func main() {
 
 	engine := html.New("./views", ".html")
 
-	if os.Getenv("DEBUG") == "true" {
-		engine.Debug(true)
-		log.Print("Running fiber in debug mode")
-	}
-
-	if developerMode {
-		engine.Reload(true)
-		log.Print("Running fiber in development mode")
-	}
-
 	app := fiber.New(fiber.Config{
 		Views:        engine,
 		ServerHeader: "Gunslinger/1.0",
 		IdleTimeout:  idleTimeout,
 	})
-
-	app.Static("/", "./static")
 
 	app.Use(func(c *fiber.Ctx) error {
 		if c.Protocol() == "http" && !developerMode {
@@ -81,7 +69,7 @@ func main() {
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "https://utf9k.net, https://deploy-preview-122--utf9k.netlify.app, http://localhost:1313",
+		AllowOrigins: "https://utf9k.net, http://localhost:1313",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 

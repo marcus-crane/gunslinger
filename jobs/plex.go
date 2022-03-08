@@ -4,11 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/marcus-crane/gunslinger/models"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 const (

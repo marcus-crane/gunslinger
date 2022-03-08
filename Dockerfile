@@ -9,7 +9,6 @@ COPY --from=builder /go/src/app/app /goapp/app
 WORKDIR /goapp
 COPY . /throwaway
 RUN cp -r /throwaway/views ./views || echo "No views to copy"
-RUN cp -r /throwaway/static ./static || echo "No static files to copy"
 RUN rm -rf /throwaway
 RUN apk --no-cache add ca-certificates
 ENV PORT=8080
