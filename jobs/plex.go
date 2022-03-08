@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,9 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/r3labs/sse/v2"
+
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 )
 
@@ -171,6 +175,10 @@ func GetCurrentlyPlayingPlex() {
 	} else {
 		playingItem.Subtitle = mediaItem.GrandparentTitle
 	}
+
+	byteStream := new(bytes.Buffer)
+	json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
+	events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 
 	CurrentPlaybackItem = playingItem
 }

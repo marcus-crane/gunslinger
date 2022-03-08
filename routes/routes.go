@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 )
 
@@ -15,6 +16,8 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 }
 
 func Register(mux *http.ServeMux) *http.ServeMux {
+
+	events.Server.CreateStream("playback")
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -41,6 +44,8 @@ func Register(mux *http.ServeMux) *http.ServeMux {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jobs.CurrentPlaybackItem)
 	})
+
+	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
 	// v1.Get("/videogames", handlers.GetGameInFocus)
 	// v1.Post("/videogames", handlers.UpdateGameInFocus)
