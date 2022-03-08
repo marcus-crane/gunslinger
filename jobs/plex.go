@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 
 	"github.com/r3labs/sse/v2"
@@ -115,6 +116,12 @@ func GetCurrentlyPlayingPlex() {
 		// mark it as inactive
 		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "plex" {
 			CurrentPlaybackItem.IsActive = false
+			// reflect.DeepEqual is good enough for our purposes even though
+			// it doesn't do things like properly copmare timestamp metadata.
+			// For just checking if we should emit a message, it's good enough
+			byteStream := new(bytes.Buffer)
+			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
+			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		}
 		return
 	}
@@ -176,9 +183,14 @@ func GetCurrentlyPlayingPlex() {
 		playingItem.Subtitle = mediaItem.GrandparentTitle
 	}
 
-	byteStream := new(bytes.Buffer)
-	json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
-	events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+	// reflect.DeepEqual is good enough for our purposes even though
+	// it doesn't do things like properly copmare timestamp metadata.
+	// For just checking if we should emit a message, it's good enough
+	if !reflect.DeepEqual(CurrentPlaybackItem, playingItem) {
+		byteStream := new(bytes.Buffer)
+		json.NewEncoder(byteStream).Encode(playingItem)
+		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+	}
 
 	CurrentPlaybackItem = playingItem
 }
