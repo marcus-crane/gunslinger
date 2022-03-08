@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -63,7 +62,6 @@ func getImageBase64(thumbnailURL string) string {
 }
 
 func GetCurrentlyPlayingPlex() {
-	log.Print("Hello")
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	var client http.Client
 	req, err := http.NewRequest("GET", sessionURL, nil)
