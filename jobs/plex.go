@@ -4,12 +4,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
-	
 	"github.com/marcus-crane/gunslinger/models"
 )
 
@@ -26,12 +26,24 @@ func buildPlexURL(endpoint string) string {
 
 func getImageBase64(thumbnailURL string) string {
 	imageUrl := buildPlexURL(thumbnailURL)
-	imageA := fiber.Get(imageUrl).
-		UserAgent(UserAgent)
-	_, body, errs := imageA.Bytes()
 
-	if len(errs) != 0 {
-		panic(errs)
+	var client http.Client
+	req, err := http.NewRequest("GET", imageUrl, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header = http.Header{
+		"User-Agent": []string{UserAgent},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
 	}
 
 	var base64Encoding string
@@ -51,23 +63,31 @@ func getImageBase64(thumbnailURL string) string {
 }
 
 func GetCurrentlyPlayingPlex() {
+	log.Print("Hello")
 	sessionURL := buildPlexURL(plexSessionEndpoint)
-	sessionA := fiber.Get(sessionURL).
-		UserAgent(UserAgent).
-		Add("Accept", "application/json").
-		Add("Content-Type", "application/json")
+	var client http.Client
+	req, err := http.NewRequest("GET", sessionURL, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header = http.Header{
+		"Accept":       []string{"application/json"},
+		"Content-Type": []string{"application/json"},
+		"User-Agent":   []string{UserAgent},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
 
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
 	var plexResponse models.PlexResponse
 
-	_, body, errs := sessionA.Bytes()
-
-	if len(errs) != 0 {
-		panic(errs)
-	}
-
-	err := json.Unmarshal(body, &plexResponse)
-
-	if err != nil {
+	if err = json.Unmarshal(body, &plexResponse); err != nil {
 		fmt.Println("Error fetching Plex data: ", err)
 	}
 

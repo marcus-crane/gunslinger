@@ -5,11 +5,10 @@ import (
 
 	"github.com/marcus-crane/gunslinger/handlers"
 	"github.com/marcus-crane/gunslinger/jobs"
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 func Register(app *fiber.App) *fiber.App {
-	app.Get("/", handlers.GetIndex)
-
 	api := app.Group("/api")
 	api.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(models.ResponseHTTP{
@@ -29,10 +28,9 @@ func Register(app *fiber.App) *fiber.App {
 	v1.Get("/videogames", handlers.GetGameInFocus)
 	v1.Post("/videogames", handlers.UpdateGameInFocus)
 	v1.Delete("/videogames", handlers.ClearGameInFocus)
-	v1.Post("/thanks", handlers.NotifyPositiveSiteImpression)
 
 	v2 := api.Group("/v2")
-	v2.Get("/", (c *fiber.Ctx) error {
+	v2.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(models.ResponseHTTP{
 			Success: true,
 			Data:    "This is the v2 endpoint of the API. There are no v2 endpoints at present.",
@@ -40,7 +38,7 @@ func Register(app *fiber.App) *fiber.App {
 	})
 
 	v3 := api.Group("/v3")
-	v3.Get("/", (c *fiber.Ctx) error {
+	v3.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(models.ResponseHTTP{
 			Success: true,
 			Data:    "This is the v3 endpoint of the API",
