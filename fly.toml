@@ -7,8 +7,6 @@ kill_timeout = 5
 
 [env]
   BACKGROUND_JOBS_ENABLED = true
-  DEBUG = false
-  # DEVELOPMENT = false Absence of this means production (will be using a better model in future) ((clearly this is a lie))
   LOG_LEVEL = "INFO"
 
 [experimental]
