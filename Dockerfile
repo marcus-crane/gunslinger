@@ -1,18 +1,25 @@
 FROM golang:1.17 AS builder
-WORKDIR /go/src/app
+WORKDIR /app
 COPY . .
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o app
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o gunslinger
+
+FROM alpine:latest as tailscale
+WORKDIR /app
+COPY . ./
+ENV TSFILE=tailscale_1.22.2_amd64.tgz
+RUN wget https://pkgs.tailscale.com/stable/${TSFILE} && tar xzf ${TSFILE} --strip-components=1
+COPY . ./
 
 FROM alpine:latest
-COPY --from=builder /go/src/app/app /goapp/app
-WORKDIR /goapp
-COPY . /throwaway
-RUN cp -r /throwaway/views ./views || echo "No views to copy"
-RUN cp -r /throwaway/static ./static || echo "No static files to copy"
-RUN rm -rf /throwaway
-RUN apk --no-cache add ca-certificates
-ENV PORT=8080
-EXPOSE 8080
+RUN apk update && apk add ca-certificates iptables ip6tables && rm -rf /var/cache/apk/*
 
-CMD ["/goapp/app"]
+# Copy binary to production image
+COPY --from=builder /app/gunslinger /app/gunslinger
+COPY --from=builder /app/start.sh /app/start.sh
+COPY --from=tailscale /app/tailscaled /app/tailscaled
+COPY --from=tailscale /app/tailscale /app/tailscale
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+
+# Run on container startup.
+CMD ["/app/start.sh"]
