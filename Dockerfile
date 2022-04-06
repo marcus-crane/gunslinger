@@ -21,5 +21,8 @@ COPY --from=tailscale /app/tailscaled /app/tailscaled
 COPY --from=tailscale /app/tailscale /app/tailscale
 RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
 
+ENV PORT=8080
+EXPOSE 8080
+
 # Run on container startup.
 CMD ["/app/start.sh"]
