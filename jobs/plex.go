@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strconv"
 
 	"github.com/r3labs/sse/v2"
 
@@ -127,17 +126,6 @@ func GetCurrentlyPlayingPlex() {
 	}
 
 	mediaItem := plexResponse.MediaContainer.Metadata[index]
-
-	duration, err := strconv.Atoi(mediaItem.Duration)
-	if err != nil {
-		panic(err)
-	}
-
-	elapsed, err := strconv.Atoi(mediaItem.ViewOffset)
-	if err != nil {
-		panic(err)
-	}
-
 	thumbnail := mediaItem.Thumb
 
 	// Tracks generally don't have a unique cover so we should use the album cover instead
@@ -149,8 +137,8 @@ func GetCurrentlyPlayingPlex() {
 	playingItem := models.MediaItem{
 		Title:    mediaItem.Title,
 		Category: mediaItem.Type,
-		Elapsed:  elapsed,
-		Duration: duration,
+		Elapsed:  mediaItem.ViewOffset,
+		Duration: mediaItem.Duration,
 		Source:   "plex",
 		// TODO: Make use of the transcode endpoint or pull the thumbnail onto disc for caching
 		Image: getImageBase64(thumbnail),
@@ -161,18 +149,10 @@ func GetCurrentlyPlayingPlex() {
 	}
 
 	if mediaItem.Type == "episode" {
-		seasonNumber, err := strconv.Atoi(mediaItem.ParentIndex)
-		if err != nil {
-			panic(err)
-		}
-		episodeNumber, err := strconv.Atoi(mediaItem.Index)
-		if err != nil {
-			panic(err)
-		}
 		playingItem.Title = fmt.Sprintf(
 			"%02dx%02d %s",
-			seasonNumber,
-			episodeNumber,
+			mediaItem.ParentIndex, // Season number
+			mediaItem.Index,       // Episode number
 			mediaItem.Title,
 		)
 	}

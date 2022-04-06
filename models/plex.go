@@ -11,15 +11,15 @@ type MediaContainer struct {
 
 type Metadata struct {
 	Attribution      string     `json:"attribution"`
-	Duration         string     `json:"duration"`
+	Duration         int        `json:"duration"`
 	GrandparentTitle string     `json:"grandparentTitle"`
 	Thumb            string     `json:"thumb"`
 	ParentThumb      string     `json:"parentThumb"`
-	Index            string     `json:"index"`
-	ParentIndex      string     `json:"parentIndex"`
+	Index            int        `json:"index"`
+	ParentIndex      int        `json:"parentIndex"`
 	Title            string     `json:"title"`
 	Type             string     `json:"type"`
-	ViewOffset       string     `json:"viewOffset"`
+	ViewOffset       int        `json:"viewOffset"`
 	Director         []Director `json:"Director"`
 	Player           Player     `json:"Player"`
 }
