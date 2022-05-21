@@ -34,6 +34,8 @@ github.com/klauspost/compress v1.15.0 h1:xqfchp4whNFxn5A4XFyyYtitiWI8Hy5EW59jEwc
 github.com/klauspost/compress v1.15.0/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/marcus-crane/go-psn-api-fork v0.0.0-20220206044231-d0461f0149b1 h1:fVKQDic5f19LnludDlsBGQBtThdQV1sRQ0IVReiZeXM=
 github.com/marcus-crane/go-psn-api-fork v0.0.0-20220206044231-d0461f0149b1/go.mod h1:ARIS0rwcwUTpv34ZVPqpGWAssfcKi9jsSkBgGTstCcg=
+github.com/marcus-crane/go-psn-api-fork v0.0.0-20220206045652-0e81da952bd5 h1:crzhhg8RFl6HCKL4UmM95sZHA+kqFT7MVPv+rfRZHug=
+github.com/marcus-crane/go-psn-api-fork v0.0.0-20220206045652-0e81da952bd5/go.mod h1:ARIS0rwcwUTpv34ZVPqpGWAssfcKi9jsSkBgGTstCcg=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
