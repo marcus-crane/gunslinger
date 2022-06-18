@@ -18,7 +18,7 @@ func SetupInBackground() *gocron.Scheduler {
 
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex)
 	// s.Every(30).Seconds().Do(GetPlaystationPresence)
-	s.Every(30).Seconds().Do(GetCurrentlyPlayingSteam)
+	s.Every(5).Seconds().Do(GetCurrentlyPlayingSteam)
 
 	log.Print("Jobs scheduled. Scheduler not running yet.")
 

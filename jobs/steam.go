@@ -1,13 +1,17 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/r3labs/sse/v2"
 )
 
 var (
@@ -101,6 +105,15 @@ func GetCurrentlyPlayingSteam() {
 		Source:   "steam",
 		Image:    game.HeaderImage,
 		IsActive: true,
+	}
+
+	// reflect.DeepEqual is good enough for our purposes even though
+	// it doesn't do things like properly copmare timestamp metadata.
+	// For just checking if we should emit a message, it's good enough
+	if !reflect.DeepEqual(CurrentPlaybackItem, playingItem) {
+		byteStream := new(bytes.Buffer)
+		json.NewEncoder(byteStream).Encode(playingItem)
+		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 	}
 
 	CurrentPlaybackItem = playingItem
