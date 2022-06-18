@@ -30,14 +30,6 @@ func Register(mux *http.ServeMux) http.Handler {
 		renderJSONMessage(w, "This is the base of Gunslinger's various APIs")
 	})
 
-	mux.HandleFunc("/api/v1", func(w http.ResponseWriter, r *http.Request) {
-		renderJSONMessage(w, "This is the v1 endpoint of the API")
-	})
-
-	mux.HandleFunc("/api/v2", func(w http.ResponseWriter, r *http.Request) {
-		renderJSONMessage(w, "This is the v2 endpoint of the API. There are no v2 endpoints at present")
-	})
-
 	mux.HandleFunc("/api/v3", func(w http.ResponseWriter, r *http.Request) {
 		renderJSONMessage(w, "This is the v3 endpoint of the API")
 	})
@@ -49,12 +41,8 @@ func Register(mux *http.ServeMux) http.Handler {
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
-	// v1.Get("/videogames", handlers.GetGameInFocus)
-	// v1.Post("/videogames", handlers.UpdateGameInFocus)
-	// v1.Delete("/videogames", handlers.ClearGameInFocus)
-
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://deploy-preview-128--utf9k.netlify.app"},
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
