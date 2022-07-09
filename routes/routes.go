@@ -42,7 +42,7 @@ func Register(mux *http.ServeMux) http.Handler {
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313"},
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "http://localhost:8080"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
