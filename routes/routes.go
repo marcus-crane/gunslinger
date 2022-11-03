@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/cors"
 	"gorm.io/gorm"
@@ -50,7 +51,22 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		var result []models.DBMediaItem
 		database.Limit(5).Order("created_at desc").Find(&result)
-		json.NewEncoder(w).Encode(result)
+		includeCover := r.URL.Query().Get("expand") == "cover"
+		var response []models.ResponseMediaItem
+		for _, item := range result {
+			rItem := models.ResponseMediaItem{
+				OccuredAt: item.CreatedAt.Format(time.RFC3339),
+				Title:     item.Title,
+				Subtitle:  item.Subtitle,
+				Category:  item.Category,
+				Source:    item.Source,
+			}
+			if includeCover {
+				rItem.Image = item.Image
+			}
+			response = append(response, rItem)
+		}
+		json.NewEncoder(w).Encode(response)
 	})
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)

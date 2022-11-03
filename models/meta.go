@@ -18,6 +18,15 @@ type DBMediaItem struct {
 	Image     string    `json:"image"`
 }
 
+type ResponseMediaItem struct {
+	OccuredAt string `json:"occurred_at"`
+	Title     string `json:"title"`
+	Subtitle  string `json:"subtitle"`
+	Category  string `json:"category"`
+	Source    string `json:"source"`
+	Image     string `json:"image"`
+}
+
 type MediaItem struct {
 	Title    string `json:"title"`
 	Subtitle string `json:"subtitle"`
