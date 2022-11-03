@@ -1,5 +1,9 @@
-FROM golang:1.18 AS builder
+FROM alpine:3.16 AS builder
 WORKDIR /app
+# We download these to ensure that when building with CGO, stdlib links are in the right place for alpine
+RUN apk update
+RUN apk upgrade
+RUN apk add --update go gcc g++
 COPY . .
 RUN go mod download
 RUN GOOS=linux go build -v -o gunslinger
