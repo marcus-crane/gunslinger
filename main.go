@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/routes"
@@ -18,7 +19,9 @@ func main() {
 		fmt.Println(err)
 	}
 
-	jobScheduler := jobs.SetupInBackground()
+	database := db.Initialize()
+
+	jobScheduler := jobs.SetupInBackground(database)
 
 	if os.Getenv("BACKGROUND_JOBS_ENABLED") == "true" {
 		jobScheduler.StartAsync()
@@ -29,7 +32,7 @@ func main() {
 
 	events.Init()
 
-	router := routes.Register(http.NewServeMux())
+	router := routes.Register(http.NewServeMux(), database)
 
 	fmt.Println("Gunslinger is running at http://localhost:8080")
 

@@ -9,4 +9,6 @@ require (
 	github.com/r3labs/sse/v2 v2.8.0
 	github.com/rs/cors v1.8.2
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
+	gorm.io/driver/sqlite v1.4.3
+	gorm.io/gorm v1.24.1
 )

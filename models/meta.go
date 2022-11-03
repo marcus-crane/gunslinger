@@ -1,8 +1,21 @@
 package models
 
+import "time"
+
 type ResponseHTTP struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data"`
+}
+
+type DBMediaItem struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Title     string    `json:"title"`
+	Subtitle  string    `json:"subtitle"`
+	Category  string    `json:"category"`
+	IsActive  bool      `json:"is_active"`
+	Source    string    `json:"source"`
+	Image     string    `json:"image"`
 }
 
 type MediaItem struct {

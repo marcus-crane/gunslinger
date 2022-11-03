@@ -12,6 +12,7 @@ import (
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/r3labs/sse/v2"
+	"gorm.io/gorm"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 	gameDetailEndpoint = "https://store.steampowered.com/api/appdetails?appids=%s"
 )
 
-func GetCurrentlyPlayingSteam() {
+func GetCurrentlyPlayingSteam(database *gorm.DB) {
 
 	steamApiKey := os.Getenv("STEAM_TOKEN")
 	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
@@ -114,6 +115,21 @@ func GetCurrentlyPlayingSteam() {
 		byteStream := new(bytes.Buffer)
 		json.NewEncoder(byteStream).Encode(playingItem)
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+		// We want to make sure that we don't resave if the server restarts
+		// to ensure the history endpoint is relatively accurate
+		var previousItem models.DBMediaItem
+		database.Where("category = ?", playingItem.Category).Last(&previousItem)
+		if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
+			dbItem := models.DBMediaItem{
+				Title:    playingItem.Title,
+				Subtitle: playingItem.Subtitle,
+				Category: playingItem.Category,
+				IsActive: playingItem.IsActive,
+				Source:   playingItem.Source,
+				Image:    playingItem.Image,
+			}
+			database.Save(&dbItem)
+		}
 	}
 
 	CurrentPlaybackItem = playingItem

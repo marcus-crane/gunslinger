@@ -6,9 +6,11 @@ import (
 	"net/http"
 
 	"github.com/rs/cors"
+	"gorm.io/gorm"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 func renderJSONMessage(w http.ResponseWriter, message string) {
@@ -17,7 +19,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func Register(mux *http.ServeMux) http.Handler {
+func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -37,6 +39,18 @@ func Register(mux *http.ServeMux) http.Handler {
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jobs.CurrentPlaybackItem)
+	})
+
+	mux.HandleFunc("/api/v3/sessions", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(&events.Sessions{SessionsSeen: events.SessionsSeen, ActiveSessions: events.ActiveSessions})
+	})
+
+	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var result []models.DBMediaItem
+		database.Limit(5).Order("created_at desc").Find(&result)
+		json.NewEncoder(w).Encode(result)
 	})
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
