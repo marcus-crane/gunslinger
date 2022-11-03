@@ -14,8 +14,6 @@ COPY . ./
 FROM alpine:latest
 RUN apk update && apk add ca-certificates iptables ip6tables && rm -rf /var/cache/apk/*
 
-WORKDIR /app
-
 # Copy binary to production image
 COPY --from=builder /app/gunslinger /app/gunslinger
 COPY --from=builder /app/start.sh /app/start.sh
