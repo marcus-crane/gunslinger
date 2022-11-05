@@ -50,7 +50,7 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var result []models.DBMediaItem
-		database.Limit(5).Order("created_at desc").Find(&result)
+		database.Limit(6).Order("created_at desc").Find(&result)
 		includeCover := r.URL.Query().Get("expand") == "cover"
 		var response []models.ResponseMediaItem
 		for _, item := range result {
