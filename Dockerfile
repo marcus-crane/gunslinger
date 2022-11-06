@@ -1,4 +1,4 @@
-FROM alpine:3.16 AS builder
+FROM golang:1.19.3-alpine3.16 AS builder
 WORKDIR /app
 # We download these to ensure that when building with CGO, stdlib links are in the right place for alpine
 RUN apk update
@@ -8,14 +8,14 @@ COPY . .
 RUN go mod download
 RUN GOOS=linux go build -v -o gunslinger
 
-FROM alpine:latest as tailscale
+FROM alpine:3.16 as tailscale
 WORKDIR /app
 COPY . ./
 ENV TSFILE=tailscale_1.22.2_amd64.tgz
 RUN wget https://pkgs.tailscale.com/stable/${TSFILE} && tar xzf ${TSFILE} --strip-components=1
 COPY . ./
 
-FROM alpine:latest
+FROM alpine:3.16
 RUN apk update && apk add ca-certificates iptables ip6tables && rm -rf /var/cache/apk/*
 
 # Copy binary to production image

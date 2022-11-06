@@ -17,3 +17,5 @@ server
 *.db
 .env
 .idea
+
+gunslinger
