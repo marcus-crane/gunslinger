@@ -19,23 +19,25 @@ type DBMediaItem struct {
 }
 
 type ResponseMediaItem struct {
-	OccuredAt string `json:"occurred_at"`
-	Title     string `json:"title"`
-	Subtitle  string `json:"subtitle"`
-	Category  string `json:"category"`
-	Source    string `json:"source"`
-	Image     string `json:"image"`
+	OccuredAt       string   `json:"occurred_at"`
+	Title           string   `json:"title"`
+	Subtitle        string   `json:"subtitle"`
+	Category        string   `json:"category"`
+	Source          string   `json:"source"`
+	Image           string   `json:"image"`
+	DominantColours []string `json:"dominant_colours"`
 }
 
 type MediaItem struct {
-	Title    string `json:"title"`
-	Subtitle string `json:"subtitle"`
-	Category string `json:"category"`
-	IsActive bool   `json:"is_active"`
-	Elapsed  int    `json:"elapsed_ms"`
-	Duration int    `json:"duration_ms"`
-	Source   string `json:"source"`
-	Image    string `json:"image"`
+	Title           string   `json:"title"`
+	Subtitle        string   `json:"subtitle"`
+	Category        string   `json:"category"`
+	IsActive        bool     `json:"is_active"`
+	Elapsed         int      `json:"elapsed_ms"`
+	Duration        int      `json:"duration_ms"`
+	Source          string   `json:"source"`
+	Image           string   `json:"image"`
+	DominantColours []string `json:"dominant_colours"`
 }
 
 type SlackProfile struct {

@@ -5,11 +5,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"os"
 	"reflect"
 
+	color_extractor "github.com/marekm4/color-extractor"
 	"github.com/r3labs/sse/v2"
 	"gorm.io/gorm"
 
@@ -28,7 +33,7 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func getImageBase64(thumbnailURL string) string {
+func extractImageContent(thumbnailURL string) (string, []string) {
 	imageUrl := buildPlexURL(thumbnailURL)
 
 	var client http.Client
@@ -45,7 +50,10 @@ func getImageBase64(thumbnailURL string) string {
 	}
 	defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
+	var buf bytes.Buffer
+	tee := io.TeeReader(res.Body, &buf)
+
+	body, err := io.ReadAll(tee)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +71,22 @@ func getImageBase64(thumbnailURL string) string {
 
 	base64Encoding += base64.StdEncoding.EncodeToString(body)
 
-	return base64Encoding
+	var domColours []string
+
+	image, _, _ := image.Decode(&buf)
+	colours := color_extractor.ExtractColors(image)
+	for _, c := range colours {
+		domColours = append(domColours, ColorToHexString(c))
+	}
+
+	return base64Encoding, domColours
+}
+
+func ColorToHexString(c color.Color) string {
+	r, g, b, a := c.RGBA()
+	rgba := color.RGBA{uint8(r), uint8(g), uint8(b), uint8(a)}
+	return fmt.Sprintf("#%.2x%.2x%.2x", rgba.R, rgba.G, rgba.B)
+
 }
 
 func GetCurrentlyPlayingPlex(database *gorm.DB) {
@@ -135,6 +158,8 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 		thumbnail = mediaItem.ParentThumb
 	}
 
+	imageB64, domColours := extractImageContent(thumbnail)
+
 	playingItem := models.MediaItem{
 		Title:    mediaItem.Title,
 		Category: mediaItem.Type,
@@ -142,7 +167,8 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 		Duration: mediaItem.Duration,
 		Source:   "plex",
 		// TODO: Make use of the transcode endpoint or pull the thumbnail onto disc for caching
-		Image: getImageBase64(thumbnail),
+		Image:           imageB64,
+		DominantColours: domColours,
 	}
 
 	if mediaItem.Player.State == "playing" {

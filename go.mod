@@ -6,6 +6,7 @@ require (
 	github.com/go-co-op/gocron v1.14.0
 	github.com/joho/godotenv v1.4.0
 	github.com/marcus-crane/go-psn-api-fork v0.0.0-20220206045652-0e81da952bd5
+	github.com/marekm4/color-extractor v1.2.0
 	github.com/r3labs/sse/v2 v2.8.0
 	github.com/rs/cors v1.8.2
 	gorm.io/driver/sqlite v1.4.3
