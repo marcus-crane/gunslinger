@@ -46,13 +46,16 @@ func GetPlaystationPresence() {
 		return
 	}
 
+	_, dominantColours := extractImageContent(presence.GameTitleInfoList[0].TitleImage)
+
 	playingItem := models.MediaItem{
-		Title:    presence.GameTitleInfoList[0].Name,
-		Subtitle: presence.PrimaryPlatformInfo.Platform,
-		Category: "gaming",
-		Source:   "playstation",
-		Image:    presence.GameTitleInfoList[0].TitleImage,
-		IsActive: true,
+		Title:           presence.GameTitleInfoList[0].Name,
+		Subtitle:        presence.PrimaryPlatformInfo.Platform,
+		Category:        "gaming",
+		Source:          "playstation",
+		Image:           presence.GameTitleInfoList[0].TitleImage,
+		IsActive:        true,
+		DominantColours: dominantColours,
 	}
 
 	CurrentPlaybackItem = playingItem

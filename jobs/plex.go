@@ -33,9 +33,7 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func extractImageContent(thumbnailURL string) (string, []string) {
-	imageUrl := buildPlexURL(thumbnailURL)
-
+func extractImageContent(imageUrl string) (string, []string) {
 	var client http.Client
 	req, err := http.NewRequest("GET", imageUrl, nil)
 	if err != nil {
@@ -158,7 +156,8 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 		thumbnail = mediaItem.ParentThumb
 	}
 
-	imageB64, domColours := extractImageContent(thumbnail)
+	thumbnailUrl := buildPlexURL(thumbnail)
+	imageB64, domColours := extractImageContent(thumbnailUrl)
 
 	playingItem := models.MediaItem{
 		Title:    mediaItem.Title,

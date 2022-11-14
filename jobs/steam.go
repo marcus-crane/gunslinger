@@ -61,7 +61,6 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 	}
 
 	gameDetailUrl := fmt.Sprintf(gameDetailEndpoint, gameId)
-	fmt.Println(gameDetailUrl)
 
 	req, err = http.NewRequest("GET", gameDetailUrl, nil)
 	if err != nil {
@@ -82,14 +81,11 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(body))
 	var gameDetailResponse map[string]models.SteamAppResponse
 
 	if err = json.Unmarshal(body, &gameDetailResponse); err != nil {
 		fmt.Println("Error fetching Steam app data: ", err)
 	}
-
-	fmt.Println(gameDetailResponse)
 
 	game := gameDetailResponse[gameId].Data
 
@@ -99,13 +95,16 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 		developer = game.Developers[0]
 	}
 
+	_, dominantColours := extractImageContent(game.HeaderImage)
+
 	playingItem := models.MediaItem{
-		Title:    game.Name,
-		Subtitle: developer,
-		Category: "gaming",
-		Source:   "steam",
-		Image:    game.HeaderImage,
-		IsActive: true,
+		Title:           game.Name,
+		Subtitle:        developer,
+		Category:        "gaming",
+		Source:          "steam",
+		Image:           game.HeaderImage,
+		IsActive:        true,
+		DominantColours: dominantColours,
 	}
 
 	// reflect.DeepEqual is good enough for our purposes even though
