@@ -6,6 +6,7 @@ RUN apk upgrade
 RUN apk add --update go gcc g++
 COPY . .
 RUN go mod download
+# TODO: Try CGO-less sqlite connector
 RUN GOOS=linux go build -v -o gunslinger
 
 FROM alpine:3.16 as tailscale

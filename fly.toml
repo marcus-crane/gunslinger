@@ -7,6 +7,7 @@ kill_timeout = 5
 
 [env]
   BACKGROUND_JOBS_ENABLED = true
+  GOMEMLIMIT = "800MiB"
   LOG_LEVEL = "INFO"
 
 [experimental]

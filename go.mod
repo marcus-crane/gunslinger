@@ -1,6 +1,6 @@
 module github.com/marcus-crane/gunslinger
 
-go 1.18
+go 1.19
 
 require (
 	github.com/go-co-op/gocron v1.14.0
