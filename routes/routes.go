@@ -51,7 +51,6 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		var result []models.DBMediaItem
 		database.Limit(6).Order("created_at desc").Find(&result)
-		includeCover := r.URL.Query().Get("expand") == "cover"
 		var response []models.ResponseMediaItem
 		for _, item := range result {
 			rItem := models.ResponseMediaItem{
@@ -60,9 +59,6 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 				Subtitle:  item.Subtitle,
 				Category:  item.Category,
 				Source:    item.Source,
-			}
-			if includeCover {
-				rItem.Image = item.Image
 			}
 			response = append(response, rItem)
 		}

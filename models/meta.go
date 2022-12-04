@@ -23,7 +23,6 @@ type ResponseMediaItem struct {
 	Subtitle        string   `json:"subtitle"`
 	Category        string   `json:"category"`
 	Source          string   `json:"source"`
-	Image           string   `json:"image"`
 	DominantColours []string `json:"dominant_colours"`
 }
 

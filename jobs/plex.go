@@ -207,7 +207,6 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 				Category: playingItem.Category,
 				IsActive: playingItem.IsActive,
 				Source:   playingItem.Source,
-				Image:    playingItem.Image,
 			}
 			database.Save(&dbItem)
 		}
