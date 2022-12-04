@@ -19,6 +19,14 @@ func main() {
 		fmt.Println(err)
 	}
 
+	if os.Getenv("RESET_DB") == "1" {
+		err := os.Remove(os.Getenv("DB_PATH"))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
 	database := db.Initialize()
 
 	jobScheduler := jobs.SetupInBackground(database)
