@@ -15,7 +15,6 @@ type DBMediaItem struct {
 	Category  string    `json:"category"`
 	IsActive  bool      `json:"is_active"`
 	Source    string    `json:"source"`
-	Image     string    `json:"image"`
 }
 
 type ResponseMediaItem struct {
