@@ -50,9 +50,18 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var result []models.DBMediaItem
-		database.Limit(6).Order("created_at desc").Find(&result)
+		// If nothing is playing, the "now playing" will likely be the same as the
+		// first history item so we skip it if now playing and index 0 of history match.
+		// We don't fully do an offset jump though as an item is only committed to the DB
+		// when it changes to inactive so we don't want to hide a valid item in that state
+		database.Limit(7).Order("created_at desc").Find(&result)
 		var response []models.ResponseMediaItem
-		for _, item := range result {
+		for idx, item := range result {
+			// A valid case is when I just listen to the same song over and over so
+			// we need to ensure we're in the right state to skip historical items
+			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.IsActive {
+				continue
+			}
 			rItem := models.ResponseMediaItem{
 				OccuredAt: item.CreatedAt.Format(time.RFC3339),
 				Title:     item.Title,
