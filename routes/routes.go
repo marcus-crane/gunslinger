@@ -39,11 +39,6 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if jobs.CurrentPlaybackItem.Title == "" && jobs.CurrentPlaybackItem.Source == "" {
-			// We have likely just redeployed (or crashed) so we'll populate the last item from the DB
-			var result models.DBMediaItem
-			database.Limit(1).Order("created_at desc").Find(&currItem)
-		}
 		json.NewEncoder(w).Encode(jobs.CurrentPlaybackItem)
 	})
 
