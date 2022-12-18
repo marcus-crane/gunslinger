@@ -36,6 +36,7 @@ type MediaItem struct {
 	Source          string   `json:"source"`
 	Image           string   `json:"image"`
 	DominantColours []string `json:"dominant_colours"`
+	Backfilled      bool     `json:"-"`
 }
 
 type SlackProfile struct {

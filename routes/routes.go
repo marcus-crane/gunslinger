@@ -59,7 +59,7 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 		for idx, item := range result {
 			// A valid case is when I just listen to the same song over and over so
 			// we need to ensure we're in the right state to skip historical items
-			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.IsActive {
+			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
 				continue
 			}
 			rItem := models.ResponseMediaItem{

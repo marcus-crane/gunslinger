@@ -26,13 +26,14 @@ func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
 	// attempt to preload the last seen item in memory
 	var result models.DBMediaItem
 	database.Limit(1).Order("created_at desc").Find(&result)
-	if result.Title != "" && result.Source != "" {
+	if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 		CurrentPlaybackItem = models.MediaItem{
-			Title:    result.Title,
-			Subtitle: result.Subtitle,
-			Category: result.Category,
-			Source:   result.Source,
-			IsActive: false,
+			Title:      result.Title,
+			Subtitle:   result.Subtitle,
+			Category:   result.Category,
+			Source:     result.Source,
+			IsActive:   false,
+			Backfilled: true,
 		}
 	}
 
