@@ -18,8 +18,6 @@ func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, database)
-	// PSN Go library seems to be broken now :(
-	// s.Every(30).Seconds().Do(GetPlaystationPresence)
 	s.Every(30).Seconds().Do(GetCurrentlyPlayingSteam, database)
 
 	// Assuming we have just redeployed or have crashed, we will
