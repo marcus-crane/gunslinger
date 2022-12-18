@@ -11,7 +11,6 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 
 	color_extractor "github.com/marekm4/color-extractor"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
 const (
@@ -28,8 +28,8 @@ const (
 )
 
 func buildPlexURL(endpoint string) string {
-	plexHostURL := os.Getenv("PLEX_URL")
-	plexToken := os.Getenv("PLEX_TOKEN")
+	plexHostURL := utils.MustEnv("PLEX_URL")
+	plexToken := utils.MustEnv("PLEX_TOKEN")
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
@@ -209,6 +209,9 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 				Source:   playingItem.Source,
 			}
 			database.Save(&dbItem)
+			if err := saveCover(playingItem.Image, playingItem.Category); err != nil {
+				fmt.Println("Failed to save cover for Plex")
+			}
 		}
 	}
 

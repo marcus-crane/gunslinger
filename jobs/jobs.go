@@ -1,17 +1,21 @@
 package jobs
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/go-co-op/gocron"
 	"gorm.io/gorm"
 
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
 var (
 	CurrentPlaybackItem models.MediaItem
+	STORAGE_DIR         = utils.GetEnv("STORAGE_DIR", "/tmp")
 )
 
 func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
@@ -32,10 +36,23 @@ func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
 			Source:     result.Source,
 			IsActive:   false,
 			Backfilled: true,
+			Image:      loadCover(result.Category),
 		}
 	}
 
 	log.Print("Jobs scheduled. Scheduler not running yet.")
 
 	return s
+}
+
+func loadCover(category string) string {
+	img, err := os.ReadFile(fmt.Sprintf("%s/cover.%s", STORAGE_DIR, category))
+	if err != nil {
+		return "https://picsum.photos/204?blur=2"
+	}
+	return string(img)
+}
+
+func saveCover(cover string, category string) error {
+	return os.WriteFile(fmt.Sprintf("%s/cover.%s", STORAGE_DIR, category), []byte(cover), 0644)
 }

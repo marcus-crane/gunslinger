@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
 	"gorm.io/gorm"
 )
@@ -22,7 +22,7 @@ var (
 
 func GetCurrentlyPlayingSteam(database *gorm.DB) {
 
-	steamApiKey := os.Getenv("STEAM_TOKEN")
+	steamApiKey := utils.MustEnv("STEAM_TOKEN")
 	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
 
 	var client http.Client
@@ -127,6 +127,9 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 				Source:   playingItem.Source,
 			}
 			database.Save(&dbItem)
+			if err := saveCover(playingItem.Image, playingItem.Category); err != nil {
+				fmt.Println("Failed to save cover for Plex")
+			}
 		}
 	}
 

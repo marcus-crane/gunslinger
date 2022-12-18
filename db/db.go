@@ -2,15 +2,15 @@ package db
 
 import (
 	"log"
-	"os"
 
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func Initialize() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(utils.MustEnv("DB_PATH")), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}

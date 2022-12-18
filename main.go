@@ -11,6 +11,7 @@ import (
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/routes"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
 func main() {
@@ -19,8 +20,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	if os.Getenv("RESET_DB") == "1" {
-		err := os.Remove(os.Getenv("DB_PATH"))
+	if utils.GetEnv("RESET_DB", "0") == "1" {
+		err := os.Remove(utils.MustEnv("DB_PATH"))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -31,7 +32,7 @@ func main() {
 
 	jobScheduler := jobs.SetupInBackground(database)
 
-	if os.Getenv("BACKGROUND_JOBS_ENABLED") == "true" {
+	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()
 		fmt.Println("Background jobs have started up in the background.")
 	} else {
