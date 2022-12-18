@@ -68,7 +68,7 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "http://localhost:8080"},
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "http://localhost:8080", "https://utf9k.pages.dev"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
