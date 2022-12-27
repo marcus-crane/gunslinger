@@ -7,7 +7,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/marekm4/color-extractor v1.2.0
 	github.com/r3labs/sse/v2 v2.9.0
-	github.com/rs/cors v1.8.2
+	github.com/rs/cors v1.8.3
 	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.24.2
 )
