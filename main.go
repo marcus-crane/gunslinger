@@ -25,12 +25,10 @@ func main() {
 		fmt.Println(err)
 	}
 
-	if utils.GetEnv("RESET_DB", "0") == "1" {
-		err := os.Remove(utils.MustEnv("DB_PATH"))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	err := os.Remove(utils.MustEnv("DB_PATH"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	database := db.Initialize()
