@@ -109,6 +109,11 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		DominantColours: dominantColours,
 	}
 
+	imageHash := md5.Sum(image)
+	var genericBytes []byte = imageHash[:] // Disgusting :)
+	guid, _ := uuid.FromBytes(genericBytes)
+	playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+
 	// reflect.DeepEqual is good enough for our purposes even though
 	// it doesn't do things like properly copmare timestamp metadata.
 	// For just checking if we should emit a message, it's good enough
@@ -125,10 +130,6 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 			playingItem.Category,
 		); err == nil {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-				imageHash := md5.Sum(image)
-				var genericBytes []byte = imageHash[:] // Disgusting :)
-				guid, _ := uuid.FromBytes(genericBytes)
-				playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
 				if err := saveCover(guid.String(), image, extension); err != nil {
 					fmt.Printf("Failed to save cover for Steam: %+v\n", err)
 				}
