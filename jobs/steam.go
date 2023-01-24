@@ -2,17 +2,20 @@ package jobs
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"reflect"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
-	"gorm.io/gorm"
 )
 
 var (
@@ -20,7 +23,7 @@ var (
 	gameDetailEndpoint = "https://store.steampowered.com/api/appdetails?appids=%s"
 )
 
-func GetCurrentlyPlayingSteam(database *gorm.DB) {
+func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 
 	steamApiKey := utils.MustEnv("STEAM_TOKEN")
 	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
@@ -95,14 +98,13 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 		developer = game.Developers[0]
 	}
 
-	_, dominantColours := extractImageContent(game.HeaderImage)
+	image, extension, dominantColours := extractImageContent(game.HeaderImage)
 
 	playingItem := models.MediaItem{
 		Title:           game.Name,
 		Subtitle:        developer,
 		Category:        "gaming",
 		Source:          "steam",
-		Image:           game.HeaderImage,
 		IsActive:        true,
 		DominantColours: dominantColours,
 	}
@@ -117,18 +119,33 @@ func GetCurrentlyPlayingSteam(database *gorm.DB) {
 		// We want to make sure that we don't resave if the server restarts
 		// to ensure the history endpoint is relatively accurate
 		var previousItem models.DBMediaItem
-		database.Where("category = ?", playingItem.Category).Last(&previousItem)
-		if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-			dbItem := models.DBMediaItem{
-				Title:    playingItem.Title,
-				Subtitle: playingItem.Subtitle,
-				Category: playingItem.Category,
-				IsActive: playingItem.IsActive,
-				Source:   playingItem.Source,
-			}
-			database.Save(&dbItem)
-			if err := saveCover(playingItem.Image, playingItem.Category); err != nil {
-				fmt.Println("Failed to save cover for Plex")
+		if err := database.Get(
+			&previousItem,
+			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
+			playingItem.Category,
+		); err == nil {
+			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
+				imageHash := md5.Sum(image)
+				var genericBytes []byte = imageHash[:] // Disgusting :)
+				guid, _ := uuid.FromBytes(genericBytes)
+				playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+				if err := saveCover(guid.String(), image, extension); err != nil {
+					fmt.Printf("Failed to save cover for Steam: %+v\n", err)
+				}
+
+				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source) VALUES (?, ?, ?, ?, ?, ?)`
+				_, err := database.Exec(
+					schema,
+					time.Now().Unix(),
+					playingItem.Title,
+					playingItem.Subtitle,
+					playingItem.Category,
+					playingItem.IsActive,
+					playingItem.Source,
+				)
+				if err != nil {
+					fmt.Println("Failed to save DB entry")
+				}
 			}
 		}
 	}

@@ -1,29 +1,28 @@
 package models
 
-import "time"
-
 type ResponseHTTP struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data"`
 }
 
 type DBMediaItem struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Title     string    `json:"title"`
-	Subtitle  string    `json:"subtitle"`
-	Category  string    `json:"category"`
-	IsActive  bool      `json:"is_active"`
-	Source    string    `json:"source"`
+	ID        uint   `gorm:"primaryKey" json:"id" db:"id"`
+	CreatedAt int64  `json:"created_at" db:"created_at"`
+	Title     string `json:"title" db:"title"`
+	Subtitle  string `json:"subtitle" db:"subtitle"`
+	Category  string `json:"category" db:"category"`
+	IsActive  bool   `json:"is_active" db:"is_active"`
+	Source    string `json:"source" db:"source"`
+	Image     string `json:"image" db:"image"`
 }
 
 type ResponseMediaItem struct {
-	OccuredAt       string   `json:"occurred_at"`
-	Title           string   `json:"title"`
-	Subtitle        string   `json:"subtitle"`
-	Category        string   `json:"category"`
-	Source          string   `json:"source"`
-	DominantColours []string `json:"dominant_colours"`
+	OccuredAt string `json:"occurred_at"`
+	Title     string `json:"title"`
+	Subtitle  string `json:"subtitle"`
+	Category  string `json:"category"`
+	Source    string `json:"source"`
+	Image     string `json:"image"`
 }
 
 type MediaItem struct {

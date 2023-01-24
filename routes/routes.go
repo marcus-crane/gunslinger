@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/rs/cors"
-	"gorm.io/gorm"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
@@ -20,13 +21,32 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
+func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 
 	events.Server.CreateStream("playback")
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, "Welcome to Gunslinger, my handy do-everything API.\nYou can find the source code on <a href=\"https://github.com/marcus-crane/gunslinger\">Github</a>\n")
+	})
+
+	mux.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
+		cover := strings.Trim(r.URL.Path, "/static/")
+		coverSegments := strings.Split(cover, ".")
+		if len(coverSegments) != 3 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		guid := coverSegments[1]
+		extension := coverSegments[2]
+		image, err := jobs.LoadCover(guid, extension)
+		if err != nil {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=31622400")
+		w.Header().Set("Content-Type", fmt.Sprintf("image/%s", extension))
+		w.Write([]byte(image))
 	})
 
 	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
@@ -49,13 +69,16 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 
 	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		var response []models.ResponseMediaItem
 		var result []models.DBMediaItem
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
 		// when it changes to inactive so we don't want to hide a valid item in that state
-		database.Limit(7).Order("created_at desc").Find(&result)
-		var response []models.ResponseMediaItem
+		if err := database.Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 		for idx, item := range result {
 			// A valid case is when I just listen to the same song over and over so
 			// we need to ensure we're in the right state to skip historical items
@@ -63,11 +86,12 @@ func Register(mux *http.ServeMux, database *gorm.DB) http.Handler {
 				continue
 			}
 			rItem := models.ResponseMediaItem{
-				OccuredAt: item.CreatedAt.Format(time.RFC3339),
+				OccuredAt: time.Unix(item.CreatedAt, 0).Format(time.RFC3339),
 				Title:     item.Title,
 				Subtitle:  item.Subtitle,
 				Category:  item.Category,
 				Source:    item.Source,
+				Image:     item.Image,
 			}
 			response = append(response, rItem)
 		}

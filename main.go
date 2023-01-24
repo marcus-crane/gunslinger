@@ -1,11 +1,13 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
@@ -13,6 +15,9 @@ import (
 	"github.com/marcus-crane/gunslinger/routes"
 	"github.com/marcus-crane/gunslinger/utils"
 )
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
 
 func main() {
 
@@ -29,6 +34,16 @@ func main() {
 	}
 
 	database := db.Initialize()
+
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		panic(err)
+	}
+
+	if err := goose.Up(database.DB, "migrations"); err != nil {
+		panic(err)
+	}
 
 	jobScheduler := jobs.SetupInBackground(database)
 

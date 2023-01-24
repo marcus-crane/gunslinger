@@ -3,18 +3,16 @@ package db
 import (
 	"log"
 
-	"github.com/marcus-crane/gunslinger/models"
+	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/utils"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	_ "modernc.org/sqlite"
 )
 
-func Initialize() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(utils.MustEnv("DB_PATH")), &gorm.Config{})
+func Initialize() *sqlx.DB {
+	db, err := sqlx.Connect("sqlite", utils.MustEnv("DB_PATH"))
 	if err != nil {
 		panic(err)
 	}
-	db.AutoMigrate(&models.DBMediaItem{})
 	log.Print("Initialised DB connection")
 	return db
 }

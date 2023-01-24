@@ -2,7 +2,7 @@ package jobs
 
 import (
 	"bytes"
-	"encoding/base64"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -10,12 +10,15 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"log"
 	"net/http"
 	"reflect"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	color_extractor "github.com/marekm4/color-extractor"
 	"github.com/r3labs/sse/v2"
-	"gorm.io/gorm"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -33,7 +36,7 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func extractImageContent(imageUrl string) (string, []string) {
+func extractImageContent(imageUrl string) ([]byte, string, []string) {
 	var client http.Client
 	req, err := http.NewRequest("GET", imageUrl, nil)
 	if err != nil {
@@ -56,18 +59,16 @@ func extractImageContent(imageUrl string) (string, []string) {
 		panic(err)
 	}
 
-	var base64Encoding string
-
 	mimeType := http.DetectContentType(body)
+
+	extension := ""
 
 	switch mimeType {
 	case "image/jpeg":
-		base64Encoding += "data:image/jpeg;base64,"
+		extension = "jpeg"
 	case "image/png":
-		base64Encoding += "data:image/png;base64,"
+		extension = "png"
 	}
-
-	base64Encoding += base64.StdEncoding.EncodeToString(body)
 
 	var domColours []string
 
@@ -77,7 +78,7 @@ func extractImageContent(imageUrl string) (string, []string) {
 		domColours = append(domColours, ColorToHexString(c))
 	}
 
-	return base64Encoding, domColours
+	return body, extension, domColours
 }
 
 func ColorToHexString(c color.Color) string {
@@ -87,7 +88,7 @@ func ColorToHexString(c color.Color) string {
 
 }
 
-func GetCurrentlyPlayingPlex(database *gorm.DB) {
+func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	var client http.Client
 	req, err := http.NewRequest("GET", sessionURL, nil)
@@ -157,16 +158,14 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 	}
 
 	thumbnailUrl := buildPlexURL(thumbnail)
-	imageB64, domColours := extractImageContent(thumbnailUrl)
+	image, extension, domColours := extractImageContent(thumbnailUrl)
 
 	playingItem := models.MediaItem{
-		Title:    mediaItem.Title,
-		Category: mediaItem.Type,
-		Elapsed:  mediaItem.ViewOffset,
-		Duration: mediaItem.Duration,
-		Source:   "plex",
-		// TODO: Make use of the transcode endpoint or pull the thumbnail onto disc for caching
-		Image:           imageB64,
+		Title:           mediaItem.Title,
+		Category:        mediaItem.Type,
+		Elapsed:         mediaItem.ViewOffset,
+		Duration:        mediaItem.Duration,
+		Source:          "plex",
 		DominantColours: domColours,
 	}
 
@@ -199,19 +198,38 @@ func GetCurrentlyPlayingPlex(database *gorm.DB) {
 		// We want to make sure that we don't resave if the server restarts
 		// to ensure the history endpoint is relatively accurate
 		var previousItem models.DBMediaItem
-		database.Where("category = ?", playingItem.Category).Last(&previousItem)
-		if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-			dbItem := models.DBMediaItem{
-				Title:    playingItem.Title,
-				Subtitle: playingItem.Subtitle,
-				Category: playingItem.Category,
-				IsActive: playingItem.IsActive,
-				Source:   playingItem.Source,
+		if err := database.Get(
+			&previousItem,
+			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
+			playingItem.Category,
+		); err == nil || err.Error() == "sql: no rows in result set" {
+			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
+				imageHash := md5.Sum(image)
+				var genericBytes []byte = imageHash[:] // Disgusting :)
+				guid, _ := uuid.FromBytes(genericBytes)
+				playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+				if err := saveCover(guid.String(), image, extension); err != nil {
+					fmt.Printf("Failed to save cover for Plex: %+v\n", err)
+				}
+
+				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
+				_, err := database.Exec(
+					schema,
+					time.Now().Unix(),
+					playingItem.Title,
+					playingItem.Subtitle,
+					playingItem.Category,
+					playingItem.IsActive,
+					playingItem.Source,
+					playingItem.Image,
+				)
+				if err != nil {
+					fmt.Println("Failed to save DB entry")
+					log.Print(err)
+				}
 			}
-			database.Save(&dbItem)
-			if err := saveCover(playingItem.Image, playingItem.Category); err != nil {
-				fmt.Println("Failed to save cover for Plex")
-			}
+		} else {
+			log.Print(err)
 		}
 	}
 

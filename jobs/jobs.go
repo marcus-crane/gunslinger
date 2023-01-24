@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"gorm.io/gorm"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -18,7 +18,7 @@ var (
 	STORAGE_DIR         = utils.GetEnv("STORAGE_DIR", "/tmp")
 )
 
-func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
+func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, database)
@@ -27,16 +27,17 @@ func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
 	var result models.DBMediaItem
-	database.Limit(1).Order("created_at desc").Find(&result)
-	if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
-		CurrentPlaybackItem = models.MediaItem{
-			Title:      result.Title,
-			Subtitle:   result.Subtitle,
-			Category:   result.Category,
-			Source:     result.Source,
-			IsActive:   false,
-			Backfilled: true,
-			Image:      loadCover(result.Category),
+	if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
+		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
+			CurrentPlaybackItem = models.MediaItem{
+				Title:      result.Title,
+				Subtitle:   result.Subtitle,
+				Category:   result.Category,
+				Source:     result.Source,
+				IsActive:   false,
+				Backfilled: true,
+				Image:      result.Image,
+			}
 		}
 	}
 
@@ -45,14 +46,14 @@ func SetupInBackground(database *gorm.DB) *gocron.Scheduler {
 	return s
 }
 
-func loadCover(category string) string {
-	img, err := os.ReadFile(fmt.Sprintf("%s/cover.%s", STORAGE_DIR, category))
+func LoadCover(guid string, extension string) (string, error) {
+	img, err := os.ReadFile(fmt.Sprintf("%s/cover.%s.%s", STORAGE_DIR, guid, extension))
 	if err != nil {
-		return "https://picsum.photos/204?blur=2"
+		return "", err
 	}
-	return string(img)
+	return string(img), nil
 }
 
-func saveCover(cover string, category string) error {
-	return os.WriteFile(fmt.Sprintf("%s/cover.%s", STORAGE_DIR, category), []byte(cover), 0644)
+func saveCover(guid string, image []byte, extension string) error {
+	return os.WriteFile(fmt.Sprintf("%s/cover.%s.%s", STORAGE_DIR, guid, extension), image, 0644)
 }
