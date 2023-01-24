@@ -169,6 +169,11 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 		DominantColours: domColours,
 	}
 
+	imageHash := md5.Sum(image)
+	var genericBytes []byte = imageHash[:] // Disgusting :)
+	guid, _ := uuid.FromBytes(genericBytes)
+	playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+
 	if mediaItem.Player.State == "playing" {
 		playingItem.IsActive = true
 	}
@@ -204,14 +209,9 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 			playingItem.Category,
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-				imageHash := md5.Sum(image)
-				var genericBytes []byte = imageHash[:] // Disgusting :)
-				guid, _ := uuid.FromBytes(genericBytes)
-				playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
 				if err := saveCover(guid.String(), image, extension); err != nil {
 					fmt.Printf("Failed to save cover for Plex: %+v\n", err)
 				}
-
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
 					schema,
