@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"reflect"
 	"time"
@@ -128,13 +129,13 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 			&previousItem,
 			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
 			playingItem.Category,
-		); err == nil {
+		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
 					fmt.Printf("Failed to save cover for Steam: %+v\n", err)
 				}
 
-				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source) VALUES (?, ?, ?, ?, ?, ?)`
+				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
 					schema,
 					time.Now().Unix(),
@@ -143,11 +144,14 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 					playingItem.Category,
 					playingItem.IsActive,
 					playingItem.Source,
+					playingItem.Image,
 				)
 				if err != nil {
 					fmt.Println("Failed to save DB entry")
 				}
 			}
+		} else {
+			log.Print(err)
 		}
 	}
 

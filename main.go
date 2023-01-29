@@ -25,12 +25,6 @@ func main() {
 		fmt.Println(err)
 	}
 
-	err := os.Remove(utils.MustEnv("DB_PATH"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	database := db.Initialize()
 
 	goose.SetBaseFS(embedMigrations)
