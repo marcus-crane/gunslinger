@@ -1,4 +1,4 @@
-FROM golang:1.19.4-alpine3.16 AS builder
+FROM golang:1.20.1-alpine3.16 AS builder
 WORKDIR /app
 # We download these to ensure that when building with CGO, stdlib links are in the right place for alpine
 RUN apk update
