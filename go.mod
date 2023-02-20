@@ -6,12 +6,12 @@ require (
 	github.com/go-co-op/gocron v1.18.0
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/joho/godotenv v1.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.0
-	github.com/pressly/goose/v3 v3.8.0
-	github.com/r3labs/sse/v2 v2.9.0
+	github.com/pressly/goose/v3 v3.9.0
+	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.8.3
-	modernc.org/sqlite v1.20.3
+	modernc.org/sqlite v1.20.4
 )
 
 require (
