@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/r3labs/sse/v2"
 )
 
 const (
@@ -132,7 +135,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 			// If we've read manga in the past but only just fetched updates, we don't consider this "live"
 			// so only update the live player if nothing else is live and manga is more recent
 			if !CurrentPlaybackItem.IsActive && latestItem.CreatedAt > CurrentPlaybackItem.CreatedAt {
-				CurrentPlaybackItem = models.MediaItem{
+				playingItem := models.MediaItem{
 					CreatedAt: latestItem.CreatedAt,
 					Title:     latestItem.Title,
 					Subtitle:  latestItem.Subtitle,
@@ -141,6 +144,10 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 					IsActive:  latestItem.IsActive,
 					Image:     latestItem.Image,
 				}
+				byteStream := new(bytes.Buffer)
+				json.NewEncoder(byteStream).Encode(playingItem)
+				events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+				CurrentPlaybackItem = playingItem
 			}
 		}
 	}
