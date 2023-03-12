@@ -22,6 +22,7 @@ func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, database)
+	s.Every(30).Seconds().Do(GetRecentlyReadManga, database)
 	s.Every(30).Seconds().Do(GetCurrentlyPlayingSteam, database)
 
 	// Assuming we have just redeployed or have crashed, we will
@@ -30,6 +31,7 @@ func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
 	if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
 		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 			CurrentPlaybackItem = models.MediaItem{
+				CreatedAt:  result.CreatedAt,
 				Title:      result.Title,
 				Subtitle:   result.Subtitle,
 				Category:   result.Category,

@@ -26,6 +26,7 @@ type ResponseMediaItem struct {
 }
 
 type MediaItem struct {
+	CreatedAt       int64    `json:"-"`
 	Title           string   `json:"title"`
 	Subtitle        string   `json:"subtitle"`
 	Category        string   `json:"category"`
