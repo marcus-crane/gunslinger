@@ -56,7 +56,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 	for _, activity := range anilistResponse.Data.Page.Activities {
 		if activity.Status == "read chapter" {
 			var existingItem models.DBMediaItem
-			// Have we save this update already?
+			// Have we saved this update already?
 			if err := database.Get(
 				&existingItem,
 				"SELECT * FROM db_media_items WHERE category = ? AND title = ? ORDER BY created_at desc LIMIT 1",
@@ -69,6 +69,8 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 			// Has this status update changed? If so, it will start with the same start chapter
 			if strings.Contains(activity.Progress, " - ") {
 				startChapter := strings.Split(activity.Progress, " - ")[0]
+
+				// First, we check if the existing chapter is also part of a range ie; 102 - 105
 				if err := database.Get(
 					&existingItem,
 					"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? ORDER BY created_at desc LIMIT 1",
@@ -76,14 +78,24 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 					"%"+fmt.Sprintf("%s - ", startChapter)+"%", // Make sure we include - so eg; Chapter 100 doesn't partial match Chapter 1000
 				); err == nil {
 					// Found an existing update so we need to update the end chapter
-					fmt.Println(activity.Id)
-					query := `UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?`
-					_, err = database.Exec(
-						query,
-						activity.CreatedAt,
-						activity.Progress,
-						existingItem.ID,
-					)
+					err := updateChapter(database, activity, existingItem)
+					if err != nil {
+						fmt.Printf("Failed to update entry for %d %s", activity.Id, activity.Media.Title.UserPreferred)
+					} else {
+						fmt.Println("Saved")
+						updateOccured = true
+					}
+					continue
+				}
+
+				// Next, we check if the existing chapter was the first in a streak ie; 102
+				if err := database.Get(
+					&existingItem,
+					"SELECT * FROM db_media_items WHERE category = ? AND title = ? ORDER BY created_at desc LIMIT 1",
+					"manga",
+					startChapter,
+				); err == nil {
+					err := updateChapter(database, activity, existingItem)
 					if err != nil {
 						fmt.Printf("Failed to update entry for %d %s", activity.Id, activity.Media.Title.UserPreferred)
 					} else {
@@ -151,4 +163,15 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 			}
 		}
 	}
+}
+
+func updateChapter(database *sqlx.DB, activity models.Activity, existingItem models.DBMediaItem) error {
+	query := `UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?`
+	_, err := database.Exec(
+		query,
+		activity.CreatedAt,
+		activity.Progress,
+		existingItem.ID,
+	)
+	return err
 }
