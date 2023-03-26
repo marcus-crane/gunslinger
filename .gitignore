@@ -18,4 +18,6 @@ server
 .env
 .idea
 
-gunslinger
+gunslinger/*.sqlite3
+__pycache__
+venv
