@@ -19,3 +19,5 @@ server
 .idea
 
 gunslinger
+.DS_Store
+*.sqlite3
