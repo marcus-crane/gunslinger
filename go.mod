@@ -11,7 +11,7 @@ require (
 	github.com/pressly/goose/v3 v3.10.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.8.3
-	modernc.org/sqlite v1.21.0
+	modernc.org/sqlite v1.21.1
 )
 
 require (
