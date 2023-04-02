@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
 )
 
@@ -108,10 +107,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 
 			image, extension, _ := extractImageContent(activity.Media.CoverImage.ExtraLarge)
 
-			imageHash := md5.Sum(image)
-			var genericBytes []byte = imageHash[:] // Disgusting :)
-			guid, _ := uuid.FromBytes(genericBytes)
-			discImage := fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+			discImage, guid := utils.BytesToGUIDLocation(image, extension)
 
 			if err := saveCover(guid.String(), image, extension); err != nil {
 				fmt.Printf("Failed to save cover for Anilist: %+v\n", err)

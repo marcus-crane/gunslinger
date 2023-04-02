@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -110,10 +108,7 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		DominantColours: dominantColours,
 	}
 
-	imageHash := md5.Sum(image)
-	var genericBytes []byte = imageHash[:] // Disgusting :)
-	guid, _ := uuid.FromBytes(genericBytes)
-	playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+	playingItem.Image, _ = utils.BytesToGUIDLocation(image, extension)
 
 	// reflect.DeepEqual is good enough for our purposes even though
 	// it doesn't do things like properly copmare timestamp metadata.

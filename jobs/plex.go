@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -15,7 +14,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	color_extractor "github.com/marekm4/color-extractor"
 	"github.com/r3labs/sse/v2"
@@ -169,10 +167,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 		DominantColours: domColours,
 	}
 
-	imageHash := md5.Sum(image)
-	var genericBytes []byte = imageHash[:] // Disgusting :)
-	guid, _ := uuid.FromBytes(genericBytes)
-	playingItem.Image = fmt.Sprintf("/static/cover.%s.%s", guid, extension)
+	playingItem.Image, _ = utils.BytesToGUIDLocation(image, extension)
 
 	if mediaItem.Player.State == "playing" {
 		playingItem.IsActive = true
