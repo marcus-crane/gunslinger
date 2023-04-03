@@ -99,6 +99,8 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 
 	image, extension, dominantColours := extractImageContent(game.HeaderImage)
 
+	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
+
 	playingItem := models.MediaItem{
 		Title:           game.Name,
 		Subtitle:        developer,
@@ -106,9 +108,8 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		Source:          "steam",
 		IsActive:        true,
 		DominantColours: dominantColours,
+		Image:           imageLocation,
 	}
-
-	playingItem.Image, _ = utils.BytesToGUIDLocation(image, extension)
 
 	// reflect.DeepEqual is good enough for our purposes even though
 	// it doesn't do things like properly copmare timestamp metadata.

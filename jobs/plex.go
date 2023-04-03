@@ -158,6 +158,8 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 	thumbnailUrl := buildPlexURL(thumbnail)
 	image, extension, domColours := extractImageContent(thumbnailUrl)
 
+	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
+
 	playingItem := models.MediaItem{
 		Title:           mediaItem.Title,
 		Category:        mediaItem.Type,
@@ -165,9 +167,8 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 		Duration:        mediaItem.Duration,
 		Source:          "plex",
 		DominantColours: domColours,
+		Image:           imageLocation,
 	}
-
-	playingItem.Image, _ = utils.BytesToGUIDLocation(image, extension)
 
 	if mediaItem.Player.State == "playing" {
 		playingItem.IsActive = true
