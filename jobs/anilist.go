@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -25,23 +26,26 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to build Anilist manga payload: %+v\n", err)
+		return
 	}
 	req.Header = http.Header{
 		"Accept":        []string{"application/json"},
 		"Authorization": []string{fmt.Sprintf("Bearer %s", os.Getenv("ANILIST_TOKEN"))},
 		"Content-Type":  []string{"application/json"},
-		"User-Agent":    []string{UserAgent},
+		"User-Agent":    []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to contact Anilist for manga updates: %+v\n", err)
+		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to read Anilist response: %+v\n", err)
+		return
 	}
 	var anilistResponse models.AnilistResponse
 
@@ -105,17 +109,22 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				}
 			}
 
-			image, extension, _ := extractImageContent(activity.Media.CoverImage.ExtraLarge)
+			image, extension, _, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
+			if err != nil {
+				log.Printf("Failed to extract image content: %+v\n", err)
+				return
+			}
 
 			discImage, guid := utils.BytesToGUIDLocation(image, extension)
 
 			if err := saveCover(guid.String(), image, extension); err != nil {
 				fmt.Printf("Failed to save cover for Anilist: %+v\n", err)
+				return
 			}
 
 			// We haven't seen this chapter update so we'll save it
 			schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
-			_, err := database.Exec(
+			_, err = database.Exec(
 				schema,
 				activity.CreatedAt,
 				activity.Progress,

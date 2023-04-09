@@ -11,7 +11,7 @@ import (
 func Initialize() *sqlx.DB {
 	db, err := sqlx.Connect("sqlite", utils.MustEnv("DB_PATH"))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to DB: %+v\n", err)
 	}
 	log.Print("Initialised DB connection")
 	return db

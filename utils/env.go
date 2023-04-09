@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fmt"
+	"log"
 	"os"
 )
 
@@ -16,7 +16,7 @@ func GetEnv(key, fallback string) string {
 func MustEnv(key string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
-		panic(fmt.Sprintf("Value for %s must be provided", key))
+		log.Fatalf("Value for %s must be provided\n", key)
 	}
 	return value
 }

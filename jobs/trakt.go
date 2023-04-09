@@ -23,7 +23,7 @@ var (
 	tmdbEpisodeEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
 )
 
-func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) string {
+func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (string, error) {
 	url := ""
 	if traktResponse.Type == "movie" {
 		url = fmt.Sprintf(tmdbMovieEndpoint, traktResponse.Movie.IDs.TMDB)
@@ -35,12 +35,12 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) stri
 
 	res, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	var tmdbImageResponse models.TMDBImageResponse
 
@@ -55,7 +55,7 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) stri
 		imagePath = tmdbImageResponse.Stills[0].FilePath
 	}
 
-	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath)
+	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
 func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
@@ -66,7 +66,8 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 	var client http.Client
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to build HEAD request for Trakt: %+v\n", err)
+		return
 	}
 	req.Header = http.Header{
 		"Accept":            []string{"application/json"},
@@ -74,11 +75,12 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 		"Content-Type":      []string{"application/json"},
 		"trakt-api-version": []string{"2"},
 		"trakt-api-key":     []string{traktClientID},
-		"User-Agent":        []string{UserAgent},
+		"User-Agent":        []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to make HEAD request to Trakt: %+v\n", err)
+		return
 	}
 
 	// Nothing is playing so we should check if anything needs to be cleaned up
@@ -96,17 +98,20 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 	// Do a proper, more expensive request now that we've got something fresh
 	req2, err := http.NewRequest("GET", traktPlayingEndpoint, nil)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to build GET request for Trakt: %+v\n", err)
+		return
 	}
 	req2.Header = req.Header
 	res2, err := client.Do(req2)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to make GET request to Trakt: %+v\n", err)
+		return
 	}
 
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to read Trakt response: %+v\n", err)
+		return
 	}
 	var traktResponse models.NowPlayingResponse
 
@@ -124,18 +129,26 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 		return
 	}
 
-	imageUrl := getArtFromTMDB(tmdbToken, traktResponse)
-	image, extension, domColours := extractImageContent(imageUrl)
+	imageUrl, err := getArtFromTMDB(tmdbToken, traktResponse)
+	if err != nil {
+		log.Printf("Failed to retrieve art from TMDB: %+v\n", err)
+		return
+	}
+	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
+	if err != nil {
+		log.Printf("Failed to extract image content: %+v\n", err)
+		return
+	}
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
-		log.Printf("Failed to parse Trakt start time: %s", traktResponse.StartedAt)
+		log.Printf("Failed to parse Trakt start time: %s\n", traktResponse.StartedAt)
 		return
 	}
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
-		log.Printf("Failed to parse Trakt expiry time: %s", traktResponse.ExpiresAt)
+		log.Printf("Failed to parse Trakt expiry time: %s\n", traktResponse.ExpiresAt)
 		return
 	}
 

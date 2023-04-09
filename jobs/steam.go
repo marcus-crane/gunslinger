@@ -30,22 +30,25 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 	var client http.Client
 	req, err := http.NewRequest("GET", playingUrl, nil)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to prepare Steam request: %+v\n", err)
+		return
 	}
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{UserAgent},
+		"User-Agent":   []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to contact Steam for updates: %+v\n", err)
+		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to read Steam response: %+v\n", err)
+		return
 	}
 	var steamResponse models.SteamPlayerSummary
 
@@ -66,22 +69,25 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 
 	req, err = http.NewRequest("GET", gameDetailUrl, nil)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to prepare Steam request for more detail: %+v\n", err)
+		return
 	}
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{UserAgent},
+		"User-Agent":   []string{utils.UserAgent},
 	}
 	res, err = client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to read Steam detail response: %+v\n", err)
+		return
 	}
 	defer res.Body.Close()
 
 	body, err = io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to read Steam detail response: %+v\n", err)
+		return
 	}
 	var gameDetailResponse map[string]models.SteamAppResponse
 
@@ -97,7 +103,11 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		developer = game.Developers[0]
 	}
 
-	image, extension, dominantColours := extractImageContent(game.HeaderImage)
+	image, extension, dominantColours, err := utils.ExtractImageContent(game.HeaderImage)
+	if err != nil {
+		log.Printf("Failed to extract image content: %+v\n", err)
+		return
+	}
 
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 

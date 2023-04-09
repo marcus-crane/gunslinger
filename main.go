@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -30,11 +31,11 @@ func main() {
 	goose.SetBaseFS(embedMigrations)
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		panic(err)
+		log.Fatalf("Failed to set sqlite3 dialect: %+v\n", err)
 	}
 
 	if err := goose.Up(database.DB, "migrations"); err != nil {
-		panic(err)
+		log.Fatalf("Failed to run goose migration: %+v\n", err)
 	}
 
 	jobScheduler := jobs.SetupInBackground(database)

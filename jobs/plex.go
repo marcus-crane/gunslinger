@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
@@ -15,7 +13,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	color_extractor "github.com/marekm4/color-extractor"
 	"github.com/r3labs/sse/v2"
 
 	"github.com/marcus-crane/gunslinger/events"
@@ -25,7 +22,6 @@ import (
 
 const (
 	plexSessionEndpoint = "/status/sessions"
-	UserAgent           = "Gunslinger/1.0 (gunslinger@utf9k.net)"
 )
 
 func buildPlexURL(endpoint string) string {
@@ -34,79 +30,30 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func extractImageContent(imageUrl string) ([]byte, string, []string) {
-	var client http.Client
-	req, err := http.NewRequest("GET", imageUrl, nil)
-	if err != nil {
-		panic(err)
-	}
-	req.Header = http.Header{
-		"User-Agent": []string{UserAgent},
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer res.Body.Close()
-
-	var buf bytes.Buffer
-	tee := io.TeeReader(res.Body, &buf)
-
-	body, err := io.ReadAll(tee)
-	if err != nil {
-		panic(err)
-	}
-
-	mimeType := http.DetectContentType(body)
-
-	extension := ""
-
-	switch mimeType {
-	case "image/jpeg":
-		extension = "jpeg"
-	case "image/png":
-		extension = "png"
-	}
-
-	var domColours []string
-
-	image, _, _ := image.Decode(&buf)
-	colours := color_extractor.ExtractColors(image)
-	for _, c := range colours {
-		domColours = append(domColours, ColorToHexString(c))
-	}
-
-	return body, extension, domColours
-}
-
-func ColorToHexString(c color.Color) string {
-	r, g, b, a := c.RGBA()
-	rgba := color.RGBA{uint8(r), uint8(g), uint8(b), uint8(a)}
-	return fmt.Sprintf("#%.2x%.2x%.2x", rgba.R, rgba.G, rgba.B)
-
-}
-
 func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	var client http.Client
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to prepare Plex request: %+v\n", err)
+		return
 	}
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{UserAgent},
+		"User-Agent":   []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to contact Plex for updates: %+v\n", err)
+		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to parse Plex response: %+v\n", err)
+		return
 	}
 	var plexResponse models.PlexResponse
 
@@ -156,7 +103,11 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 	}
 
 	thumbnailUrl := buildPlexURL(thumbnail)
-	image, extension, domColours := extractImageContent(thumbnailUrl)
+	image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
+	if err != nil {
+		log.Printf("Failed to extract image content: %+v\n", err)
+		return
+	}
 
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
