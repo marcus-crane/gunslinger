@@ -3,14 +3,14 @@ module github.com/marcus-crane/gunslinger
 go 1.19
 
 require (
-	github.com/go-co-op/gocron v1.20.0
+	github.com/go-co-op/gocron v1.21.1
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.0
 	github.com/pressly/goose/v3 v3.10.0
 	github.com/r3labs/sse/v2 v2.10.0
-	github.com/rs/cors v1.8.3
+	github.com/rs/cors v1.9.0
 	modernc.org/sqlite v1.21.1
 )
 
