@@ -3,7 +3,7 @@ module github.com/marcus-crane/gunslinger
 go 1.19
 
 require (
-	github.com/go-co-op/gocron v1.22.3
+	github.com/go-co-op/gocron v1.22.4
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
@@ -11,7 +11,7 @@ require (
 	github.com/pressly/goose/v3 v3.10.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.9.0
-	modernc.org/sqlite v1.21.2
+	modernc.org/sqlite v1.22.0
 )
 
 require (
