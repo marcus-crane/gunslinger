@@ -202,7 +202,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 				if err := saveCover(guid.String(), image, extension); err != nil {
 					fmt.Printf("Failed to save cover for Trakt: %+v\n", err)
 				}
-				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
+				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
 					schema,
 					time.Now().Unix(),
@@ -210,6 +210,8 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 					playingItem.Subtitle,
 					playingItem.Category,
 					playingItem.IsActive,
+					playingItem.Duration,
+					playingItem.DominantColours,
 					playingItem.Source,
 					playingItem.Image,
 				)

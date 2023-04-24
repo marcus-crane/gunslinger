@@ -181,7 +181,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 			}
 
 			// We haven't seen this chapter update so we'll save it
-			schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
+			schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 			_, err = database.Exec(
 				schema,
 				activity.CreatedAt,
@@ -189,6 +189,8 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				activity.Media.Title.UserPreferred,
 				"manga",
 				false,
+				0,
+				[]string{},
 				"anilist",
 				discImage,
 			)
@@ -211,13 +213,15 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 			// so only update the live player if nothing else is live and manga is more recent
 			if !CurrentPlaybackItem.IsActive && latestItem.CreatedAt > CurrentPlaybackItem.CreatedAt {
 				playingItem := models.MediaItem{
-					CreatedAt: latestItem.CreatedAt,
-					Title:     latestItem.Title,
-					Subtitle:  latestItem.Subtitle,
-					Category:  latestItem.Category,
-					Source:    latestItem.Source,
-					IsActive:  latestItem.IsActive,
-					Image:     latestItem.Image,
+					CreatedAt:       latestItem.CreatedAt,
+					Title:           latestItem.Title,
+					Subtitle:        latestItem.Subtitle,
+					Category:        latestItem.Category,
+					Source:          latestItem.Source,
+					Duration:        latestItem.DurationMs,
+					DominantColours: latestItem.DominantColours,
+					IsActive:        latestItem.IsActive,
+					Image:           latestItem.Image,
 				}
 				byteStream := new(bytes.Buffer)
 				json.NewEncoder(byteStream).Encode(playingItem)

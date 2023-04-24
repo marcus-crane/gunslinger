@@ -12,16 +12,16 @@ type ResponseHTTP struct {
 }
 
 type DBMediaItem struct {
-	ID              uint   `gorm:"primaryKey" json:"id" db:"id"`
-	CreatedAt       int64  `json:"created_at" db:"created_at"`
-	Title           string `json:"title" db:"title"`
-	Subtitle        string `json:"subtitle" db:"subtitle"`
-	Category        string `json:"category" db:"category"`
-	IsActive        bool   `json:"is_active" db:"is_active"`
-	DurationMs      int    `json:"duration_ms" db:"duration_ms"`
-	DominantColours string `json:"dominant_colours" db:"dominant_colours"`
-	Source          string `json:"source" db:"source"`
-	Image           string `json:"image" db:"image"`
+	ID              uint             `gorm:"primaryKey" json:"id" db:"id"`
+	CreatedAt       int64            `json:"created_at" db:"created_at"`
+	Title           string           `json:"title" db:"title"`
+	Subtitle        string           `json:"subtitle" db:"subtitle"`
+	Category        string           `json:"category" db:"category"`
+	IsActive        bool             `json:"is_active" db:"is_active"`
+	DurationMs      int              `json:"duration_ms" db:"duration_ms"`
+	DominantColours SerializedColors `json:"dominant_colours" db:"dominant_colours"`
+	Source          string           `json:"source" db:"source"`
+	Image           string           `json:"image" db:"image"`
 }
 
 // SerializedColours is a custom DB extension type that stores

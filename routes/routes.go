@@ -119,7 +119,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 				Source:          result.Source,
 				Image:           result.Image,
 				Duration:        result.DurationMs,
-				DominantColours: strings.Split(result.DominantColours, ","),
+				DominantColours: result.DominantColours,
 			},
 		}
 		json.NewEncoder(w).Encode(playbackItems)
@@ -151,7 +151,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 				Source:          item.Source,
 				Image:           item.Image,
 				Duration:        item.DurationMs,
-				DominantColours: strings.Split(item.DominantColours, ","),
+				DominantColours: item.DominantColours,
 			}
 			response = append(response, rItem)
 		}

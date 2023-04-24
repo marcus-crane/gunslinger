@@ -32,14 +32,15 @@ func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
 	if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
 		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 			CurrentPlaybackItem = models.MediaItem{
-				CreatedAt:  result.CreatedAt,
-				Title:      result.Title,
-				Subtitle:   result.Subtitle,
-				Category:   result.Category,
-				Source:     result.Source,
-				IsActive:   false,
-				Backfilled: true,
-				Image:      result.Image,
+				CreatedAt:       result.CreatedAt,
+				Title:           result.Title,
+				Subtitle:        result.Subtitle,
+				Category:        result.Category,
+				Source:          result.Source,
+				IsActive:        false,
+				Backfilled:      true,
+				DominantColours: result.DominantColours,
+				Image:           result.Image,
 			}
 		}
 	}

@@ -117,6 +117,7 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		Category:        "gaming",
 		Source:          "steam",
 		IsActive:        true,
+		Duration:        0,
 		DominantColours: dominantColours,
 		Image:           imageLocation,
 	}
@@ -141,7 +142,7 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 					fmt.Printf("Failed to save cover for Steam: %+v\n", err)
 				}
 
-				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, source, image) VALUES (?, ?, ?, ?, ?, ?, ?)`
+				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
 					schema,
 					time.Now().Unix(),
@@ -149,6 +150,8 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 					playingItem.Subtitle,
 					playingItem.Category,
 					playingItem.IsActive,
+					playingItem.Duration,
+					playingItem.DominantColours,
 					playingItem.Source,
 					playingItem.Image,
 				)

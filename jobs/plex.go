@@ -168,7 +168,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 					playingItem.Category,
 					playingItem.IsActive,
 					playingItem.Duration,
-					models.SerializedColors(playingItem.DominantColours),
+					playingItem.DominantColours,
 					playingItem.Source,
 					playingItem.Image,
 				)
