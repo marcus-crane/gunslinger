@@ -23,6 +23,7 @@ type Activity struct {
 type Manga struct {
 	Id         int64      `json:"id"`
 	Title      MangaTitle `json:"title"`
+	Chapters   int        `json:"chapters"`
 	CoverImage MangaCover `json:"coverImage"`
 }
 

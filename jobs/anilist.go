@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -23,7 +24,7 @@ const (
 
 func GetRecentlyReadManga(database *sqlx.DB) {
 	var client http.Client
-	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
+	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
 		log.Printf("Failed to build Anilist manga payload: %+v\n", err)
@@ -57,14 +58,69 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 	updateOccured := false
 
 	for _, activity := range anilistResponse.Data.Page.Activities {
+		if activity.Status == "completed" {
+			var previousEntry models.DBMediaItem
+			// has it been at least 24 hours since the last update?
+
+			// have we binged it from start to finish somehow?
+			if err := database.Get(
+				&previousEntry,
+				"SELECT * FROM db_media_items WHERE category = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
+				"manga",
+				activity.Media.Title.UserPreferred,
+			); err == nil {
+				// We have completed this manga entirely but have never surfaced it
+				// This would seem quite strange given my current manga set up so
+				// for now we'll skip this in case we're backfilling manga
+				continue
+			}
+
+			// To be able to complete it, it must have chapters in the first place but
+			// we should do a sanity check regardless
+			lastChapter := activity.Media.Chapters
+
+			if lastChapter == 0 {
+				// This should be impossible as a series needs a chapter count
+				// to be "completeable" but stranger things have happened.
+				// We'll consider this a no-op and bail out
+				continue
+			}
+
+			streakStartChapter := ""
+
+			if strings.Contains(previousEntry.Title, " - ") {
+				streakStartChapter = strings.Split(previousEntry.Title, " - ")[1]
+			} else {
+				streakStartChapter = previousEntry.Title
+			}
+
+			streakStart, err := strconv.Atoi(streakStartChapter)
+			if err != nil {
+				// Who cares enough really. We'll just skip this event
+				continue
+			}
+			trueStreakStart := streakStart + 1
+			// We'll substitute it for a fancy name
+			activity.Progress = fmt.Sprintf("Chapters %d - %d (END)", trueStreakStart, activity.Media.Chapters)
+
+			if err != nil {
+				fmt.Printf("Failed to update entry for %d %s", activity.Id, activity.Media.Title.UserPreferred)
+			} else {
+				fmt.Println("Saved")
+				updateOccured = true
+			}
+			continue
+		}
+
 		if activity.Status == "read chapter" {
 			var existingItem models.DBMediaItem
 			// Have we saved this update already?
 			if err := database.Get(
 				&existingItem,
-				"SELECT * FROM db_media_items WHERE category = ? AND title = ? ORDER BY created_at desc LIMIT 1",
+				"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 				"manga",
 				activity.Progress,
+				activity.Media.Title.UserPreferred,
 			); err == nil {
 				continue // We have already seen this status update
 			}
@@ -76,9 +132,10 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				// First, we check if the existing chapter is also part of a range ie; 102 - 105
 				if err := database.Get(
 					&existingItem,
-					"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? ORDER BY created_at desc LIMIT 1",
+					"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 					"manga",
 					"%"+fmt.Sprintf("%s - ", startChapter)+"%", // Make sure we include - so eg; Chapter 100 doesn't partial match Chapter 1000
+					activity.Media.Title.UserPreferred,
 				); err == nil {
 					// Found an existing update so we need to update the end chapter
 					err := updateChapter(database, activity, existingItem)
@@ -94,9 +151,10 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				// Next, we check if the existing chapter was the first in a streak ie; 102
 				if err := database.Get(
 					&existingItem,
-					"SELECT * FROM db_media_items WHERE category = ? AND title = ? ORDER BY created_at desc LIMIT 1",
+					"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 					"manga",
 					startChapter,
+					activity.Media.Title.UserPreferred,
 				); err == nil {
 					err := updateChapter(database, activity, existingItem)
 					if err != nil {
