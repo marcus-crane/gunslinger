@@ -112,12 +112,14 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 
 		playbackItems := []models.ResponseMediaItem{
 			{
-				OccuredAt: time.Unix(result.CreatedAt, 0).Format(time.RFC3339),
-				Title:     result.Title,
-				Subtitle:  result.Subtitle,
-				Category:  result.Category,
-				Source:    result.Source,
-				Image:     result.Image,
+				OccuredAt:       time.Unix(result.CreatedAt, 0).Format(time.RFC3339),
+				Title:           result.Title,
+				Subtitle:        result.Subtitle,
+				Category:        result.Category,
+				Source:          result.Source,
+				Image:           result.Image,
+				Duration:        result.DurationMs,
+				DominantColours: strings.Split(result.DominantColours, ","),
 			},
 		}
 		json.NewEncoder(w).Encode(playbackItems)
@@ -142,12 +144,14 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 				continue
 			}
 			rItem := models.ResponseMediaItem{
-				OccuredAt: time.Unix(item.CreatedAt, 0).Format(time.RFC3339),
-				Title:     item.Title,
-				Subtitle:  item.Subtitle,
-				Category:  item.Category,
-				Source:    item.Source,
-				Image:     item.Image,
+				OccuredAt:       time.Unix(item.CreatedAt, 0).Format(time.RFC3339),
+				Title:           item.Title,
+				Subtitle:        item.Subtitle,
+				Category:        item.Category,
+				Source:          item.Source,
+				Image:           item.Image,
+				Duration:        item.DurationMs,
+				DominantColours: strings.Split(item.DominantColours, ","),
 			}
 			response = append(response, rItem)
 		}
