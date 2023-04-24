@@ -1,8 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE db_media_items ADD COLUMN duration_ms integer;
-
-ALTER TABLE db_media_items ADD COLUMN dominant_colours text;
+ALTER TABLE db_media_items ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE db_media_items ADD COLUMN dominant_colours TEXT;
 -- +goose StatementEnd
 
 -- +goose Down
