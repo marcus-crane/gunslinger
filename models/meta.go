@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-type ResponseHTTP struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data"`
-}
-
 // SerializableColours is a custom DB extension type that stores
 // a string slice as a comma separate value in the database
 // Example input: []string{"#020304", "#6581be"}
@@ -72,10 +67,4 @@ type MediaItem struct {
 	Image           string              `json:"image"`
 	DominantColours SerializableColours `json:"dominant_colours"`
 	Backfilled      bool                `json:"-"`
-}
-
-type SlackProfile struct {
-	StatusText       string  `json:"status_text"`
-	StatusEmoji      string  `json:"status_emoji"`
-	StatusExpiration float64 `json:"status_expiration"`
 }

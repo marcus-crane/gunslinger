@@ -40,27 +40,3 @@ type TMDBImageResponse struct {
 type TMDBImage struct {
 	FilePath string `json:"file_path"`
 }
-
-// {
-// 	"id": 3282633,
-// 	"stills": [
-// 		{
-// 			"aspect_ratio": 1.778,
-// 			"height": 1080,
-// 			"iso_639_1": null,
-// 			"file_path": "/mtJIGRYjuSR1NGwE9VSfYqwHH6s.jpg",
-// 			"vote_average": 0.0,
-// 			"vote_count": 0,
-// 			"width": 1920
-// 		},
-// 		{
-// 			"aspect_ratio": 1.778,
-// 			"height": 1080,
-// 			"iso_639_1": null,
-// 			"file_path": "/yWvdab9mkEipzMkBVtOw4d9LFMl.jpg",
-// 			"vote_average": 0.0,
-// 			"vote_count": 0,
-// 			"width": 1920
-// 		}
-// 	]
-// }
