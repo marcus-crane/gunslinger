@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/marcus-crane/gunslinger/models"
 	color_extractor "github.com/marekm4/color-extractor"
 )
 
@@ -25,7 +26,7 @@ func BytesToGUIDLocation(image []byte, extension string) (string, uuid.UUID) {
 	return location, guid
 }
 
-func ExtractImageContent(imageUrl string) ([]byte, string, []string, error) {
+func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableColours, error) {
 	var client http.Client
 	req, err := http.NewRequest("GET", imageUrl, nil)
 	if err != nil {

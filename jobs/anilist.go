@@ -167,7 +167,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				}
 			}
 
-			image, extension, _, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
+			image, extension, dominantColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
 			if err != nil {
 				log.Printf("Failed to extract image content: %+v\n", err)
 				return
@@ -190,7 +190,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				"manga",
 				false,
 				0,
-				models.SerializedColors{},
+				dominantColours,
 				"anilist",
 				discImage,
 			)
