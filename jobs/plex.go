@@ -66,6 +66,10 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB) {
 	containsPlayingItem := false
 	if plexResponse.MediaContainer.Size > 0 {
 		for idx, entry := range plexResponse.MediaContainer.Metadata {
+			// We don't want to capture movie trailers as historical items
+			if entry.Type == "clip" {
+				continue
+			}
 			if entry.Player.State == "playing" {
 				containsPlayingItem = true
 				// We may have multiple items in our queue at once
