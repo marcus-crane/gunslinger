@@ -190,7 +190,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 				"manga",
 				false,
 				0,
-				[]string{},
+				models.SerializedColors{},
 				"anilist",
 				discImage,
 			)
