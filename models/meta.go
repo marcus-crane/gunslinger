@@ -11,19 +11,6 @@ type ResponseHTTP struct {
 	Data    interface{} `json:"data"`
 }
 
-type DBMediaItem struct {
-	ID              uint                `gorm:"primaryKey" json:"id" db:"id"`
-	CreatedAt       int64               `json:"created_at" db:"created_at"`
-	Title           string              `json:"title" db:"title"`
-	Subtitle        string              `json:"subtitle" db:"subtitle"`
-	Category        string              `json:"category" db:"category"`
-	IsActive        bool                `json:"is_active" db:"is_active"`
-	DurationMs      int                 `json:"duration_ms" db:"duration_ms"`
-	DominantColours SerializableColours `json:"dominant_colours" db:"dominant_colours"`
-	Source          string              `json:"source" db:"source"`
-	Image           string              `json:"image" db:"image"`
-}
-
 // SerializableColours is a custom DB extension type that stores
 // a string slice as a comma separate value in the database
 // Example input: []string{"#020304", "#6581be"}
@@ -55,6 +42,22 @@ type ResponseMediaItem struct {
 	Image           string              `json:"image"`
 	Duration        int                 `json:"duration_ms"`
 	DominantColours SerializableColours `json:"dominant_colours"`
+}
+
+// Used in V4 but not renamed until V3 is deprecated
+type ComboDBMediaItem struct {
+	ID              uint                `json:"id" db:"id"`
+	OccuredAt       int64               `json:"occurred_at" db:"created_at"`
+	Title           string              `json:"title" db:"title"`
+	Subtitle        string              `json:"subtitle" db:"subtitle"`
+	Category        string              `json:"category" db:"category"`
+	IsActive        bool                `json:"is_active" db:"is_active"`
+	Elapsed         int                 `json:"elapsed_ms" db:"-"`
+	Duration        int                 `json:"duration_ms" db:"duration_ms"`
+	Source          string              `json:"source" db:"source"`
+	Image           string              `json:"image" db:"image"`
+	DominantColours SerializableColours `json:"dominant_colours" db:"dominant_colours"`
+	Backfilled      bool                `json:"-" db:"-"`
 }
 
 type MediaItem struct {

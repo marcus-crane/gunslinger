@@ -59,7 +59,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 
 	for _, activity := range anilistResponse.Data.Page.Activities {
 		if activity.Status == "completed" {
-			var previousEntry models.DBMediaItem
+			var previousEntry models.ComboDBMediaItem
 			// has it been at least 24 hours since the last update?
 
 			// have we binged it from start to finish somehow?
@@ -113,7 +113,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 		}
 
 		if activity.Status == "read chapter" {
-			var existingItem models.DBMediaItem
+			var existingItem models.ComboDBMediaItem
 			// Have we saved this update already?
 			if err := database.Get(
 				&existingItem,
@@ -203,7 +203,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 	}
 
 	if updateOccured {
-		var latestItem models.DBMediaItem
+		var latestItem models.ComboDBMediaItem
 		if err := database.Get(
 			&latestItem,
 			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
@@ -211,14 +211,14 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 		); err == nil {
 			// If we've read manga in the past but only just fetched updates, we don't consider this "live"
 			// so only update the live player if nothing else is live and manga is more recent
-			if !CurrentPlaybackItem.IsActive && latestItem.CreatedAt > CurrentPlaybackItem.CreatedAt {
+			if !CurrentPlaybackItem.IsActive && latestItem.OccuredAt > CurrentPlaybackItem.CreatedAt {
 				playingItem := models.MediaItem{
-					CreatedAt:       latestItem.CreatedAt,
+					CreatedAt:       latestItem.OccuredAt,
 					Title:           latestItem.Title,
 					Subtitle:        latestItem.Subtitle,
 					Category:        latestItem.Category,
 					Source:          latestItem.Source,
-					Duration:        latestItem.DurationMs,
+					Duration:        latestItem.Duration,
 					DominantColours: latestItem.DominantColours,
 					IsActive:        latestItem.IsActive,
 					Image:           latestItem.Image,
@@ -232,7 +232,7 @@ func GetRecentlyReadManga(database *sqlx.DB) {
 	}
 }
 
-func updateChapter(database *sqlx.DB, activity models.Activity, existingItem models.DBMediaItem) error {
+func updateChapter(database *sqlx.DB, activity models.Activity, existingItem models.ComboDBMediaItem) error {
 	query := `UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?`
 	_, err := database.Exec(
 		query,

@@ -74,7 +74,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var response []models.ResponseMediaItem
-		var result []models.DBMediaItem
+		var result []models.ComboDBMediaItem
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
@@ -90,12 +90,14 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 				continue
 			}
 			rItem := models.ResponseMediaItem{
-				OccuredAt: time.Unix(item.CreatedAt, 0).Format(time.RFC3339),
-				Title:     item.Title,
-				Subtitle:  item.Subtitle,
-				Category:  item.Category,
-				Source:    item.Source,
-				Image:     item.Image,
+				OccuredAt:       time.Unix(item.OccuredAt, 0).Format(time.RFC3339),
+				Title:           item.Title,
+				Subtitle:        item.Subtitle,
+				Category:        item.Category,
+				Source:          item.Source,
+				Image:           item.Image,
+				Duration:        item.Duration,
+				DominantColours: item.DominantColours,
 			}
 			response = append(response, rItem)
 		}
@@ -104,21 +106,24 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		var result models.DBMediaItem
+		var result models.ComboDBMediaItem
 		if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 
-		playbackItems := []models.ResponseMediaItem{
+		playbackItems := []models.ComboDBMediaItem{
 			{
-				OccuredAt:       time.Unix(result.CreatedAt, 0).Format(time.RFC3339),
+				ID:              result.ID,
+				OccuredAt:       result.OccuredAt,
 				Title:           result.Title,
 				Subtitle:        result.Subtitle,
 				Category:        result.Category,
+				IsActive:        jobs.CurrentPlaybackItem.IsActive,
 				Source:          result.Source,
 				Image:           result.Image,
-				Duration:        result.DurationMs,
+				Elapsed:         jobs.CurrentPlaybackItem.Elapsed,
+				Duration:        result.Duration,
 				DominantColours: result.DominantColours,
 			},
 		}
@@ -127,8 +132,8 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		var response []models.ResponseMediaItem
-		var result []models.DBMediaItem
+		var response []models.ComboDBMediaItem
+		var result []models.ComboDBMediaItem
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
@@ -143,14 +148,15 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
 				continue
 			}
-			rItem := models.ResponseMediaItem{
-				OccuredAt:       time.Unix(item.CreatedAt, 0).Format(time.RFC3339),
+			rItem := models.ComboDBMediaItem{
+				ID:              item.ID,
+				OccuredAt:       item.OccuredAt,
 				Title:           item.Title,
 				Subtitle:        item.Subtitle,
 				Category:        item.Category,
 				Source:          item.Source,
 				Image:           item.Image,
-				Duration:        item.DurationMs,
+				Duration:        item.Duration,
 				DominantColours: item.DominantColours,
 			}
 			response = append(response, rItem)

@@ -192,7 +192,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		// We want to make sure that we don't resave if the server restarts
 		// to ensure the history endpoint is relatively accurate
-		var previousItem models.DBMediaItem
+		var previousItem models.ComboDBMediaItem
 		if err := database.Get(
 			&previousItem,
 			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
