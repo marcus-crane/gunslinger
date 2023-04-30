@@ -24,7 +24,7 @@ func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, database)
 	s.Every(15).Seconds().Do(GetRecentlyReadManga, database) // Rate limit: 90 req/sec
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, database)
-	// s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, database)
+	s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, database)
 
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
