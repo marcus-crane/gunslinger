@@ -114,7 +114,6 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 
 		playbackItems := []models.ComboDBMediaItem{
 			{
-				ID:              result.ID,
 				OccuredAt:       result.OccuredAt,
 				Title:           result.Title,
 				Subtitle:        result.Subtitle,
