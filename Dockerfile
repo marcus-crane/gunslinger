@@ -6,7 +6,7 @@ COPY . .
 RUN go mod download
 RUN GOOS=linux CGO_ENABLED=0 go build -v -o gunslinger
 
-FROM alpine:3.17
+FROM alpine:3.18
 RUN apk update && apk add ca-certificates iptables ip6tables sqlite && rm -rf /var/cache/apk/*
 
 # Copy binary to production image
