@@ -3,12 +3,12 @@ module github.com/marcus-crane/gunslinger
 go 1.19
 
 require (
-	github.com/go-co-op/gocron v1.25.0
+	github.com/go-co-op/gocron v1.28.1
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.0
-	github.com/pressly/goose/v3 v3.11.0
+	github.com/pressly/goose/v3 v3.11.2
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.9.0
 	modernc.org/sqlite v1.22.1
@@ -20,10 +20,11 @@ require (
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
