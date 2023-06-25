@@ -3,7 +3,7 @@ module github.com/marcus-crane/gunslinger
 go 1.19
 
 require (
-	github.com/go-co-op/gocron v1.28.3
+	github.com/go-co-op/gocron v1.30.0
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
