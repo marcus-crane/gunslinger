@@ -32,6 +32,8 @@ github.com/go-co-op/gocron v1.28.2 h1:H9oHUGH+9HZ5mAorbnzRjzXLf4poP+ctZdbtaKRYag
 github.com/go-co-op/gocron v1.28.2/go.mod h1:39f6KNSGVOU1LO/ZOoZfcSxwlsJDQOKSu8erN0SH48Y=
 github.com/go-co-op/gocron v1.28.3 h1:swTsge6u/1Ei51b9VLMz/YTzEzWpbsk5SiR7m5fklTI=
 github.com/go-co-op/gocron v1.28.3/go.mod h1:39f6KNSGVOU1LO/ZOoZfcSxwlsJDQOKSu8erN0SH48Y=
+github.com/go-co-op/gocron v1.30.0 h1:7nDCO++3HqQb+gSyd0NWRjsNbyPcK9cKVepBQWWaP6E=
+github.com/go-co-op/gocron v1.30.0/go.mod h1:39f6KNSGVOU1LO/ZOoZfcSxwlsJDQOKSu8erN0SH48Y=
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/go-sql-driver/mysql v1.7.0 h1:ueSltNNllEqE3qcWBTD0iQd3IpL/6U+mJxLkazJ7YPc=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
