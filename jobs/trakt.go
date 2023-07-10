@@ -116,7 +116,8 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
 	var traktResponse models.NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
-		fmt.Println("Error fetching Trakt data: ", err)
+		// TODO: Check status code
+		return
 	}
 
 	// We only want to use Trakt to capture movies and TV series that have been
