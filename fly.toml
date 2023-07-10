@@ -1,44 +1,43 @@
-# fly.toml file generated for gunslinger on 2021-06-09T14:38:50+12:00
+# fly.toml app configuration file generated for gunslinger on 2023-07-10T20:47:18+12:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
 app = "gunslinger"
-
+primary_region = "syd"
 kill_signal = "SIGINT"
-kill_timeout = 5
-
-[env]
-  BACKGROUND_JOBS_ENABLED = true
-  GOMEMLIMIT = "800MiB"
-  LOG_LEVEL = "INFO"
+kill_timeout = "5s"
 
 [experimental]
-  allowed_public_ports = []
   auto_rollback = true
 
-[[services]]
-  http_checks = []
-  internal_port = 8080
-  protocol = "tcp"
-  script_checks = []
-
-  [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
-    type = "connections"
-
-  [[services.ports]]
-    handlers = ["http"]
-    port = 80
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-  [[services.tcp_checks]]
-    grace_period = "1s"
-    interval = "15s"
-    restart_limit = 6
-    timeout = "2s"
+[env]
+  BACKGROUND_JOBS_ENABLED = "t"
+  GOMEMLIMIT = "800MiB"
+  LOG_LEVEL = "INFO"
 
 [[mounts]]
   source = "data"
   destination = "/data"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "1s"
+    restart_limit = 6
