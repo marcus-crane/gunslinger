@@ -56,6 +56,10 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 		fmt.Println("Error fetching Steam data: ", err)
 	}
 
+	if len(steamResponse.Response.Players) == 0 {
+		return
+	}
+
 	gameId := steamResponse.Response.Players[0].GameID
 
 	if gameId == "" {
