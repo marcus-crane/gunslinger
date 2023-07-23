@@ -7,11 +7,11 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
-	github.com/marekm4/color-extractor v1.2.0
+	github.com/marekm4/color-extractor v1.2.1
 	github.com/pressly/goose/v3 v3.13.4
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.9.0
-	modernc.org/sqlite v1.23.1
+	modernc.org/sqlite v1.24.0
 )
 
 require (
