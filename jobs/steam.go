@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
+	"github.com/rs/zerolog/log"
 )
 
 var (

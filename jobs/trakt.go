@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -45,7 +45,7 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (str
 	var tmdbImageResponse models.TMDBImageResponse
 
 	if err = json.Unmarshal(body, &tmdbImageResponse); err != nil {
-		fmt.Println("Error fetching Trakt data: ", err)
+		log.Error().RawJSON("body", body).Err(err).Msg("Failed to fetch image data from TMDB")
 	}
 
 	imagePath := ""
@@ -65,7 +65,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
-		log.Printf("Failed to build HEAD request for Trakt: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to build HEAD request for Trakt")
 		return
 	}
 	req.Header = http.Header{
@@ -78,7 +78,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed to make HEAD request to Trakt: %+v\n", err)
+		log.Error().Err(err).Str("code", res.Status).Msg("Failed to make HEAD request to Trakt")
 		return
 	}
 
@@ -97,25 +97,26 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	// Do a proper, more expensive request now that we've got something fresh
 	req2, err := http.NewRequest("GET", traktPlayingEndpoint, nil)
 	if err != nil {
-		log.Printf("Failed to build GET request for Trakt: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to build GET request for Trakt")
 		return
 	}
 	req2.Header = req.Header
 	res2, err := client.Do(req2)
 	if err != nil {
-		log.Printf("Failed to make GET request to Trakt: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to make GET request to Trakt")
 		return
 	}
 
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
-		log.Printf("Failed to read Trakt response: %+v\n", err)
+		log.Error().Err(err).Str("code", res2.Status).Msg("Failed to unmarshal Trakt response")
 		return
 	}
 	var traktResponse models.NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
+		log.Error().Err(err).Str("code", res2.Status).Msg("Failed to unmarshal Trakt response")
 		return
 	}
 
@@ -131,24 +132,24 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 
 	imageUrl, err := getArtFromTMDB(tmdbToken, traktResponse)
 	if err != nil {
-		log.Printf("Failed to retrieve art from TMDB: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to retrieve art from TMDB")
 		return
 	}
 	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 	if err != nil {
-		log.Printf("Failed to extract image content: %+v\n", err)
+		log.Error().Err(err).Str("image_url", imageUrl).Msg("Failed to extract image content")
 		return
 	}
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
-		log.Printf("Failed to parse Trakt start time: %s\n", traktResponse.StartedAt)
+		log.Error().Err(err).Str("started_at", traktResponse.StartedAt).Msg("Failed to parse Trakt start time")
 		return
 	}
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
-		log.Printf("Failed to parse Trakt expiry time: %s\n", traktResponse.ExpiresAt)
+		log.Error().Err(err).Str("expires_at", traktResponse.ExpiresAt).Msg("Failed to parse Trakt expiry time")
 		return
 	}
 
@@ -200,7 +201,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					fmt.Printf("Failed to save cover for Trakt: %+v\n", err)
+					log.Error().Err(err).Str("guid", guid.String()).Str("title", playingItem.Title).Msg("Failed to save cover for Trakt")
 				}
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
@@ -216,12 +217,11 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 					playingItem.Image,
 				)
 				if err != nil {
-					fmt.Println("Failed to save DB entry")
-					log.Print(err)
+					log.Error().Err(err).Str("title", playingItem.Title).Msg("Failed to save DB entry")
 				}
 			}
 		} else {
-			log.Print(err)
+			log.Error().Err(err).Str("title", playingItem.Title).Msg("An unknown error occurred")
 		}
 	}
 

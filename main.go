@@ -3,12 +3,13 @@ package main
 import (
 	"embed"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
@@ -21,6 +22,7 @@ import (
 var embedMigrations embed.FS
 
 func main() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	if err := godotenv.Load(); err != nil {
 		fmt.Println(err)
@@ -31,30 +33,30 @@ func main() {
 	goose.SetBaseFS(embedMigrations)
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Fatalf("Failed to set sqlite3 dialect: %+v\n", err)
+		log.Fatal().Err(err).Msg("Failed to set sqlte3 dialect")
 	}
 
 	if err := goose.Up(database.DB, "migrations"); err != nil {
-		log.Fatalf("Failed to run goose migration: %+v\n", err)
+		log.Fatal().Err(err).Msg("Failed to run goose migration")
 	}
 
 	jobScheduler := jobs.SetupInBackground(database)
 
 	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()
-		fmt.Println("Background jobs have started up in the background.")
+		log.Info().Msg("Background jobs have started up in the background.")
 	} else {
-		fmt.Println("Background jobs are disabled.")
+		log.Info().Msg("Background jobs are disabled.")
 	}
 
 	events.Init()
 
 	router := routes.Register(http.NewServeMux(), database)
 
-	fmt.Println("Gunslinger is running at http://localhost:8080")
+	log.Info().Msg("Gunslinger is running at http://localhost:8080")
 
 	if err := http.ListenAndServe(":8080", router); err != nil {
-		fmt.Println(err)
+		log.Error().Err(err).Send()
 		jobScheduler.Stop()
 		os.Exit(1)
 	}

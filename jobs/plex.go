@@ -7,13 +7,14 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/r3labs/sse/v2"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -34,7 +35,8 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
-		log.Printf("Failed to prepare Plex request: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to prepare Plex request")
+		// log.Printf("Failed to prepare Plex request: %+v\n", err)
 		return
 	}
 	req.Header = http.Header{
@@ -44,20 +46,20 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed to contact Plex for updates: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to contact Plex for updates")
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Failed to parse Plex response: %+v\n", err)
+		log.Error().Err(err).Msg("Failed to parse Plex response")
 		return
 	}
 	var plexResponse models.PlexResponse
 
 	if err = json.Unmarshal(body, &plexResponse); err != nil {
-		fmt.Println("Error fetching Plex data: ", err)
+		log.Error().Err(err).Msg("Error fetching Plex data")
 	}
 
 	index := 0
@@ -108,7 +110,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	thumbnailUrl := buildPlexURL(thumbnail)
 	image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
 	if err != nil {
-		log.Printf("Failed to extract image content: %+v\n", err)
+		log.Error().Err(err).Str("image_url", thumbnailUrl).Msg("Failed to extract image content")
 		return
 	}
 
@@ -160,7 +162,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					fmt.Printf("Failed to save cover for Plex: %+v\n", err)
+					log.Error().Err(err).Str("guid", guid.String()).Str("title", playingItem.Title).Msg("Failed to save cover for Trakt")
 				}
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
@@ -176,12 +178,11 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 					playingItem.Image,
 				)
 				if err != nil {
-					fmt.Println("Failed to save DB entry")
-					log.Print(err)
+					log.Error().Err(err).Str("title", playingItem.Title).Msg("Failed to save DB entry")
 				}
 			}
 		} else {
-			log.Print(err)
+			log.Error().Err(err).Str("title", playingItem.Title).Msg("An unknown error occurred")
 		}
 	}
 
