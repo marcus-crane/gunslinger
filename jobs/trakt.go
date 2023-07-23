@@ -58,12 +58,11 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (str
 	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
-func GetCurrentlyPlayingTrakt(database *sqlx.DB) {
+func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
 	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
 	tmdbToken := utils.MustEnv("TMDB_TOKEN")
 
-	var client http.Client
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
 		log.Printf("Failed to build HEAD request for Trakt: %+v\n", err)

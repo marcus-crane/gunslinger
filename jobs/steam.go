@@ -22,12 +22,11 @@ var (
 	gameDetailEndpoint = "https://store.steampowered.com/api/appdetails?appids=%s"
 )
 
-func GetCurrentlyPlayingSteam(database *sqlx.DB) {
+func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 
 	steamApiKey := utils.MustEnv("STEAM_TOKEN")
 	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
 
-	var client http.Client
 	req, err := http.NewRequest("GET", playingUrl, nil)
 	if err != nil {
 		log.Printf("Failed to prepare Steam request: %+v\n", err)
@@ -57,6 +56,9 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB) {
 	}
 
 	if len(steamResponse.Response.Players) == 0 {
+		if CurrentPlaybackItem.Source == "steam" {
+			CurrentPlaybackItem.IsActive = false
+		}
 		return
 	}
 

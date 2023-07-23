@@ -30,9 +30,8 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func GetCurrentlyPlayingPlex(database *sqlx.DB) {
+func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
-	var client http.Client
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
 		log.Printf("Failed to prepare Plex request: %+v\n", err)

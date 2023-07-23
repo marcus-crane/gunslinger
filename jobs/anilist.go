@@ -22,8 +22,7 @@ const (
 	anilistGraphqlEndpoint = "https://graphql.anilist.co"
 )
 
-func GetRecentlyReadManga(database *sqlx.DB) {
-	var client http.Client
+func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
