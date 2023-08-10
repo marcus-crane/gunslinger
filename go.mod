@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/go-co-op/gocron v1.31.0
+	github.com/go-co-op/gocron v1.31.1
 	github.com/google/uuid v1.3.0
 	github.com/h2non/gock v1.2.0
 	github.com/jmoiron/sqlx v1.3.5
@@ -15,7 +15,7 @@ require (
 	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.30.0
 	github.com/stretchr/testify v1.8.4
-	modernc.org/sqlite v1.24.0
+	modernc.org/sqlite v1.25.0
 )
 
 require (
