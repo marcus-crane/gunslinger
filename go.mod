@@ -4,13 +4,13 @@ go 1.19
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/go-co-op/gocron v1.31.1
-	github.com/google/uuid v1.3.0
+	github.com/go-co-op/gocron v1.33.0
+	github.com/google/uuid v1.3.1
 	github.com/h2non/gock v1.2.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.1
-	github.com/pressly/goose/v3 v3.14.0
+	github.com/pressly/goose/v3 v3.15.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.30.0
