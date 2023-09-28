@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/go-co-op/gocron v1.34.0
+	github.com/go-co-op/gocron v1.34.2
 	github.com/google/uuid v1.3.1
 	github.com/h2non/gock v1.2.0
 	github.com/jmoiron/sqlx v1.3.5
@@ -13,7 +13,7 @@ require (
 	github.com/pressly/goose/v3 v3.15.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.0
-	github.com/rs/zerolog v1.30.0
+	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.4
 	modernc.org/sqlite v1.25.0
 )
@@ -31,7 +31,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.11.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
