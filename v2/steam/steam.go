@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/marcus-crane/gunslinger/v2/shared"
 )
 
 const (
@@ -30,7 +32,7 @@ func NewClient(apiKey string) *Client {
 	}
 }
 
-func (c *Client) GetUserPlaying() (string, error) {
+func (c *Client) getUserPlaying() (string, error) {
 	var steamResponse SteamPlayerSummary
 	var activeTitle string
 	endpoint := fmt.Sprintf("%s/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=76561197999386785", c.APIBaseURL, c.APIKey)
@@ -68,7 +70,7 @@ func (c *Client) GetUserPlaying() (string, error) {
 	return activeTitle, nil
 }
 
-func (c *Client) LookupStoreItem(appID string) (SteamAppDetail, error) {
+func (c *Client) lookupStoreItem(appID string) (SteamAppDetail, error) {
 	var steamResponse map[string]SteamAppResponse
 	endpoint := fmt.Sprintf("%s/appdetails?appids=%s", c.StoreBaseURL, appID)
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -97,6 +99,29 @@ func (c *Client) LookupStoreItem(appID string) (SteamAppDetail, error) {
 		return SteamAppDetail{}, fmt.Errorf(ERR_STORE_RESPONSE_MALFORMED)
 	}
 	return game.Data, nil
+}
+
+func (c *Client) retrieveImage(appID string) {}
+
+func (c *Client) QueryMediaState() (shared.DBMediaItem, error) {
+	userPlayingID, err := c.getUserPlaying()
+	if err != nil {
+		return shared.DBMediaItem{}, err
+	}
+	if userPlayingID == "" {
+		return shared.DBMediaItem{}, fmt.Errorf("empty game id found")
+	}
+	storeDetail, err := c.lookupStoreItem(userPlayingID)
+	if err != nil {
+		return shared.DBMediaItem{}, err
+	}
+	return shared.DBMediaItem{
+		Title:    storeDetail.Name,
+		Author:   storeDetail.Developers[0],
+		Category: "gaming",
+		IsActive: true,
+		Source:   "steam",
+	}, nil
 }
 
 type SteamPlayerSummary struct {

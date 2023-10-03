@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -22,7 +23,7 @@ func TestGetUserPlaying_Handle500(t *testing.T) {
 	c.APIBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
 	want := ""
-	got, err := c.GetUserPlaying()
+	got, err := c.getUserPlaying()
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -44,7 +45,7 @@ func TestGetUserPlaying_HandleMalformedResponse(t *testing.T) {
 	c.APIBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
 	want := ""
-	got, err := c.GetUserPlaying()
+	got, err := c.getUserPlaying()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,11 @@ func TestGetUserPlaying_SuccessUserInactive(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		f, err := os.Open("testdata/profile_inactive.json")
+		fixture, err := filepath.Abs("testdata/profile_inactive.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f, err := os.Open(fixture)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,7 +75,7 @@ func TestGetUserPlaying_SuccessUserInactive(t *testing.T) {
 	c.APIBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
 	want := ""
-	got, err := c.GetUserPlaying()
+	got, err := c.getUserPlaying()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +88,11 @@ func TestGetUserPlaying_SuccessUserActive(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		f, err := os.Open("testdata/profile_active.json")
+		fixture, err := filepath.Abs("testdata/profile_active.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f, err := os.Open(fixture)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,7 +105,7 @@ func TestGetUserPlaying_SuccessUserActive(t *testing.T) {
 	c.APIBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
 	want := "1191900"
-	got, err := c.GetUserPlaying()
+	got, err := c.getUserPlaying()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +124,7 @@ func TestLookupStoreItem_Handle500(t *testing.T) {
 	c := NewClient("abc123")
 	c.StoreBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
-	_, err := c.LookupStoreItem("123456")
+	_, err := c.lookupStoreItem("123456")
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -133,7 +142,7 @@ func TestLookupStoreItem_HandleMalformedResponse(t *testing.T) {
 	c := NewClient("abc123")
 	c.StoreBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
-	_, err := c.LookupStoreItem("abc123")
+	_, err := c.lookupStoreItem("abc123")
 	if !cmp.Equal(err.Error(), ERR_STORE_RESPONSE_MALFORMED) {
 		t.Fatal(err)
 	}
@@ -143,7 +152,11 @@ func TestLookupStoreItem_Success(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		f, err := os.Open("testdata/store_lookup.json")
+		fixture, err := filepath.Abs("testdata/store_lookup.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f, err := os.Open(fixture)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -161,7 +174,7 @@ func TestLookupStoreItem_Success(t *testing.T) {
 	c := NewClient("abc123")
 	c.StoreBaseURL = ts.URL
 	c.HTTPClient = ts.Client()
-	got, err := c.LookupStoreItem("1191900")
+	got, err := c.lookupStoreItem("1191900")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,3 +19,5 @@ server
 .idea
 
 gunslinger
+
+v2/.env
