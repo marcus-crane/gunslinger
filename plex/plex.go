@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/marcus-crane/gunslinger/v2/shared"
+	"github.com/marcus-crane/gunslinger/shared"
 )
 
 const (

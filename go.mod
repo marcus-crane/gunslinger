@@ -1,9 +1,10 @@
 module github.com/marcus-crane/gunslinger
 
-go 1.19
+go 1.21
 
 require (
 	github.com/go-co-op/gocron v1.35.0
+	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1

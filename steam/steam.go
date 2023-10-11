@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/marcus-crane/gunslinger/v2/shared"
+	"github.com/marcus-crane/gunslinger/shared"
 )
 
 const (
@@ -100,8 +100,6 @@ func (c *Client) lookupStoreItem(appID string) (SteamAppDetail, error) {
 	}
 	return game.Data, nil
 }
-
-func (c *Client) retrieveImage(appID string) {}
 
 func (c *Client) QueryMediaState() (shared.DBMediaItem, error) {
 	userPlayingID, err := c.getUserPlaying()
