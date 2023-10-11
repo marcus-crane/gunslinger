@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -26,7 +26,7 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to build Anilist manga payload")
+		slog.Error("Failed to build Anilist manga payload", slog.String("stack", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -37,20 +37,20 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to contact Anilist for manga updates")
+		slog.Error("Failed to contact Anilist for manga updates", slog.String("stack", err.Error()))
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to read Anilist response")
+		slog.Error("Failed to read Anilist response", slog.String("stack", err.Error()))
 		return
 	}
 	var anilistResponse models.AnilistResponse
 
 	if err = json.Unmarshal(body, &anilistResponse); err != nil {
-		log.Error().Err(err).Msg("Error fetching Anilist data")
+		slog.Error("Error fetching Anilist data", slog.String("stack", err.Error()))
 		return
 	}
 
@@ -103,9 +103,13 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 			activity.Progress = fmt.Sprintf("Chapters %d - %d (END)", trueStreakStart, activity.Media.Chapters)
 
 			if err != nil {
-				log.Error().Int64("activity.id", activity.Id).Str("activity.title", activity.Media.Title.UserPreferred).Err(err).Msg("Failed to update entry")
+				slog.Error("Failed to update entry",
+					slog.Int64("activity.id", activity.Id),
+					slog.String("activity.title", activity.Media.Title.UserPreferred),
+					slog.String("stack", err.Error()),
+				)
 			} else {
-				log.Debug().Str("activity.title", activity.Media.Title.UserPreferred).Msg("Updated title successfully")
+				slog.Debug("Updated title successfully", slog.String("activity.title", activity.Media.Title.UserPreferred))
 				updateOccured = true
 			}
 			continue
@@ -139,7 +143,11 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 					// Found an existing update so we need to update the end chapter
 					err := updateChapter(database, activity, existingItem)
 					if err != nil {
-						log.Error().Int64("activity.id", activity.Id).Str("activity.title", activity.Media.Title.UserPreferred).Err(err).Msg("Failed to update entry")
+						slog.Error("Failed to update entry",
+							slog.Int64("activity.id", activity.Id),
+							slog.String("activity.title", activity.Media.Title.UserPreferred),
+							slog.String("stack", err.Error()),
+						)
 					} else {
 						updateOccured = true
 					}
@@ -156,9 +164,12 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 				); err == nil {
 					err := updateChapter(database, activity, existingItem)
 					if err != nil {
-						log.Error().Int64("activity.id", activity.Id).Str("activity.title", activity.Media.Title.UserPreferred).Err(err).Msg("Failed to update entry")
+						slog.Error("Failed to update entry",
+							slog.Int64("activity.id", activity.Id),
+							slog.String("activity.title", activity.Media.Title.UserPreferred),
+							slog.String("stack", err.Error()),
+						)
 					} else {
-						fmt.Println("Saved")
 						updateOccured = true
 					}
 					continue
@@ -167,14 +178,20 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 
 			image, extension, dominantColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
 			if err != nil {
-				log.Error().Err(err).Str("image_url", activity.Media.CoverImage.ExtraLarge).Msg("Failed to extract image content")
+				slog.Error("Failed to extract image content",
+					slog.String("stack", err.Error()),
+					slog.String("image_url", activity.Media.CoverImage.ExtraLarge),
+				)
 				return
 			}
 
 			discImage, guid := utils.BytesToGUIDLocation(image, extension)
 
 			if err := saveCover(guid.String(), image, extension); err != nil {
-				log.Error().Err(err).Str("guid", guid.String()).Msg("Failed to save cover for Anilist")
+				slog.Error("Failed to save cover for Anilist",
+					slog.String("stack", err.Error()),
+					slog.String("guid", guid.String()),
+				)
 				return
 			}
 
@@ -193,7 +210,10 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 				discImage,
 			)
 			if err != nil {
-				log.Error().Err(err).Str("title", activity.Media.Title.UserPreferred).Msg("Failed to save DB entry")
+				slog.Error("Failed to save DB entry",
+					slog.String("stack", err.Error()),
+					slog.String("title", activity.Media.Title.UserPreferred),
+				)
 				continue
 			}
 			updateOccured = true

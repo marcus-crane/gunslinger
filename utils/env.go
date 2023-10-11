@@ -1,9 +1,8 @@
 package utils
 
 import (
+	"log/slog"
 	"os"
-
-	"github.com/rs/zerolog/log"
 )
 
 func GetEnv(key, fallback string) string {
@@ -17,7 +16,8 @@ func GetEnv(key, fallback string) string {
 func MustEnv(key string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
-		log.Fatal().Str("key", key).Msg("Value must be provided")
+		slog.Error("Value must be provided", slog.String("key", key))
+		os.Exit(1)
 	}
 	return value
 }
