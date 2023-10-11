@@ -154,7 +154,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	}
 
 	duration := int(ends.Sub(started).Milliseconds())
-	elapsed := int(time.Now().Sub(started).Milliseconds())
+	elapsed := int(time.Since(started).Milliseconds())
 
 	playingItem := models.MediaItem{
 		Category:        traktResponse.Type,
