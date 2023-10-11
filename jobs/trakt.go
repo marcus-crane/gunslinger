@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"time"
@@ -45,7 +46,7 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (str
 	var tmdbImageResponse models.TMDBImageResponse
 
 	if err = json.Unmarshal(body, &tmdbImageResponse); err != nil {
-		log.Error().RawJSON("body", body).Err(err).Msg("Failed to fetch image data from TMDB")
+		slog.Error("Failed to fetch image data from TMDB", slog.String("body", string(body)))
 	}
 
 	imagePath := ""
@@ -65,7 +66,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to build HEAD request for Trakt")
+		slog.Error("Failed to build HEAD request for Trakt", slog.String("stack", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -78,7 +79,10 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Error().Err(err).Str("code", res.Status).Msg("Failed to make HEAD request to Trakt")
+		slog.Error("Failed to make HEAD request to Trakt",
+			slog.String("stack", err.Error()),
+			slog.String("code", res.Status),
+		)
 		return
 	}
 
@@ -103,20 +107,26 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	req2.Header = req.Header
 	res2, err := client.Do(req2)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to make GET request to Trakt")
+		slog.Error("Failed to make GET request for Trakt", slog.String("stack", err.Error()))
 		return
 	}
 
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
-		log.Error().Err(err).Str("code", res2.Status).Msg("Failed to unmarshal Trakt response")
+		slog.Error("Failed to unmarshal Trakt response",
+			slog.String("stack", err.Error()),
+			slog.String("code", res2.Status),
+		)
 		return
 	}
 	var traktResponse models.NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
-		log.Error().Err(err).Str("code", res2.Status).Msg("Failed to unmarshal Trakt response")
+		slog.Error("Failed to unmarshal Trakt response",
+			slog.String("stack", err.Error()),
+			slog.String("code", res2.Status),
+		)
 		return
 	}
 
@@ -132,24 +142,35 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 
 	imageUrl, err := getArtFromTMDB(tmdbToken, traktResponse)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to retrieve art from TMDB")
+		slog.Error("Failed to retrieve art from TMDB",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 	if err != nil {
-		log.Error().Err(err).Str("image_url", imageUrl).Msg("Failed to extract image content")
+		slog.Error("Failed to extract image content",
+			slog.String("stack", err.Error()),
+			slog.String("image_url", imageUrl),
+		)
 		return
 	}
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
-		log.Error().Err(err).Str("started_at", traktResponse.StartedAt).Msg("Failed to parse Trakt start time")
+		slog.Error("Failed to parse Trakt start time",
+			slog.String("stack", err.Error()),
+			slog.String("started_at", traktResponse.StartedAt),
+		)
 		return
 	}
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
-		log.Error().Err(err).Str("expires_at", traktResponse.ExpiresAt).Msg("Failed to parse Trakt expiry time")
+		slog.Error("Failed to parse Trakt expiry time",
+			slog.String("stack", err.Error()),
+			slog.String("expires_at", traktResponse.ExpiresAt),
+		)
 		return
 	}
 
@@ -217,11 +238,17 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 					playingItem.Image,
 				)
 				if err != nil {
-					log.Error().Err(err).Str("title", playingItem.Title).Msg("Failed to save DB entry")
+					slog.Error("Failed to save DB entry",
+						slog.String("stack", err.Error()),
+						slog.String("title", playingItem.Title),
+					)
 				}
 			}
 		} else {
-			log.Error().Err(err).Str("title", playingItem.Title).Msg("An unknown error occurred")
+			slog.Error("An unknown error occurred",
+				slog.String("stack", err.Error()),
+				slog.String("title", playingItem.Title),
+			)
 		}
 	}
 
