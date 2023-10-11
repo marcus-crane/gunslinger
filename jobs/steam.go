@@ -15,7 +15,6 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -30,7 +29,9 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 
 	req, err := http.NewRequest("GET", playingUrl, nil)
 	if err != nil {
-		log.Printf("Failed to prepare Steam request: %+v\n", err)
+		slog.Error("Failed to prepare Steam request",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	req.Header = http.Header{
@@ -40,20 +41,26 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed to contact Steam for updates: %+v\n", err)
+		slog.Error("Failed to contact Steam for updates",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Failed to read Steam response: %+v\n", err)
+		slog.Error("Failed to read Steam response",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	var steamResponse models.SteamPlayerSummary
 
 	if err = json.Unmarshal(body, &steamResponse); err != nil {
-		fmt.Println("Error fetching Steam data: ", err)
+		slog.Error("Error fetching Steam data",
+			slog.String("stack", err.Error()),
+		)
 	}
 
 	if len(steamResponse.Response.Players) == 0 {
@@ -76,7 +83,9 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 
 	req, err = http.NewRequest("GET", gameDetailUrl, nil)
 	if err != nil {
-		log.Printf("Failed to prepare Steam request for more detail: %+v\n", err)
+		slog.Error("Failed to prepare Steam request for more detail",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	req.Header = http.Header{
@@ -86,20 +95,26 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 	}
 	res, err = client.Do(req)
 	if err != nil {
-		log.Printf("Failed to read Steam detail response: %+v\n", err)
+		slog.Error("Failed to read Steam detail response",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	defer res.Body.Close()
 
 	body, err = io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Failed to read Steam detail response: %+v\n", err)
+		slog.Error("Failed to read Steam detail response",
+			slog.String("stack", err.Error()),
+		)
 		return
 	}
 	var gameDetailResponse map[string]models.SteamAppResponse
 
 	if err = json.Unmarshal(body, &gameDetailResponse); err != nil {
-		fmt.Println("Error fetching Steam app data: ", err)
+		slog.Error("Error fetching Steam app data",
+			slog.String("stack", err.Error()),
+		)
 	}
 
 	game := gameDetailResponse[gameId].Data
@@ -112,7 +127,10 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 
 	image, extension, dominantColours, err := utils.ExtractImageContent(game.HeaderImage)
 	if err != nil {
-		log.Printf("Failed to extract image content: %+v\n", err)
+		slog.Error("Failed to extract image content",
+			slog.String("stack", err.Error()),
+			slog.String("image_url", game.HeaderImage),
+		)
 		return
 	}
 
@@ -146,7 +164,11 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					slog.Error("Failed to save cover for Steam", slog.String("stack", err.Error()))
+					slog.Error("Failed to save cover for Steam",
+						slog.String("stack", err.Error()),
+						slog.String("guid", guid.String()),
+						slog.String("title", playingItem.Title),
+					)
 				}
 
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -167,7 +189,10 @@ func GetCurrentlyPlayingSteam(database *sqlx.DB, client http.Client) {
 				}
 			}
 		} else {
-			log.Print(err)
+			slog.Error("An unknown error occurred",
+				slog.String("stack", err.Error()),
+				slog.String("title", playingItem.Title),
+			)
 		}
 	}
 

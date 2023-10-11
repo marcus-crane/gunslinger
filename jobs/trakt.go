@@ -15,7 +15,6 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -101,7 +100,7 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 	// Do a proper, more expensive request now that we've got something fresh
 	req2, err := http.NewRequest("GET", traktPlayingEndpoint, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to build GET request for Trakt")
+		slog.Error("Failed to build GET request for Trakt", slog.String("stack", err.Error()))
 		return
 	}
 	req2.Header = req.Header
@@ -222,7 +221,11 @@ func GetCurrentlyPlayingTrakt(database *sqlx.DB, client http.Client) {
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					log.Error().Err(err).Str("guid", guid.String()).Str("title", playingItem.Title).Msg("Failed to save cover for Trakt")
+					slog.Error("Failed to save cover for Trakt",
+						slog.String("stack", err.Error()),
+						slog.String("guid", guid.String()),
+						slog.String("title", playingItem.Title),
+					)
 				}
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(

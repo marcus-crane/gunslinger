@@ -7,14 +7,13 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/r3labs/sse/v2"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -35,8 +34,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to prepare Plex request")
-		// log.Printf("Failed to prepare Plex request: %+v\n", err)
+		slog.Error("Failed to prepare Plex request", slog.String("stack", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -46,20 +44,20 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to contact Plex for updates")
+		slog.Error("Failed to contact Plex for updates", slog.String("stack", err.Error()))
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse Plex response")
+		slog.Error("Failed to parse Plex response", slog.String("stack", err.Error()))
 		return
 	}
 	var plexResponse models.PlexResponse
 
 	if err = json.Unmarshal(body, &plexResponse); err != nil {
-		log.Error().Err(err).Msg("Error fetching Plex data")
+		slog.Error("Error fetching Plex data", slog.String("stack", err.Error()))
 	}
 
 	index := 0
@@ -110,7 +108,10 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 	thumbnailUrl := buildPlexURL(thumbnail)
 	image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
 	if err != nil {
-		log.Error().Err(err).Str("image_url", thumbnailUrl).Msg("Failed to extract image content")
+		slog.Error("Failed to extract image content",
+			slog.String("stack", err.Error()),
+			slog.String("image_url", thumbnailUrl),
+		)
 		return
 	}
 
@@ -162,7 +163,11 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 		); err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					log.Error().Err(err).Str("guid", guid.String()).Str("title", playingItem.Title).Msg("Failed to save cover for Trakt")
+					slog.Error("Failed to save cover for Plex",
+						slog.String("stack", err.Error()),
+						slog.String("guid", guid.String()),
+						slog.String("title", playingItem.Title),
+					)
 				}
 				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				_, err := database.Exec(
@@ -178,11 +183,17 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 					playingItem.Image,
 				)
 				if err != nil {
-					log.Error().Err(err).Str("title", playingItem.Title).Msg("Failed to save DB entry")
+					slog.Error("Failed to save DB entry",
+						slog.String("stack", err.Error()),
+						slog.String("title", playingItem.Title),
+					)
 				}
 			}
 		} else {
-			log.Error().Err(err).Str("title", playingItem.Title).Msg("An unknown error occurred")
+			slog.Error("An unknown error occurred",
+				slog.String("stack", err.Error()),
+				slog.String("title", playingItem.Title),
+			)
 		}
 	}
 
