@@ -28,7 +28,11 @@ func main() {
 		fmt.Println(err)
 	}
 
-	database := db.Initialize()
+	dbName := "sqlite"
+
+	dsn := utils.MustEnv("DB_PATH")
+
+	database := db.Initialize(dbName, dsn)
 
 	goose.SetBaseFS(embedMigrations)
 
