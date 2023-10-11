@@ -8,8 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"golang.org/x/exp/slog"
 
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
@@ -22,8 +21,6 @@ import (
 var embedMigrations embed.FS
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
 	if err := godotenv.Load(); err != nil {
 		fmt.Println(err)
 	}
@@ -37,30 +34,32 @@ func main() {
 	goose.SetBaseFS(embedMigrations)
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Fatal().Err(err).Msg("Failed to set sqlte3 dialect")
+		slog.Error("Failed to set sqlite3 dialect", slog.String("stack", err.Error()))
+		os.Exit(1)
 	}
 
 	if err := goose.Up(database.DB, "migrations"); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run goose migration")
+		slog.Error("Failed to run goose migration", slog.String("stack", err.Error()))
+		os.Exit(1)
 	}
 
 	jobScheduler := jobs.SetupInBackground(database)
 
 	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()
-		log.Info().Msg("Background jobs have started up in the background.")
+		slog.Info("Background jobs have started up in the background.")
 	} else {
-		log.Info().Msg("Background jobs are disabled.")
+		slog.Info("Background jobs are disabled.")
 	}
 
 	events.Init()
 
 	router := routes.Register(http.NewServeMux(), database)
 
-	log.Info().Msg("Gunslinger is running at http://localhost:8080")
+	slog.Info("Gunslinger is running at http://localhost:8080")
 
 	if err := http.ListenAndServe(":8080", router); err != nil {
-		log.Error().Err(err).Send()
+		slog.Error("", slog.String("stack", err.Error()))
 		jobScheduler.Stop()
 		os.Exit(1)
 	}
