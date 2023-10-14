@@ -10,11 +10,10 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
-	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/r3labs/sse/v2"
 
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -30,7 +29,7 @@ func buildPlexURL(endpoint string) string {
 	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
 }
 
-func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
+func GetCurrentlyPlayingPlex(store db.Store, client http.Client) {
 	sessionURL := buildPlexURL(plexSessionEndpoint)
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
@@ -155,12 +154,8 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		// We want to make sure that we don't resave if the server restarts
 		// to ensure the history endpoint is relatively accurate
-		var previousItem models.ComboDBMediaItem
-		if err := database.Get(
-			&previousItem,
-			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
-			playingItem.Category,
-		); err == nil || err.Error() == "sql: no rows in result set" {
+		previousItem, err := store.GetByCategory(playingItem.Category)
+		if err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
 					slog.Error("Failed to save cover for Plex",
@@ -169,20 +164,7 @@ func GetCurrentlyPlayingPlex(database *sqlx.DB, client http.Client) {
 						slog.String("title", playingItem.Title),
 					)
 				}
-				schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-				_, err := database.Exec(
-					schema,
-					time.Now().Unix(),
-					playingItem.Title,
-					playingItem.Subtitle,
-					playingItem.Category,
-					playingItem.IsActive,
-					playingItem.Duration,
-					playingItem.DominantColours,
-					playingItem.Source,
-					playingItem.Image,
-				)
-				if err != nil {
+				if err := store.Insert(playingItem); err != nil {
 					slog.Error("Failed to save DB entry",
 						slog.String("stack", err.Error()),
 						slog.String("title", playingItem.Title),

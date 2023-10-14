@@ -20,4 +20,5 @@ type Store interface {
 	GetRecent() ([]models.ComboDBMediaItem, error)
 	GetNewest() (models.ComboDBMediaItem, error)
 	GetByCategory(category string) (models.ComboDBMediaItem, error)
+	Insert(item models.MediaItem) error
 }

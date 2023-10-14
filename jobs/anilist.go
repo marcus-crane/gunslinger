@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -22,7 +23,7 @@ const (
 	anilistGraphqlEndpoint = "https://graphql.anilist.co"
 )
 
-func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
+func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
@@ -222,11 +223,8 @@ func GetRecentlyReadManga(database *sqlx.DB, client http.Client) {
 
 	if updateOccured {
 		var latestItem models.ComboDBMediaItem
-		if err := database.Get(
-			&latestItem,
-			"SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1",
-			"manga",
-		); err == nil {
+		latestItem, err := store.GetByCategory("manga")
+		if err == nil {
 			// If we've read manga in the past but only just fetched updates, we don't consider this "live"
 			// so only update the live player if nothing else is live and manga is more recent
 			if !CurrentPlaybackItem.IsActive && latestItem.OccuredAt > CurrentPlaybackItem.CreatedAt {
