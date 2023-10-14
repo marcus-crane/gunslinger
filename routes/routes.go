@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/rs/cors"
 
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
@@ -21,7 +21,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
+func Register(mux *http.ServeMux, store db.Store) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -79,7 +79,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
 		// when it changes to inactive so we don't want to hide a valid item in that state
-		if err := database.Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+		if err := store.GetConnection().Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
@@ -107,7 +107,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var result models.ComboDBMediaItem
-		if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err != nil {
+		if err := store.GetConnection().Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
@@ -137,7 +137,7 @@ func Register(mux *http.ServeMux, database *sqlx.DB) http.Handler {
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
 		// when it changes to inactive so we don't want to hide a valid item in that state
-		if err := database.Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+		if err := store.GetConnection().Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}

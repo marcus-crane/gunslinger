@@ -20,7 +20,9 @@ func (s *SerializableColours) Scan(src interface{}) error {
 	var source []string
 	switch src.(type) {
 	case string:
-		source = strings.Split(src.(string), ",")
+		if src != "" {
+			source = strings.Split(src.(string), ",")
+		}
 	default:
 		return errors.New("incompatible type for SerializedColors")
 	}

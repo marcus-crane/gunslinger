@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/jmoiron/sqlx"
 
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -19,20 +19,20 @@ var (
 	STORAGE_DIR         = utils.GetEnv("STORAGE_DIR", "/tmp")
 )
 
-func SetupInBackground(database *sqlx.DB) *gocron.Scheduler {
+func SetupInBackground(store db.Store) *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
 	client := http.Client{}
 
-	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, database, client)
-	s.Every(15).Seconds().Do(GetRecentlyReadManga, database, client) // Rate limit: 90 req/sec
-	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, database, client)
-	s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, database, client)
+	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, store.GetConnection(), client)
+	s.Every(15).Seconds().Do(GetRecentlyReadManga, store.GetConnection(), client) // Rate limit: 90 req/sec
+	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, store.GetConnection(), client)
+	// s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, store.GetConnection(), client)
 
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
 	var result models.ComboDBMediaItem
-	if err := database.Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
+	if err := store.GetConnection().Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
 		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 			CurrentPlaybackItem = models.MediaItem{
 				CreatedAt:       result.OccuredAt,

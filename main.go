@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/pressly/goose/v3"
 	"golang.org/x/exp/slog"
 
 	"github.com/marcus-crane/gunslinger/db"
@@ -25,21 +24,16 @@ func main() {
 		fmt.Println(err)
 	}
 
-	dbName := "sqlite"
-
 	dsn := utils.MustEnv("DB_PATH")
 
-	database := db.Initialize(dbName, dsn)
-
-	goose.SetBaseFS(embedMigrations)
-
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		slog.Error("Failed to set sqlite3 dialect", slog.String("stack", err.Error()))
+	database, err := db.NewSqliteStore(dsn)
+	if err != nil {
+		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	if err := goose.Up(database.DB, "migrations"); err != nil {
-		slog.Error("Failed to run goose migration", slog.String("stack", err.Error()))
+	if err := database.ApplyMigrations(embedMigrations); err != nil {
+		slog.Error("Failed to apply migrations to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 

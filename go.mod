@@ -3,6 +3,7 @@ module github.com/marcus-crane/gunslinger
 go 1.21
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/go-co-op/gocron v1.35.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
