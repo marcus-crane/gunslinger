@@ -1,30 +1,59 @@
 package db
 
 import (
+	"embed"
+
 	"github.com/jmoiron/sqlx"
+	"github.com/pressly/goose/v3"
+
 	"github.com/marcus-crane/gunslinger/models"
+
+	_ "github.com/lib/pq"
 )
 
 type PostgresStore struct {
 	DB *sqlx.DB
 }
 
-func (p *PostgresStore) GetConnection() *sqlx.DB {
-	return p.DB
+func NewPostgresStore(dsn string) (Store, error) {
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+	return &PostgresStore{
+		DB: db,
+	}, nil
 }
 
-func (p *PostgresStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetConnection() *sqlx.DB {
+	return s.DB
+}
+
+func (s *PostgresStore) ApplyMigrations(migrations embed.FS) error {
+	goose.SetBaseFS(migrations)
+
+	if err := goose.SetDialect(string(goose.DialectPostgres)); err != nil {
+		return err
+	}
+
+	if err := goose.Up(s.DB.DB, "migrations"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *PostgresStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
 	cl := []models.ComboDBMediaItem{}
-	if err := p.DB.Select(&cl, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+	if err := s.DB.Select(&cl, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 		return cl, err
 	}
 	return cl, nil
 }
 
-func (p *PostgresStore) RetrieveLatest() (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) RetrieveLatest() (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
-	row := p.DB.QueryRowx("SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
-	err := row.StructScan(&c)
+	err := s.DB.Get(&c, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
 	if err != nil {
 		return c, err
 	}

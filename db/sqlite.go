@@ -7,13 +7,15 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/marcus-crane/gunslinger/models"
+
+	_ "modernc.org/sqlite"
 )
 
 type SqliteStore struct {
 	DB *sqlx.DB
 }
 
-func NewSqliteStore(dsn string) (*SqliteStore, error) {
+func NewSqliteStore(dsn string) (Store, error) {
 	db, err := sqlx.Connect("sqlite", dsn)
 	if err != nil {
 		return nil, err
@@ -30,7 +32,7 @@ func (s *SqliteStore) GetConnection() *sqlx.DB {
 func (s *SqliteStore) ApplyMigrations(migrations embed.FS) error {
 	goose.SetBaseFS(migrations)
 
-	if err := goose.SetDialect("sqlite3"); err != nil {
+	if err := goose.SetDialect(string(goose.DialectSQLite3)); err != nil {
 		return err
 	}
 
@@ -51,8 +53,7 @@ func (s *SqliteStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
 
 func (s *SqliteStore) RetrieveLatest() (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
-	row := s.DB.QueryRowx("SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
-	err := row.StructScan(&c)
+	err := s.DB.Get(&c, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
 	if err != nil {
 		return c, err
 	}
