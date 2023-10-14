@@ -11,7 +11,13 @@ import (
 
 func TestSqliteStore_RetrieveRecent(t *testing.T) {
 	t.Parallel()
-	p := fakeSqliteStore(t)
+
+	query := "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"
+	rows := sqlmock.NewRows([]string{"id", "created_at", "title", "subtitle", "category", "is_active", "duration_ms", "source", "image", "dominant_colours"}).
+		AddRow(1, 0, "blah", "", "", false, 0, "", "", models.SerializableColours{}).
+		AddRow(2, 0, "bleh", "", "", false, 0, "", "", models.SerializableColours{})
+
+	p := fakeSqliteStore(t, query, rows)
 	want := []models.ComboDBMediaItem{
 		{
 			ID:    1,
@@ -31,7 +37,28 @@ func TestSqliteStore_RetrieveRecent(t *testing.T) {
 	}
 }
 
-func fakeSqliteStore(t *testing.T) SqliteStore {
+func TestSqliteStore_RetrieveLatest(t *testing.T) {
+	t.Parallel()
+
+	query := "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1"
+	rows := sqlmock.NewRows([]string{"id", "created_at", "title", "subtitle", "category", "is_active", "duration_ms", "source", "image", "dominant_colours"}).
+		AddRow(1, 0, "blah", "", "", false, 0, "", "", models.SerializableColours{})
+
+	p := fakeSqliteStore(t, query, rows)
+	want := models.ComboDBMediaItem{
+		ID:    1,
+		Title: "blah",
+	}
+	got, err := p.RetrieveLatest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func fakeSqliteStore(t *testing.T, query string, rows *sqlmock.Rows) Store {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatal(err)
@@ -39,12 +66,9 @@ func fakeSqliteStore(t *testing.T) SqliteStore {
 	t.Cleanup(func() {
 		db.Close()
 	})
-	query := "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"
-	rows := sqlmock.NewRows([]string{"id", "created_at", "title", "subtitle", "category", "is_active", "duration_ms", "source", "image", "dominant_colours"}).
-		AddRow(1, 0, "blah", "", "", false, 0, "", "", models.SerializableColours{}).
-		AddRow(2, 0, "bleh", "", "", false, 0, "", "", models.SerializableColours{})
+
 	mock.ExpectQuery(query).WillReturnRows(rows)
-	return SqliteStore{
+	return &SqliteStore{
 		DB: sqlx.NewDb(db, "sqlmock"),
 	}
 }
