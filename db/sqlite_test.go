@@ -9,7 +9,7 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 )
 
-func TestSqliteStore_RetrieveAll(t *testing.T) {
+func TestSqliteStore_RetrieveRecent(t *testing.T) {
 	t.Parallel()
 	p := fakeSqliteStore(t)
 	want := []models.ComboDBMediaItem{
@@ -22,7 +22,7 @@ func TestSqliteStore_RetrieveAll(t *testing.T) {
 			Title: "bleh",
 		},
 	}
-	got, err := p.RetrieveAll()
+	got, err := p.RetrieveRecent()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,6 @@ func Initialize(dbName string, dsn string) *sqlx.DB {
 
 type Store interface {
 	GetConnection() *sqlx.DB
-	RetrieveAll() ([]models.ComboDBMediaItem, error)
+	RetrieveRecent() ([]models.ComboDBMediaItem, error)
 	RetrieveLatest() (models.ComboDBMediaItem, error)
 }

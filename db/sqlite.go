@@ -41,7 +41,7 @@ func (s *SqliteStore) ApplyMigrations(migrations embed.FS) error {
 	return nil
 }
 
-func (s *SqliteStore) RetrieveAll() ([]models.ComboDBMediaItem, error) {
+func (s *SqliteStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
 	cl := []models.ComboDBMediaItem{}
 	if err := s.DB.Select(&cl, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 		return cl, err
@@ -51,7 +51,9 @@ func (s *SqliteStore) RetrieveAll() ([]models.ComboDBMediaItem, error) {
 
 func (s *SqliteStore) RetrieveLatest() (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
-	if err := s.DB.Select(&c, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1"); err != nil {
+	row := s.DB.QueryRowx("SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
+	err := row.StructScan(&c)
+	if err != nil {
 		return c, err
 	}
 	return c, nil

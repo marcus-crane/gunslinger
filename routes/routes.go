@@ -74,12 +74,12 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var response []models.ResponseMediaItem
-		var result []models.ComboDBMediaItem
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
 		// when it changes to inactive so we don't want to hide a valid item in that state
-		if err := store.GetConnection().Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+		result, err := store.RetrieveRecent()
+		if err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
@@ -106,8 +106,8 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		var result models.ComboDBMediaItem
-		if err := store.GetConnection().Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err != nil {
+		result, err := store.RetrieveLatest()
+		if err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
@@ -132,12 +132,12 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var response []models.ComboDBMediaItem
-		var result []models.ComboDBMediaItem
+		result, err := store.RetrieveRecent()
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
 		// when it changes to inactive so we don't want to hide a valid item in that state
-		if err := store.GetConnection().Select(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
+		if err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}

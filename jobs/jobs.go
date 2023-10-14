@@ -31,8 +31,8 @@ func SetupInBackground(store db.Store) *gocron.Scheduler {
 
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
-	var result models.ComboDBMediaItem
-	if err := store.GetConnection().Get(&result, "SELECT * FROM db_media_items ORDER BY created_at desc LIMIT 1"); err == nil {
+	result, err := store.RetrieveLatest()
+	if err == nil {
 		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 			CurrentPlaybackItem = models.MediaItem{
 				CreatedAt:       result.OccuredAt,
