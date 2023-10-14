@@ -31,7 +31,7 @@ func SetupInBackground(store db.Store) *gocron.Scheduler {
 
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
-	result, err := store.RetrieveLatest()
+	result, err := store.GetNewest()
 	if err == nil {
 		if result.Title != "" && result.Source != "" && CurrentPlaybackItem.Title == "" && CurrentPlaybackItem.Source == "" {
 			CurrentPlaybackItem = models.MediaItem{

@@ -43,7 +43,7 @@ func (s *PostgresStore) ApplyMigrations(migrations embed.FS) error {
 	return nil
 }
 
-func (s *PostgresStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetRecent() ([]models.ComboDBMediaItem, error) {
 	cl := []models.ComboDBMediaItem{}
 	if err := s.DB.Select(&cl, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 		return cl, err
@@ -51,9 +51,18 @@ func (s *PostgresStore) RetrieveRecent() ([]models.ComboDBMediaItem, error) {
 	return cl, nil
 }
 
-func (s *PostgresStore) RetrieveLatest() (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetNewest() (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
+	if err != nil {
+		return c, err
+	}
+	return c, nil
+}
+
+func (s *PostgresStore) GetByCategory(category string) (models.ComboDBMediaItem, error) {
+	c := models.ComboDBMediaItem{}
+	err := s.DB.Get("SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1", category)
 	if err != nil {
 		return c, err
 	}

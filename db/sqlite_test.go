@@ -9,7 +9,7 @@ import (
 	"github.com/marcus-crane/gunslinger/models"
 )
 
-func TestSqliteStore_RetrieveRecent(t *testing.T) {
+func TestSqliteStore_GetRecent(t *testing.T) {
 	t.Parallel()
 
 	query := "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"
@@ -28,7 +28,7 @@ func TestSqliteStore_RetrieveRecent(t *testing.T) {
 			Title: "bleh",
 		},
 	}
-	got, err := p.RetrieveRecent()
+	got, err := p.GetRecent()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestSqliteStore_RetrieveRecent(t *testing.T) {
 	}
 }
 
-func TestSqliteStore_RetrieveLatest(t *testing.T) {
+func TestSqliteStore_GetNewest(t *testing.T) {
 	t.Parallel()
 
 	query := "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1"
@@ -49,7 +49,7 @@ func TestSqliteStore_RetrieveLatest(t *testing.T) {
 		ID:    1,
 		Title: "blah",
 	}
-	got, err := p.RetrieveLatest()
+	got, err := p.GetNewest()
 	if err != nil {
 		t.Fatal(err)
 	}
