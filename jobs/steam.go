@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
@@ -136,6 +137,7 @@ func GetCurrentlyPlayingSteam(store db.Store, client http.Client) {
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
 	playingItem := models.MediaItem{
+		CreatedAt:       time.Now().Unix(),
 		Title:           game.Name,
 		Subtitle:        developer,
 		Category:        "gaming",

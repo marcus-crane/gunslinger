@@ -2,7 +2,6 @@ package db
 
 import (
 	"embed"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
@@ -73,7 +72,7 @@ func (s *SqliteStore) GetByCategory(category string) (models.ComboDBMediaItem, e
 func (s *SqliteStore) Insert(item models.MediaItem) error {
 	_, err := s.DB.Exec(
 		"INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		time.Now().Unix(),
+		item.CreatedAt,
 		item.Title,
 		item.Subtitle,
 		item.Category,

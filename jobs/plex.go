@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/r3labs/sse/v2"
 
@@ -117,6 +118,7 @@ func GetCurrentlyPlayingPlex(store db.Store, client http.Client) {
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
 	playingItem := models.MediaItem{
+		CreatedAt:       time.Now().Unix(),
 		Title:           mediaItem.Title,
 		Category:        mediaItem.Type,
 		Elapsed:         mediaItem.ViewOffset,

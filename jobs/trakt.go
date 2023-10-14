@@ -177,6 +177,7 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 	elapsed := int(time.Since(started).Milliseconds())
 
 	playingItem := models.MediaItem{
+		CreatedAt:       time.Now().Unix(),
 		Category:        traktResponse.Type,
 		IsActive:        true,
 		Elapsed:         elapsed,

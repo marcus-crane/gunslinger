@@ -196,27 +196,27 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 				return
 			}
 
-			// We haven't seen this chapter update so we'll save it
-			schema := `INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-			_, err = database.Exec(
-				schema,
-				activity.CreatedAt,
-				activity.Progress,
-				activity.Media.Title.UserPreferred,
-				"manga",
-				false,
-				0,
-				dominantColours,
-				"anilist",
-				discImage,
-			)
-			if err != nil {
+			playingItem := models.MediaItem{
+				CreatedAt:       activity.CreatedAt,
+				Title:           activity.Progress,
+				Subtitle:        activity.Media.Title.UserPreferred,
+				Category:        "manga",
+				IsActive:        false,
+				Elapsed:         0,
+				Duration:        0,
+				Source:          "anilist",
+				Image:           discImage,
+				DominantColours: dominantColours,
+			}
+
+			if err := store.Insert(playingItem); err != nil {
 				slog.Error("Failed to save DB entry",
 					slog.String("stack", err.Error()),
-					slog.String("title", activity.Media.Title.UserPreferred),
+					slog.String("title", playingItem.Title),
 				)
 				continue
 			}
+
 			updateOccured = true
 		}
 	}
