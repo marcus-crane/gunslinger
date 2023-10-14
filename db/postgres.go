@@ -25,10 +25,6 @@ func NewPostgresStore(dsn string) (Store, error) {
 	}, nil
 }
 
-func (s *PostgresStore) GetConnection() *sqlx.DB {
-	return s.DB
-}
-
 func (s *PostgresStore) ApplyMigrations(migrations embed.FS) error {
 	goose.SetBaseFS(migrations)
 
@@ -83,4 +79,13 @@ func (s *PostgresStore) Insert(item models.MediaItem) error {
 		item.Image,
 	)
 	return err
+}
+
+func (s *PostgresStore) InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
+	c := models.ComboDBMediaItem{}
+	err := s.DB.Get(&c, query, args...)
+	if err != nil {
+		return c, err
+	}
+	return c, nil
 }

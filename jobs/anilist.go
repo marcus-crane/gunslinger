@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -23,7 +22,7 @@ const (
 	anilistGraphqlEndpoint = "https://graphql.anilist.co"
 )
 
-func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client) {
+func GetRecentlyReadManga(store db.Store, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
@@ -63,12 +62,7 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 			// has it been at least 24 hours since the last update?
 
 			// have we binged it from start to finish somehow?
-			if err := database.Get(
-				&previousEntry,
-				"SELECT * FROM db_media_items WHERE category = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
-				"manga",
-				activity.Media.Title.UserPreferred,
-			); err == nil {
+			if err := checkMangaCompletion(store, activity); err == nil {
 				// We have completed this manga entirely but have never surfaced it
 				// This would seem quite strange given my current manga set up so
 				// for now we'll skip this in case we're backfilling manga
@@ -119,13 +113,7 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 		if activity.Status == "read chapter" {
 			var existingItem models.ComboDBMediaItem
 			// Have we saved this update already?
-			if err := database.Get(
-				&existingItem,
-				"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
-				"manga",
-				activity.Progress,
-				activity.Media.Title.UserPreferred,
-			); err == nil {
+			if err := checkStatusUpdateAlreadySeen(store, activity); err == nil {
 				continue // We have already seen this status update
 			}
 
@@ -134,15 +122,9 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 				startChapter := strings.Split(activity.Progress, " - ")[0]
 
 				// First, we check if the existing chapter is also part of a range ie; 102 - 105
-				if err := database.Get(
-					&existingItem,
-					"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
-					"manga",
-					"%"+fmt.Sprintf("%s - ", startChapter)+"%", // Make sure we include - so eg; Chapter 100 doesn't partial match Chapter 1000
-					activity.Media.Title.UserPreferred,
-				); err == nil {
+				if err := checkIfChapterInRange(store, activity, startChapter); err == nil {
 					// Found an existing update so we need to update the end chapter
-					err := updateChapter(database, activity, existingItem)
+					err := updateChapter(store, activity, existingItem)
 					if err != nil {
 						slog.Error("Failed to update entry",
 							slog.Int64("activity.id", activity.Id),
@@ -156,14 +138,8 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 				}
 
 				// Next, we check if the existing chapter was the first in a streak ie; 102
-				if err := database.Get(
-					&existingItem,
-					"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
-					"manga",
-					startChapter,
-					activity.Media.Title.UserPreferred,
-				); err == nil {
-					err := updateChapter(database, activity, existingItem)
+				if err := checkIfChapterIsFirstInStreak(store, activity, startChapter); err == nil {
+					err := updateChapter(store, activity, existingItem)
 					if err != nil {
 						slog.Error("Failed to update entry",
 							slog.Int64("activity.id", activity.Id),
@@ -248,13 +224,51 @@ func GetRecentlyReadManga(database *sqlx.DB, store db.Store, client http.Client)
 	}
 }
 
-func updateChapter(database *sqlx.DB, activity models.Activity, existingItem models.ComboDBMediaItem) error {
-	query := `UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?`
-	_, err := database.Exec(
-		query,
+func updateChapter(store db.Store, activity models.Activity, existingItem models.ComboDBMediaItem) error {
+	_, err := store.InsertCustom(
+		"UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?",
 		activity.CreatedAt,
 		activity.Progress,
 		existingItem.ID,
+	)
+	return err
+}
+
+func checkMangaCompletion(store db.Store, activity models.Activity) error {
+	_, err := store.InsertCustom(
+		"SELECT * FROM db_media_items WHERE category = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
+		"manga",
+		activity.Media.Title.UserPreferred,
+	)
+	return err
+}
+
+func checkStatusUpdateAlreadySeen(store db.Store, activity models.Activity) error {
+	_, err := store.InsertCustom(
+		"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
+		"manga",
+		activity.Progress,
+		activity.Media.Title.UserPreferred,
+	)
+	return err
+}
+
+func checkIfChapterInRange(store db.Store, activity models.Activity, startChapter string) error {
+	_, err := store.InsertCustom(
+		"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
+		"manga",
+		"%"+fmt.Sprintf("%s - ", startChapter)+"%",
+		activity.Media.Title.UserPreferred,
+	)
+	return err
+}
+
+func checkIfChapterIsFirstInStreak(store db.Store, activity models.Activity, startChapter string) error {
+	_, err := store.InsertCustom(
+		"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
+		"manga",
+		startChapter,
+		activity.Media.Title.UserPreferred,
 	)
 	return err
 }

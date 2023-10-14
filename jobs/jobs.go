@@ -25,7 +25,7 @@ func SetupInBackground(store db.Store) *gocron.Scheduler {
 	client := http.Client{}
 
 	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, store, client)
-	s.Every(15).Seconds().Do(GetRecentlyReadManga, store.GetConnection(), store, client) // Rate limit: 90 req/sec
+	s.Every(15).Seconds().Do(GetRecentlyReadManga, store, client) // Rate limit: 90 req/sec
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, store, client)
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, store, client)
 

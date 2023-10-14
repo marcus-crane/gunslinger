@@ -15,10 +15,10 @@ func Initialize(dbName string, dsn string) *sqlx.DB {
 }
 
 type Store interface {
-	GetConnection() *sqlx.DB
 	ApplyMigrations(migrations embed.FS) error
 	GetRecent() ([]models.ComboDBMediaItem, error)
 	GetNewest() (models.ComboDBMediaItem, error)
 	GetByCategory(category string) (models.ComboDBMediaItem, error)
 	Insert(item models.MediaItem) error
+	InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error)
 }
