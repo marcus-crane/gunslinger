@@ -9,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/r3labs/sse/v2"
@@ -147,10 +146,7 @@ func GetCurrentlyPlayingPlex(store db.Store, client http.Client) {
 		playingItem.Subtitle = mediaItem.GrandparentTitle
 	}
 
-	// reflect.DeepEqual is good enough for our purposes even though
-	// it doesn't do things like properly copmare timestamp metadata.
-	// For just checking if we should emit a message, it's good enough
-	if !reflect.DeepEqual(CurrentPlaybackItem, playingItem) {
+	if CurrentPlaybackItem.Hash() != playingItem.Hash() {
 		byteStream := new(bytes.Buffer)
 		json.NewEncoder(byteStream).Encode(playingItem)
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})

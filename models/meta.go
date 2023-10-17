@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -69,4 +70,18 @@ type MediaItem struct {
 	Image           string              `json:"image"`
 	DominantColours SerializableColours `json:"dominant_colours"`
 	Backfilled      bool                `json:"-"`
+}
+
+func (m MediaItem) Hash() string {
+	return fmt.Sprintf(
+		"%s-%s-%s-%t-%d-%d-%s-%s",
+		m.Title,
+		m.Subtitle,
+		m.Category,
+		m.IsActive,
+		m.Elapsed,
+		m.Duration,
+		m.Source,
+		m.Image,
+	)
 }
