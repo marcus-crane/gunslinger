@@ -58,7 +58,7 @@ func (s *SqliteStore) GetNewest() (models.ComboDBMediaItem, error) {
 
 func (s *SqliteStore) GetByCategory(category string) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
-	err := s.DB.Get("SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1", category)
+	err := s.DB.Get(&c, "SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1", category)
 	if err != nil {
 		return c, err
 	}
