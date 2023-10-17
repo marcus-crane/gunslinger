@@ -32,7 +32,7 @@ func (s *SqliteStore) ApplyMigrations(migrations embed.FS) error {
 		return err
 	}
 
-	if err := goose.Up(s.DB.DB, "migrations/sqlite"); err != nil {
+	if err := goose.Up(s.DB.DB, "migrations"); err != nil {
 		return err
 	}
 

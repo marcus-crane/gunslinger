@@ -8,38 +8,38 @@ import (
 
 	"github.com/marcus-crane/gunslinger/models"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
-type MysqlStore struct {
+type PostgresStore struct {
 	DB *sqlx.DB
 }
 
-func NewMysqlStore(dsn string) (Store, error) {
-	db, err := sqlx.Connect("mysql", dsn)
+func NewPostgresStore(dsn string) (Store, error) {
+	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
-	return &MysqlStore{
+	return &PostgresStore{
 		DB: db,
 	}, nil
 }
 
-func (s *MysqlStore) ApplyMigrations(migrations embed.FS) error {
+func (s *PostgresStore) ApplyMigrations(migrations embed.FS) error {
 	goose.SetBaseFS(migrations)
 
-	if err := goose.SetDialect(string(goose.DialectMySQL)); err != nil {
+	if err := goose.SetDialect(string(goose.DialectPostgres)); err != nil {
 		return err
 	}
 
-	if err := goose.Up(s.DB.DB, "migrations/mysql"); err != nil {
+	if err := goose.Up(s.DB.DB, "migrations"); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *MysqlStore) GetRecent() ([]models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetRecent() ([]models.ComboDBMediaItem, error) {
 	cl := []models.ComboDBMediaItem{}
 	if err := s.DB.Select(&cl, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 7"); err != nil {
 		return cl, err
@@ -47,7 +47,7 @@ func (s *MysqlStore) GetRecent() ([]models.ComboDBMediaItem, error) {
 	return cl, nil
 }
 
-func (s *MysqlStore) GetNewest() (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetNewest() (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, "SELECT id, created_at, title, subtitle, category, is_active, duration_ms, source, image, dominant_colours FROM db_media_items ORDER BY created_at desc LIMIT 1")
 	if err != nil {
@@ -56,16 +56,16 @@ func (s *MysqlStore) GetNewest() (models.ComboDBMediaItem, error) {
 	return c, nil
 }
 
-func (s *MysqlStore) GetByCategory(category string) (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetByCategory(category string) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
-	err := s.DB.Get(&c, "SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1", category)
+	err := s.DB.Get("SELECT * FROM db_media_items WHERE category = ? ORDER BY created_at desc LIMIT 1", category)
 	if err != nil {
 		return c, err
 	}
 	return c, nil
 }
 
-func (s *MysqlStore) Insert(item models.MediaItem) error {
+func (s *PostgresStore) Insert(item models.MediaItem) error {
 	_, err := s.DB.Exec(
 		"INSERT INTO db_media_items (created_at, title, subtitle, category, is_active, duration_ms, dominant_colours, source, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		item.CreatedAt,
@@ -81,7 +81,7 @@ func (s *MysqlStore) Insert(item models.MediaItem) error {
 	return err
 }
 
-func (s *MysqlStore) InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, query, args...)
 	if err != nil {
