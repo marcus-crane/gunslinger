@@ -2,7 +2,8 @@ package models
 
 import (
 	"database/sql/driver"
-	"errors"
+	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -18,13 +19,18 @@ func (s SerializableColours) Value() (driver.Value, error) {
 
 func (s *SerializableColours) Scan(src interface{}) error {
 	var source []string
-	switch src.(type) {
+	switch v := src.(type) {
 	case string:
-		if src != "" {
-			source = strings.Split(src.(string), ",")
+		if v != "" {
+			source = strings.Split(v, ",")
+		}
+	case []byte:
+		byteStr := string(v[:])
+		if byteStr != "" {
+			source = strings.Split(byteStr, ",")
 		}
 	default:
-		return errors.New("incompatible type for SerializedColors")
+		return fmt.Errorf("incompatible type for SerializedColors: %s", reflect.TypeOf(src))
 	}
 	*s = SerializableColours(source)
 	return nil

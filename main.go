@@ -16,7 +16,7 @@ import (
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
-//go:embed migrations/*.sql
+//go:embed migrations/**/*.sql
 var embedMigrations embed.FS
 
 func main() {
@@ -24,11 +24,32 @@ func main() {
 		fmt.Println(err)
 	}
 
-	dsn := utils.MustEnv("DB_PATH")
+	dbDriver := utils.MustEnv("DB_DRIVER")
 
-	database, err := db.NewSqliteStore(dsn)
-	if err != nil {
-		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+	var database db.Store
+
+	if dbDriver == "mysql" {
+		dsn := utils.MustEnv("MYSQL_DSN")
+		store, err := db.NewMysqlStore(dsn)
+		if err != nil {
+			slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+			os.Exit(1)
+		}
+		database = store
+	}
+
+	if dbDriver == "sqlite" {
+		dsn := utils.MustEnv("SQLITE_PATH")
+		store, err := db.NewSqliteStore(dsn)
+		if err != nil {
+			slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+			os.Exit(1)
+		}
+		database = store
+	}
+
+	if database == nil {
+		slog.Error("No valid DB was configured.")
 		os.Exit(1)
 	}
 

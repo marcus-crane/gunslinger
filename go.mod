@@ -5,11 +5,11 @@ go 1.21
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/go-co-op/gocron v1.35.2
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
-	github.com/lib/pq v1.10.9
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/pressly/goose/v3 v3.15.1
 	github.com/r3labs/sse/v2 v2.10.0
