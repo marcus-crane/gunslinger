@@ -81,11 +81,16 @@ func (s *PostgresStore) Insert(item models.MediaItem) error {
 	return err
 }
 
-func (s *PostgresStore) InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
+func (s *PostgresStore) GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, query, args...)
 	if err != nil {
 		return c, err
 	}
 	return c, nil
+}
+
+func (s *PostgresStore) ExecCustom(query string, args ...interface{}) error {
+	_, err := s.DB.Exec(query, args...)
+	return err
 }

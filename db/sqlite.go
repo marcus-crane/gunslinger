@@ -81,11 +81,16 @@ func (s *SqliteStore) Insert(item models.MediaItem) error {
 	return err
 }
 
-func (s *SqliteStore) InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
+func (s *SqliteStore) GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, query, args...)
 	if err != nil {
 		return c, err
 	}
 	return c, nil
+}
+
+func (s *SqliteStore) ExecCustom(query string, args ...interface{}) error {
+	_, err := s.DB.Exec(query, args...)
+	return err
 }

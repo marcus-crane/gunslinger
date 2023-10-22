@@ -225,17 +225,16 @@ func GetRecentlyReadManga(store db.Store, client http.Client) {
 }
 
 func updateChapter(store db.Store, activity models.Activity, existingItem models.ComboDBMediaItem) error {
-	_, err := store.InsertCustom(
+	return store.ExecCustom(
 		"UPDATE db_media_items SET created_at = ?, title = ? WHERE id = ?",
 		activity.CreatedAt,
 		activity.Progress,
 		existingItem.ID,
 	)
-	return err
 }
 
 func checkMangaCompletion(store db.Store, activity models.Activity) error {
-	_, err := store.InsertCustom(
+	_, err := store.GetCustom(
 		"SELECT * FROM db_media_items WHERE category = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 		"manga",
 		activity.Media.Title.UserPreferred,
@@ -244,7 +243,7 @@ func checkMangaCompletion(store db.Store, activity models.Activity) error {
 }
 
 func checkStatusUpdateAlreadySeen(store db.Store, activity models.Activity) error {
-	_, err := store.InsertCustom(
+	_, err := store.GetCustom(
 		"SELECT * FROM db_media_items WHERE category = ? AND title = ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 		"manga",
 		activity.Progress,
@@ -254,7 +253,7 @@ func checkStatusUpdateAlreadySeen(store db.Store, activity models.Activity) erro
 }
 
 func checkIfChapterInRange(store db.Store, activity models.Activity, startChapter string) error {
-	_, err := store.InsertCustom(
+	_, err := store.GetCustom(
 		"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 		"manga",
 		"%"+fmt.Sprintf("%s - ", startChapter)+"%",
@@ -264,7 +263,7 @@ func checkIfChapterInRange(store db.Store, activity models.Activity, startChapte
 }
 
 func checkIfChapterIsFirstInStreak(store db.Store, activity models.Activity, startChapter string) error {
-	_, err := store.InsertCustom(
+	_, err := store.GetCustom(
 		"SELECT * FROM db_media_items WHERE category = ? AND title LIKE ? AND subtitle = ? ORDER BY created_at desc LIMIT 1",
 		"manga",
 		startChapter,

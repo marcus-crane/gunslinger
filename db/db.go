@@ -20,5 +20,6 @@ type Store interface {
 	GetNewest() (models.ComboDBMediaItem, error)
 	GetByCategory(category string) (models.ComboDBMediaItem, error)
 	Insert(item models.MediaItem) error
-	InsertCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error)
+	GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error)
+	ExecCustom(query string, args ...interface{}) error
 }
