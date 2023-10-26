@@ -68,6 +68,10 @@ func GetCurrentlyPlayingPlex(store db.Store, client http.Client) {
 			if entry.Type == "clip" {
 				continue
 			}
+			// Skip sessions that aren't from my own account
+			if entry.User.Id != "1" {
+				continue
+			}
 			if entry.Player.State == "playing" {
 				containsPlayingItem = true
 				// We may have multiple items in our queue at once

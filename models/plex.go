@@ -22,6 +22,7 @@ type Metadata struct {
 	ViewOffset       int        `json:"viewOffset"`
 	Director         []Director `json:"Director"`
 	Player           Player     `json:"Player"`
+	User             User       `json:"User"`
 }
 
 type Director struct {
@@ -30,4 +31,8 @@ type Director struct {
 
 type Player struct {
 	State string `json:"state"`
+}
+
+type User struct {
+	Id string `json:"id"`
 }
