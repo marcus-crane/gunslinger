@@ -46,7 +46,7 @@ func (c *Client) getUserPlaying() (PlexResponse, error) {
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{"Gunslinger/2.0 <github.com/marcus-crane/gunslinger>"},
+		"User-Agent":   []string{shared.USER_AGENT},
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -74,7 +74,7 @@ func (c *Client) QueryMediaState() ([]shared.DBMediaItem, error) {
 	}
 	for _, entry := range status.MediaContainer.Metadata {
 		// We don't want to capture movie trailers as historical items
-		if entry.Type == "clip" {
+		if entry.Type == shared.CATEGORY_CLIP {
 			continue
 		}
 		mediaItem := shared.DBMediaItem{
@@ -83,12 +83,12 @@ func (c *Client) QueryMediaState() ([]shared.DBMediaItem, error) {
 			Category: entry.Type,
 			Elapsed:  entry.ViewOffset,
 			Duration: entry.Duration,
-			Source:   "plex",
+			Source:   shared.SOURCE_PLEX,
 		}
-		if entry.Player.State == "playing" {
+		if entry.Player.State == shared.PLAYER_STATE_PLAYING {
 			mediaItem.IsActive = true
 		}
-		if entry.Type == "episode" {
+		if entry.Type == shared.CATEGORY_EPISODE {
 			mediaItem.Title = fmt.Sprintf(
 				"%02dx%02d %s",
 				entry.ParentIndex, // Season number
@@ -96,11 +96,11 @@ func (c *Client) QueryMediaState() ([]shared.DBMediaItem, error) {
 				entry.Title,
 			)
 		}
-		if entry.Type == "movie" {
+		if entry.Type == shared.CATEGORY_MOVIE {
 			mediaItem.Author = entry.Director[0].Name
 		}
 
-		if entry.Type == "track" {
+		if entry.Type == shared.CATEGORY_TRACK {
 			mediaItem.Subtitle = entry.ParentTitle
 			mediaItem.Author = entry.GrandparentTitle
 		}

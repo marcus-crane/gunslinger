@@ -43,7 +43,7 @@ func (c *Client) getUserPlaying() (string, error) {
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{"Gunslinger/2.0 <github.com/marcus-crane/gunslinger>"},
+		"User-Agent":   []string{shared.USER_AGENT},
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *Client) lookupStoreItem(appID string) (SteamAppDetail, error) {
 	req.Header = http.Header{
 		"Accept":       []string{"application/json"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{"Gunslinger/2.0 <github.com/marcus-crane/gunslinger>"},
+		"User-Agent":   []string{shared.USER_AGENT},
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -116,9 +116,9 @@ func (c *Client) QueryMediaState() (shared.DBMediaItem, error) {
 	return shared.DBMediaItem{
 		Title:    storeDetail.Name,
 		Author:   storeDetail.Developers[0],
-		Category: "gaming",
+		Category: shared.CATEGORY_VIDEOGAME,
 		IsActive: true,
-		Source:   "steam",
+		Source:   shared.SOURCE_STEAM,
 	}, nil
 }
 

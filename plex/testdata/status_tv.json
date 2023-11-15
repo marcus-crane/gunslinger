@@ -1,0 +1,234 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "Metadata": [
+      {
+        "addedAt": 1689405745,
+        "art": "/library/metadata/33577/art/1698387133",
+        "audienceRating": 7.9,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "contentRating": "TV-14",
+        "duration": 2640264,
+        "grandparentArt": "/library/metadata/33577/art/1698387133",
+        "grandparentGuid": "plex://show/5d9c086c02391c001f5891b7",
+        "grandparentKey": "/library/metadata/33577",
+        "grandparentRatingKey": "33577",
+        "grandparentTheme": "/library/metadata/33577/theme/1698387133",
+        "grandparentThumb": "/library/metadata/33577/thumb/1698387133",
+        "grandparentTitle": "House",
+        "guid": "plex://episode/5d9c12771cae62001f772a7b",
+        "index": 11,
+        "key": "/library/metadata/35056",
+        "librarySectionID": "5",
+        "librarySectionKey": "/library/sections/5",
+        "librarySectionTitle": "TV",
+        "originallyAvailableAt": "2011-02-07",
+        "parentGuid": "plex://season/602f7f7ec52b36002c7eef7d",
+        "parentIndex": 7,
+        "parentKey": "/library/metadata/35045",
+        "parentRatingKey": "35045",
+        "parentThumb": "/library/metadata/35045/thumb/1689405787",
+        "parentTitle": "Season 7",
+        "ratingKey": "35056",
+        "sessionKey": "122",
+        "summary": "Cuddy’s mother, Arlene, is admitted to Princeton Plansboro after complaining about unusual symptoms, but stubborn Arlene insists that House be removed from the case, forcing House to come up with non-conventional means to treat his patient.",
+        "thumb": "/library/metadata/35056/thumb/1689405799",
+        "title": "Family Practice",
+        "type": "episode",
+        "updatedAt": 1689405799,
+        "viewOffset": 255922,
+        "year": 2011,
+        "Media": [
+          {
+            "aspectRatio": "1.78",
+            "audioChannels": 2,
+            "audioCodec": "mp3",
+            "bitrate": 1099,
+            "container": "avi",
+            "duration": 2640264,
+            "height": 352,
+            "id": "53814",
+            "videoCodec": "mpeg4",
+            "videoFrameRate": "24p",
+            "videoProfile": "advanced simple",
+            "videoResolution": "sd",
+            "width": 624,
+            "selected": true,
+            "Part": [
+              {
+                "container": "avi",
+                "duration": 2640264,
+                "file": "/media/tv/House/Season 7/House MD Season 7 Episode 11 - Family Practice.avi",
+                "id": "54368",
+                "indexes": "sd",
+                "key": "/library/parts/54368/1689334994/file.avi",
+                "size": 367007292,
+                "videoProfile": "advanced simple",
+                "decision": "directplay",
+                "selected": true,
+                "Stream": [
+                  {
+                    "bitDepth": 8,
+                    "bitrate": 963,
+                    "chromaLocation": "left",
+                    "chromaSubsampling": "4:2:0",
+                    "codec": "mpeg4",
+                    "codecID": "XVID",
+                    "codedHeight": 352,
+                    "codedWidth": 624,
+                    "displayTitle": "SD (MPEG4)",
+                    "extendedDisplayTitle": "SD (MPEG4)",
+                    "frameRate": 23.976,
+                    "height": 352,
+                    "id": "125206",
+                    "index": 0,
+                    "level": 5,
+                    "profile": "advanced simple",
+                    "refFrames": 1,
+                    "streamType": 1,
+                    "width": 624,
+                    "location": "direct"
+                  },
+                  {
+                    "audioChannelLayout": "stereo",
+                    "bitrate": 136,
+                    "channels": 2,
+                    "codec": "mp3",
+                    "displayTitle": "Unknown (MP3 Stereo)",
+                    "extendedDisplayTitle": "Unknown (MP3 Stereo)",
+                    "id": "125207",
+                    "index": 1,
+                    "samplingRate": 48000,
+                    "selected": true,
+                    "streamIdentifier": "1",
+                    "streamType": 2,
+                    "location": "direct"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "Rating": [
+          {
+            "image": "themoviedb://image.rating",
+            "type": "audience",
+            "value": "7.9"
+          }
+        ],
+        "Director": [
+          {
+            "filter": "director=106700",
+            "id": "106700",
+            "tag": "Miguel Sapochnik",
+            "tagKey": "5d776860e6d55c0020411e68",
+            "thumb": "https://metadata-static.plex.tv/people/5d776860e6d55c0020411e68.jpg"
+          }
+        ],
+        "Writer": [
+          {
+            "filter": "writer=103163",
+            "id": "103163",
+            "tag": "Peter Blake",
+            "tagKey": "5e1635552d4d84003e490d1f",
+            "thumb": "https://metadata-static.plex.tv/c/people/cb7c8676acad1df70326e54053612fa6.jpg"
+          }
+        ],
+        "Role": [
+          {
+            "filter": "actor=107526",
+            "id": "107526",
+            "role": "Dr. Marty Kaufman",
+            "tag": "Ben Bode",
+            "tagKey": "5d776827151a60001f24ab4a",
+            "thumb": "https://metadata-static.plex.tv/a/people/aaaab84097a6c14187a8d713a73bc16d.jpg"
+          },
+          {
+            "filter": "actor=59303",
+            "id": "59303",
+            "role": "Jaimie",
+            "tag": "Michael Gladis",
+            "tagKey": "5d776832a091de001f2e799b",
+            "thumb": "https://metadata-static.plex.tv/people/5d776832a091de001f2e799b.jpg"
+          },
+          {
+            "filter": "actor=107527",
+            "id": "107527",
+            "role": "Kara",
+            "tag": "Julia Rose",
+            "tagKey": "5d776846eb5d26001f1e46b4",
+            "thumb": "https://metadata-static.plex.tv/people/5d776846eb5d26001f1e46b4.jpg"
+          },
+          {
+            "filter": "actor=107528",
+            "id": "107528",
+            "role": "Timothy",
+            "tag": "David Olejnik",
+            "tagKey": "5ddba93b572c3a001d514dbe"
+          },
+          {
+            "filter": "actor=107529",
+            "id": "107529",
+            "role": "Salesgirl",
+            "tag": "Kelly Frye",
+            "tagKey": "5d77685f6f4521001eaa403b",
+            "thumb": "https://metadata-static.plex.tv/people/5d77685f6f4521001eaa403b.jpg"
+          },
+          {
+            "filter": "actor=102984",
+            "id": "102984",
+            "role": "Arlene Cuddy",
+            "tag": "Candice Bergen",
+            "tagKey": "5d7768282ec6b5001f6ba680",
+            "thumb": "https://metadata-static.plex.tv/5/people/5d9896e35175e0cba992674eee0a19bb.jpg"
+          },
+          {
+            "filter": "actor=102986",
+            "id": "102986",
+            "role": "Julia Cuddy",
+            "tag": "Paula Marshall",
+            "tagKey": "5d776835eb5d26001f1e0b44",
+            "thumb": "https://metadata-static.plex.tv/people/5d776835eb5d26001f1e0b44.jpg"
+          },
+          {
+            "filter": "actor=102954",
+            "id": "102954",
+            "role": "Rachel Taub",
+            "tag": "Jennifer Crystal Foley",
+            "tagKey": "5d7768e49ab54400214ecde4",
+            "thumb": "https://metadata-static.plex.tv/f/people/fcf677dd3fc7667d777936fdb7353a44.jpg"
+          }
+        ],
+        "User": {
+          "id": "1",
+          "thumb": "https://plex.tv/users/bd082d86df2dd317/avatar?c=1700022594",
+          "title": "utf9k"
+        },
+        "Player": {
+          "address": "172.17.0.1",
+          "device": "Apple TV",
+          "machineIdentifier": "0C82C587-C5D3-4AF7-A9A8-79D878243E62",
+          "model": "14,1",
+          "platform": "tvOS",
+          "platformVersion": "17.2",
+          "product": "Plex for Apple TV",
+          "profile": "tvOS",
+          "remotePublicAddress": "172.17.0.1",
+          "state": "playing",
+          "title": "Apple TV",
+          "vendor": "Apple",
+          "version": "8.27.1",
+          "local": false,
+          "relayed": false,
+          "secure": true,
+          "userID": 1
+        },
+        "Session": {
+          "id": "0C82C587-C5D3-4AF7-A9A8-79D878243E62",
+          "bandwidth": 1617,
+          "location": "wan"
+        }
+      }
+    ]
+  }
+}
