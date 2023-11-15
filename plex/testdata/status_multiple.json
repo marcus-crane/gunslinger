@@ -1,0 +1,405 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "Metadata": [
+      {
+        "addedAt": 1689405745,
+        "art": "/library/metadata/33577/art/1698387133",
+        "audienceRating": 7.9,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "contentRating": "TV-14",
+        "duration": 2640264,
+        "grandparentArt": "/library/metadata/33577/art/1698387133",
+        "grandparentGuid": "plex://show/5d9c086c02391c001f5891b7",
+        "grandparentKey": "/library/metadata/33577",
+        "grandparentRatingKey": "33577",
+        "grandparentTheme": "/library/metadata/33577/theme/1698387133",
+        "grandparentThumb": "/library/metadata/33577/thumb/1698387133",
+        "grandparentTitle": "House",
+        "guid": "plex://episode/5d9c12771cae62001f772a7b",
+        "index": 11,
+        "key": "/library/metadata/35056",
+        "librarySectionID": "5",
+        "librarySectionKey": "/library/sections/5",
+        "librarySectionTitle": "TV",
+        "originallyAvailableAt": "2011-02-07",
+        "parentGuid": "plex://season/602f7f7ec52b36002c7eef7d",
+        "parentIndex": 7,
+        "parentKey": "/library/metadata/35045",
+        "parentRatingKey": "35045",
+        "parentThumb": "/library/metadata/35045/thumb/1689405787",
+        "parentTitle": "Season 7",
+        "ratingKey": "35056",
+        "sessionKey": "122",
+        "summary": "Cuddy’s mother, Arlene, is admitted to Princeton Plansboro after complaining about unusual symptoms, but stubborn Arlene insists that House be removed from the case, forcing House to come up with non-conventional means to treat his patient.",
+        "thumb": "/library/metadata/35056/thumb/1689405799",
+        "title": "Family Practice",
+        "type": "episode",
+        "updatedAt": 1689405799,
+        "viewOffset": 1654361,
+        "year": 2011,
+        "Media": [
+          {
+            "aspectRatio": "1.78",
+            "audioChannels": 2,
+            "audioCodec": "mp3",
+            "bitrate": 1099,
+            "container": "avi",
+            "duration": 2640264,
+            "height": 352,
+            "id": "53814",
+            "videoCodec": "mpeg4",
+            "videoFrameRate": "24p",
+            "videoProfile": "advanced simple",
+            "videoResolution": "sd",
+            "width": 624,
+            "selected": true,
+            "Part": [
+              {
+                "container": "avi",
+                "duration": 2640264,
+                "file": "/media/tv/House/Season 7/House MD Season 7 Episode 11 - Family Practice.avi",
+                "id": "54368",
+                "indexes": "sd",
+                "key": "/library/parts/54368/1689334994/file.avi",
+                "size": 367007292,
+                "videoProfile": "advanced simple",
+                "decision": "directplay",
+                "selected": true,
+                "Stream": [
+                  {
+                    "bitDepth": 8,
+                    "bitrate": 963,
+                    "chromaLocation": "left",
+                    "chromaSubsampling": "4:2:0",
+                    "codec": "mpeg4",
+                    "codecID": "XVID",
+                    "codedHeight": 352,
+                    "codedWidth": 624,
+                    "displayTitle": "SD (MPEG4)",
+                    "extendedDisplayTitle": "SD (MPEG4)",
+                    "frameRate": 23.976,
+                    "height": 352,
+                    "id": "125206",
+                    "index": 0,
+                    "level": 5,
+                    "profile": "advanced simple",
+                    "refFrames": 1,
+                    "streamType": 1,
+                    "width": 624,
+                    "location": "direct"
+                  },
+                  {
+                    "audioChannelLayout": "stereo",
+                    "bitrate": 136,
+                    "channels": 2,
+                    "codec": "mp3",
+                    "displayTitle": "Unknown (MP3 Stereo)",
+                    "extendedDisplayTitle": "Unknown (MP3 Stereo)",
+                    "id": "125207",
+                    "index": 1,
+                    "samplingRate": 48000,
+                    "selected": true,
+                    "streamIdentifier": "1",
+                    "streamType": 2,
+                    "location": "direct"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "Rating": [
+          {
+            "image": "themoviedb://image.rating",
+            "type": "audience",
+            "value": "7.9"
+          }
+        ],
+        "Director": [
+          {
+            "filter": "director=106700",
+            "id": "106700",
+            "tag": "Miguel Sapochnik",
+            "tagKey": "5d776860e6d55c0020411e68",
+            "thumb": "https://metadata-static.plex.tv/people/5d776860e6d55c0020411e68.jpg"
+          }
+        ],
+        "Writer": [
+          {
+            "filter": "writer=103163",
+            "id": "103163",
+            "tag": "Peter Blake",
+            "tagKey": "5e1635552d4d84003e490d1f",
+            "thumb": "https://metadata-static.plex.tv/c/people/cb7c8676acad1df70326e54053612fa6.jpg"
+          }
+        ],
+        "Role": [
+          {
+            "filter": "actor=107526",
+            "id": "107526",
+            "role": "Dr. Marty Kaufman",
+            "tag": "Ben Bode",
+            "tagKey": "5d776827151a60001f24ab4a",
+            "thumb": "https://metadata-static.plex.tv/a/people/aaaab84097a6c14187a8d713a73bc16d.jpg"
+          },
+          {
+            "filter": "actor=59303",
+            "id": "59303",
+            "role": "Jaimie",
+            "tag": "Michael Gladis",
+            "tagKey": "5d776832a091de001f2e799b",
+            "thumb": "https://metadata-static.plex.tv/people/5d776832a091de001f2e799b.jpg"
+          },
+          {
+            "filter": "actor=107527",
+            "id": "107527",
+            "role": "Kara",
+            "tag": "Julia Rose",
+            "tagKey": "5d776846eb5d26001f1e46b4",
+            "thumb": "https://metadata-static.plex.tv/people/5d776846eb5d26001f1e46b4.jpg"
+          },
+          {
+            "filter": "actor=107528",
+            "id": "107528",
+            "role": "Timothy",
+            "tag": "David Olejnik",
+            "tagKey": "5ddba93b572c3a001d514dbe"
+          },
+          {
+            "filter": "actor=107529",
+            "id": "107529",
+            "role": "Salesgirl",
+            "tag": "Kelly Frye",
+            "tagKey": "5d77685f6f4521001eaa403b",
+            "thumb": "https://metadata-static.plex.tv/people/5d77685f6f4521001eaa403b.jpg"
+          },
+          {
+            "filter": "actor=102984",
+            "id": "102984",
+            "role": "Arlene Cuddy",
+            "tag": "Candice Bergen",
+            "tagKey": "5d7768282ec6b5001f6ba680",
+            "thumb": "https://metadata-static.plex.tv/5/people/5d9896e35175e0cba992674eee0a19bb.jpg"
+          },
+          {
+            "filter": "actor=102986",
+            "id": "102986",
+            "role": "Julia Cuddy",
+            "tag": "Paula Marshall",
+            "tagKey": "5d776835eb5d26001f1e0b44",
+            "thumb": "https://metadata-static.plex.tv/people/5d776835eb5d26001f1e0b44.jpg"
+          },
+          {
+            "filter": "actor=102954",
+            "id": "102954",
+            "role": "Rachel Taub",
+            "tag": "Jennifer Crystal Foley",
+            "tagKey": "5d7768e49ab54400214ecde4",
+            "thumb": "https://metadata-static.plex.tv/f/people/fcf677dd3fc7667d777936fdb7353a44.jpg"
+          }
+        ],
+        "User": {
+          "id": "1",
+          "thumb": "https://plex.tv/users/bd082d86df2dd317/avatar?c=1700022594",
+          "title": "utf9k"
+        },
+        "Player": {
+          "address": "172.17.0.1",
+          "device": "Apple TV",
+          "machineIdentifier": "0C82C587-C5D3-4AF7-A9A8-79D878243E62",
+          "model": "14,1",
+          "platform": "tvOS",
+          "platformVersion": "17.2",
+          "product": "Plex for Apple TV",
+          "profile": "tvOS",
+          "remotePublicAddress": "172.17.0.1",
+          "state": "playing",
+          "title": "Apple TV",
+          "vendor": "Apple",
+          "version": "8.27.1",
+          "local": false,
+          "relayed": false,
+          "secure": true,
+          "userID": 1
+        },
+        "Session": {
+          "id": "0C82C587-C5D3-4AF7-A9A8-79D878243E62",
+          "bandwidth": 1617,
+          "location": "wan"
+        }
+      },
+      {
+        "addedAt": 1647558000,
+        "allowSync": "0",
+        "attribution": "com.tidal",
+        "duration": 185706,
+        "grandparentGuid": "plex://artist/5d07bc05403c6402904abf72",
+        "grandparentKey": "/library/metadata/38855",
+        "grandparentRatingKey": "38855",
+        "grandparentThumb": "/library/metadata/38855/thumb/1699513160",
+        "grandparentTitle": "Broadcast",
+        "guid": "plex://track/61f13b83310da699457cdb77",
+        "index": 1,
+        "key": "/library/metadata/38879",
+        "lastViewedAt": 1698627650,
+        "librarySectionID": "4",
+        "librarySectionKey": "/library/sections/4",
+        "librarySectionTitle": "Music",
+        "oneShot": "1",
+        "originallyAvailableAt": "2022-03-17",
+        "parentGuid": "plex://album/61f12d70310da6994527e441",
+        "parentIndex": 1,
+        "parentKey": "/library/metadata/38878",
+        "parentRatingKey": "38878",
+        "parentStudio": "Warp",
+        "parentThumb": "/library/metadata/38878/thumb/1698216009",
+        "parentTitle": "BBC Maida Vale Sessions",
+        "parentYear": 2022,
+        "ratingCount": 10391,
+        "ratingKey": "38879",
+        "remoteMedia": "1",
+        "sessionKey": "124",
+        "sourceKey": "/library/metadata/6229f62c6c0c8735bc97468c",
+        "thumb": "/library/metadata/38878/thumb/1698216009",
+        "title": "The Note [Message From Home]",
+        "titleSort": "Note [Message From Home]",
+        "type": "track",
+        "updatedAt": 1698216009,
+        "viewCount": 1,
+        "viewOffset": 0,
+        "Media": [
+          {
+            "audioCodec": "flac",
+            "bitrate": 963,
+            "container": "flac",
+            "duration": 185706,
+            "id": "58168",
+            "optimizedForStreaming": true,
+            "origin": "dvr",
+            "source": "provider://tv.plex.provider.music",
+            "Part": [
+              {
+                "container": "flac",
+                "duration": 185706,
+                "id": "58730",
+                "key": "/library/parts/219693432-LOSSLESS",
+                "Stream": [
+                  {
+                    "albumGain": "-8.45",
+                    "albumPeak": "0.995544",
+                    "albumRange": "5.983338",
+                    "bitDepth": 16,
+                    "bitrate": 963,
+                    "codec": "flac",
+                    "displayTitle": "FLAC",
+                    "duration": 185706,
+                    "extendedDisplayTitle": "FLAC",
+                    "gain": "-7.46",
+                    "id": "135019",
+                    "index": 0,
+                    "peak": "0.978394",
+                    "samplingRate": 44100,
+                    "selected": true,
+                    "streamType": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "audioCodec": "aac",
+            "bitrate": 320,
+            "container": "mp4",
+            "duration": 186000,
+            "id": "58169",
+            "optimizedForStreaming": true,
+            "source": "provider://tv.plex.provider.music",
+            "Part": [
+              {
+                "container": "mp4",
+                "duration": 186000,
+                "id": "58731",
+                "key": "/library/parts/219693432-HIGH",
+                "Stream": [
+                  {
+                    "albumGain": "-8.45",
+                    "albumPeak": "0.995544",
+                    "albumRange": "5.983338",
+                    "bitrate": 320,
+                    "codec": "aac",
+                    "displayTitle": "AAC",
+                    "duration": 186000,
+                    "extendedDisplayTitle": "AAC",
+                    "gain": "-7.46",
+                    "id": "135020",
+                    "index": 0,
+                    "peak": "0.978394",
+                    "selected": true,
+                    "streamType": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "audioCodec": "aac",
+            "bitrate": 96,
+            "container": "mp4",
+            "duration": 186000,
+            "id": "58170",
+            "optimizedForStreaming": true,
+            "source": "provider://tv.plex.provider.music",
+            "Part": [
+              {
+                "container": "mp4",
+                "duration": 186000,
+                "id": "58732",
+                "key": "/library/parts/219693432-LOW",
+                "Stream": [
+                  {
+                    "albumGain": "-8.45",
+                    "albumPeak": "0.995544",
+                    "albumRange": "5.983338",
+                    "bitrate": 96,
+                    "codec": "aac",
+                    "displayTitle": "AAC",
+                    "duration": 186000,
+                    "extendedDisplayTitle": "AAC",
+                    "gain": "-7.46",
+                    "id": "135021",
+                    "index": 0,
+                    "peak": "0.978394",
+                    "selected": true,
+                    "streamType": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "User": {
+          "id": "1",
+          "thumb": "https://plex.tv/users/bd082d86df2dd317/avatar?c=1700022594",
+          "title": "utf9k"
+        },
+        "Player": {
+          "address": "172.17.0.1",
+          "device": "macOS",
+          "machineIdentifier": "85072918-52c8-4189-b457-e0bbc155c7b1",
+          "platform": "macOS",
+          "platformVersion": "23.0.0",
+          "product": "Plexamp",
+          "remotePublicAddress": "172.17.0.1",
+          "state": "playing",
+          "title": "skeith",
+          "version": "4.8.4",
+          "local": false,
+          "relayed": false,
+          "secure": true,
+          "userID": 1
+        }
+      }
+    ]
+  }
+}
