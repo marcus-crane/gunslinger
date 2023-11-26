@@ -109,6 +109,18 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 		return
 	}
 
+	// Nothing is playing so we should check if anything needs to be cleaned up
+	// or if we need to do a state transition
+	if res.StatusCode == 204 {
+		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "trakt" {
+			CurrentPlaybackItem.IsActive = false
+			byteStream := new(bytes.Buffer)
+			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
+			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+		}
+		return
+	}
+
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
 		slog.Error("Failed to unmarshal Trakt response",
