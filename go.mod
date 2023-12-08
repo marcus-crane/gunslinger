@@ -14,7 +14,7 @@ require (
 	github.com/pressly/goose/v3 v3.16.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.1
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb
 	modernc.org/sqlite v1.27.0
 )
 
@@ -29,10 +29,10 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.18.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
-	golang.org/x/tools v0.15.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/tools v0.16.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
 	modernc.org/cc/v3 v3.41.0 // indirect
