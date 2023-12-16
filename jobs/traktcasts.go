@@ -7,8 +7,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -21,23 +23,36 @@ var (
 )
 
 func getArtFromApple(traktResponse models.NowPlayingResponse) (string, error) {
-	//url := fmt.Sprintf("https://podcasts.apple.com/us/podcast/%s/id%d", traktResponse.PodcastEpisode.IDs.Slug, traktResponse.PodcastEpisode.IDs.Apple)
-	// res, err := http.Get(url)
-	// if err != nil {
-	// 	return "", err
-	// }
+	url := fmt.Sprintf("https://podcasts.apple.com/us/podcast/%s/id%d", traktResponse.Podcast.IDs.Slug, traktResponse.Podcast.IDs.Apple)
+	res, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", err
+	}
 
-	// body, err := io.ReadAll(res.Body)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// var tmdbImageResponse models.TMDBImageResponse
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		return "", err
+	}
 
-	// if err = json.Unmarshal(body, &tmdbImageResponse); err != nil {
-	// 	slog.Error("Failed to fetch image data from TMDB", slog.String("body", string(body)))
-	// }
+	var coverUrl string
 
-	return "https://is1-ssl.mzstatic.com/image/thumb/Podcasts113/v4/55/52/a3/5552a384-1ba2-60cc-eab5-e1c1d096e1ca/mza_7482651295927141170.jpg/626x0w.jpg", nil
+	// Find the review items
+	doc.Find("source[type='image/jpeg']").Each(func(i int, s *goquery.Selection) {
+		if i == 0 {
+			srcset, exists := s.Attr("srcset")
+			if !exists {
+				return
+			}
+			bits := strings.Split(srcset, " ")
+			coverUrl = strings.Replace(bits[0], "268x0", "512x0", 1)
+		}
+	})
+
+	return coverUrl, nil
 }
 
 func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
@@ -123,7 +138,8 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	}
 
 	// If we don't have any IDs, we can't look up cover art so we'll just bail out
-	if traktResponse.Movie.IDs.Apple == 0 || traktResponse.Movie.IDs.Slug == "" {
+	if traktResponse.Podcast.IDs.Apple == 0 || traktResponse.Podcast.IDs.Slug == "" {
+		slog.Info("No IDs")
 		return
 	}
 
@@ -132,6 +148,10 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		slog.Error("Failed to retrieve art from Apple Podcasts",
 			slog.String("stack", err.Error()),
 		)
+		return
+	}
+	if imageUrl == "" {
+		slog.Error("Did not find a suitable cover art from Apple Podcasts")
 		return
 	}
 	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
