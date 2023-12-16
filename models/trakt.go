@@ -1,13 +1,15 @@
 package models
 
 type NowPlayingResponse struct {
-	ExpiresAt string       `json:"expires_at"`
-	StartedAt string       `json:"started_at"`
-	Action    string       `json:"action"`
-	Type      string       `json:"type"`
-	Movie     TraktSummary `json:"movie"`
-	Episode   TraktEpisode `json:"episode"`
-	Show      TraktSummary `json:"show"`
+	ExpiresAt      string       `json:"expires_at"`
+	StartedAt      string       `json:"started_at"`
+	Action         string       `json:"action"`
+	Type           string       `json:"type"`
+	Movie          TraktSummary `json:"movie"`
+	Episode        TraktEpisode `json:"episode"`
+	Show           TraktSummary `json:"show"`
+	PodcastEpisode TraktEpisode `json:"podcast_episode"`
+	Podcast        TraktSummary `json:"podcast"`
 }
 
 type TraktEpisode struct {
@@ -29,6 +31,7 @@ type TraktIDs struct {
 	TVDB  int    `json:"tvdb"`
 	IMDB  string `json:"imdb"`
 	TMDB  int    `json:"tmdb"`
+	Apple int    `json:"apple"`
 }
 
 type TMDBImageResponse struct {

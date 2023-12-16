@@ -28,6 +28,7 @@ func SetupInBackground(store db.Store) *gocron.Scheduler {
 	s.Every(15).Seconds().Do(GetRecentlyReadManga, store, client) // Rate limit: 90 req/sec
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, store, client)
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, store, client)
+	s.Every(15).Seconds().Do(GetCurrentlyListeningTrakt, store, client)
 
 	// Assuming we have just redeployed or have crashed, we will
 	// attempt to preload the last seen item in memory
