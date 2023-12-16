@@ -46,7 +46,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 
 	req, err := http.NewRequest("HEAD", traktListeningEndpoint, nil)
 	if err != nil {
-		slog.Error("Failed to build HEAD request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to build HEAD request for Traktcasts", slog.String("stack", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -59,7 +59,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		slog.Error("Failed to make HEAD request to Trakt",
+		slog.Error("Failed to make HEAD request to Traktcasts",
 			slog.String("stack", err.Error()),
 			slog.String("code", res.Status),
 		)
@@ -81,13 +81,13 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	// Do a proper, more expensive request now that we've got something fresh
 	req2, err := http.NewRequest("GET", traktListeningEndpoint, nil)
 	if err != nil {
-		slog.Error("Failed to build GET request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to build GET request for Traktcasts", slog.String("stack", err.Error()))
 		return
 	}
 	req2.Header = req.Header
 	res2, err := client.Do(req2)
 	if err != nil {
-		slog.Error("Failed to make GET request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to make GET request for Traktcasts", slog.String("stack", err.Error()))
 		return
 	}
 
@@ -105,7 +105,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
-		slog.Error("Failed to unmarshal Trakt response",
+		slog.Error("Failed to unmarshal Traktcasts response",
 			slog.String("stack", err.Error()),
 			slog.String("code", res2.Status),
 		)
@@ -115,7 +115,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
-		slog.Error("Failed to unmarshal Trakt response",
+		slog.Error("Failed to unmarshal Traktcasts response",
 			slog.String("stack", err.Error()),
 			slog.String("code", res2.Status),
 		)
@@ -146,7 +146,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
-		slog.Error("Failed to parse Trakt start time",
+		slog.Error("Failed to parse Traktcasts start time",
 			slog.String("stack", err.Error()),
 			slog.String("started_at", traktResponse.StartedAt),
 		)
@@ -154,7 +154,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	}
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
-		slog.Error("Failed to parse Trakt expiry time",
+		slog.Error("Failed to parse Traktcasts expiry time",
 			slog.String("stack", err.Error()),
 			slog.String("expires_at", traktResponse.ExpiresAt),
 		)
@@ -192,7 +192,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		if err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
 				if err := saveCover(guid.String(), image, extension); err != nil {
-					slog.Error("Failed to save cover for Trakt",
+					slog.Error("Failed to save cover for Traktcasts",
 						slog.String("stack", err.Error()),
 						slog.String("guid", guid.String()),
 						slog.String("title", playingItem.Title),
