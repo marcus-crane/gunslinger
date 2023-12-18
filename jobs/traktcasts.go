@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	traktListeningEndpoint = "https://api.trakt.tv/users/sentry/listening"
+	traktListeningEndpoint = "https://api.trakt.tv/users/sentry/listening?extended=full"
 )
 
 func getArtFromApple(traktResponse models.NowPlayingResponse) (string, error) {
@@ -164,14 +164,8 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	}
 	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
-	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
-	if err != nil {
-		slog.Error("Failed to parse Traktcasts start time",
-			slog.String("stack", err.Error()),
-			slog.String("started_at", traktResponse.StartedAt),
-		)
-		return
-	}
+	// We may pause and restart episodes so we need to infer the current progress by taking the runtime
+	// and checking the difference between now and when the scrobble expires
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
 		slog.Error("Failed to parse Traktcasts expiry time",
@@ -181,8 +175,8 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		return
 	}
 
-	duration := int(ends.Sub(started).Milliseconds())
-	elapsed := int(time.Since(started).Milliseconds())
+	duration := traktResponse.PodcastEpisode.Runtime * 1000
+	elapsed := duration - int(time.Until(ends).Milliseconds())
 
 	playingItem := models.MediaItem{
 		Title:           traktResponse.PodcastEpisode.Title,

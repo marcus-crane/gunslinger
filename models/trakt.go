@@ -13,16 +13,24 @@ type NowPlayingResponse struct {
 }
 
 type TraktEpisode struct {
-	Season int      `json:"season"`
-	Number int      `json:"number"`
-	Title  string   `json:"title"`
-	IDs    TraktIDs `json:"ids"`
+	Season        int      `json:"season"`
+	Number        int      `json:"number"`
+	Title         string   `json:"title"`
+	IDs           TraktIDs `json:"ids"`
+	Overview      string   `json:"overview"`
+	OverviewPlain string   `json:"overview_plain"`
+	Explicit      bool     `json:"explicit"`
+	Runtime       int      `json:"runtime"`
 }
 
 type TraktSummary struct {
-	Title string   `json:"title"`
-	Year  int      `json:"year"`
-	IDs   TraktIDs `json:"ids"`
+	Title         string   `json:"title"`
+	Year          int      `json:"year"`
+	IDs           TraktIDs `json:"ids"`
+	Overview      string   `json:"overview"`
+	OverviewPlain string   `json:"overview_plain"`
+	Author        string   `json:"author"`
+	Homepage      string   `json:"homepage"`
 }
 
 type TraktIDs struct {
