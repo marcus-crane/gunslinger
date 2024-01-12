@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -161,6 +162,37 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			response = append(response, rItem)
 		}
 		json.NewEncoder(w).Encode(response)
+	})
+
+	mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if r.Method != http.MethodDelete {
+			renderJSONMessage(w, "That method is invalid for this endpoint")
+			return
+		}
+		if !qVal.Has("id") {
+			renderJSONMessage(w, "An ID did not appear to be provided")
+			return
+		}
+		id := qVal.Get("id")
+		err := store.ExecCustom("DELETE FROM db_media_items WHERE id = ?", id)
+		if err != nil {
+			renderJSONMessage(w, "Something went wrong trying to delete that item")
+			return
+		}
+		renderJSONMessage(w, "Operation was successfully executed")
 	})
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
