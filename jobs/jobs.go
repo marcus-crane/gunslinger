@@ -63,5 +63,6 @@ func LoadCover(guid string, extension string) (string, error) {
 }
 
 func saveCover(guid string, image []byte, extension string) error {
+	os.WriteFile(fmt.Sprintf("%s/current.jpeg", STORAGE_DIR), image, 0644)
 	return os.WriteFile(fmt.Sprintf("%s/cover.%s.%s", STORAGE_DIR, guid, extension), image, 0644)
 }
