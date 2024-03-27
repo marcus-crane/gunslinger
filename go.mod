@@ -5,9 +5,10 @@ go 1.21
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/PuerkitoBio/goquery v1.8.1
-	github.com/go-co-op/gocron v1.36.1
+	github.com/go-co-op/gocron v1.37.0
+	github.com/go-co-op/gocron/v2 v2.2.9
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
@@ -27,7 +28,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
