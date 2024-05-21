@@ -1,6 +1,7 @@
 package routes
 
 import (
+  "bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,11 @@ import (
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
 )
+
+type readerPayload struct {
+  URL string `json:"url"`
+  SavedUsing string `json:"saved_using"`
+}
 
 func renderJSONMessage(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
@@ -104,6 +110,57 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 		}
 		json.NewEncoder(w).Encode(response)
 	})
+
+  // Yes, this is garbage and doesn't deserve to be put in here
+  // It works for now though
+  mux.HandleFunc("/api/v4/readwise_ingest", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    qVal := r.URL.Query()
+    token := qVal.Get("token")
+
+    if token == "" {
+      json.NewEncoder(w).Encode(map[string]string{"error": "token was not provided"})
+      return
+    }
+
+    url := qVal.Get("url")
+
+    if url == "" {
+      json.NewEncoder(w).Encode(map[string]string{"error": "url was not provided"})
+      return
+    }
+    
+    payload := readerPayload{
+      URL: url,
+      SavedUsing: "Gunslinger",
+    }
+
+    data, err := json.Marshal(payload)
+    if err != nil {
+      json.NewEncoder(w).Encode(map[string]string{"error": "failed to marshal payload"})
+      return
+    }
+
+    req, err := http.NewRequest("POST", "https://readwise.io/api/v3/save/", bytes.NewReader(data))
+    if err != nil {
+      json.NewEncoder(w).Encode(map[string]string{"error": "failed to build request"})
+      return
+    }
+
+    req.Header.Add("Authorization", fmt.Sprintf("Token %s", token))
+    req.Header.Add("Content-Type", "application/json")
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+      json.NewEncoder(w).Encode(map[string]string{"error": "failed to send request"})
+      return
+    }
+    defer resp.Body.Close()
+
+    json.NewEncoder(w).Encode(map[string]string{"status": resp.Status}) 
+  })
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
