@@ -1,14 +1,17 @@
 package routes
 
 import (
-  "bytes"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	hmacext "github.com/alexellis/hmac/v2"
 	"github.com/rs/cors"
 
 	"github.com/marcus-crane/gunslinger/db"
@@ -18,8 +21,19 @@ import (
 )
 
 type readerPayload struct {
-  URL string `json:"url"`
-  SavedUsing string `json:"saved_using"`
+	URL             string   `json:"url,omitempty"`
+	HTML            string   `json:"html,omitempty"`
+	ShouldCleanHTML bool     `json:"should_clean_html,omitempty"`
+	Title           string   `json:"title,omitempty"`
+	Author          string   `json:"author,omitempty"`
+	Summary         string   `json:"summary,omitempty"`
+	PublishedDate   string   `json:"published_date,omitempty"`
+	ImageURL        string   `json:"image_url,omitempty"`
+	Location        string   `json:"location,omitempty"`
+	Category        string   `json:"category,omitempty"`
+	SavedUsing      string   `json:"saved_using,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
+	Notes           string   `json:"notes,omitempty"`
 }
 
 func renderJSONMessage(w http.ResponseWriter, message string) {
@@ -111,56 +125,162 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 		json.NewEncoder(w).Encode(response)
 	})
 
-  // Yes, this is garbage and doesn't deserve to be put in here
-  // It works for now though
-  mux.HandleFunc("/api/v4/readwise_ingest", func(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Content-Type", "application/json")
+	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 
-    qVal := r.URL.Query()
-    token := qVal.Get("token")
+		rwToken := os.Getenv("READWISE_TOKEN")
+		if rwToken == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
+			return
+		}
 
-    if token == "" {
-      json.NewEncoder(w).Encode(map[string]string{"error": "token was not provided"})
-      return
-    }
+		minifluxSecret := os.Getenv("MINIFLUX_WEBHOOK_SECRET")
+		if minifluxSecret == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
+			return
+		}
 
-    url := qVal.Get("url")
+		if r.Header.Get("X-Miniflux-Event-Type") != "save_entry" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "this event type is not supported"})
+			return
+		}
 
-    if url == "" {
-      json.NewEncoder(w).Encode(map[string]string{"error": "url was not provided"})
-      return
-    }
-    
-    payload := readerPayload{
-      URL: url,
-      SavedUsing: "Gunslinger",
-    }
+		signature := r.Header.Get("X-Miniflux-Signature")
 
-    data, err := json.Marshal(payload)
-    if err != nil {
-      json.NewEncoder(w).Encode(map[string]string{"error": "failed to marshal payload"})
-      return
-    }
+		slog.With(slog.String("signature", signature)).Info("Received signature")
 
-    req, err := http.NewRequest("POST", "https://readwise.io/api/v3/save/", bytes.NewReader(data))
-    if err != nil {
-      json.NewEncoder(w).Encode(map[string]string{"error": "failed to build request"})
-      return
-    }
+		if signature == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "no signature was provided"})
+			return
+		}
 
-    req.Header.Add("Authorization", fmt.Sprintf("Token %s", token))
-    req.Header.Add("Content-Type", "application/json")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to read request body as part of signature validation"})
+			return
+		}
 
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-      json.NewEncoder(w).Encode(map[string]string{"error": "failed to send request"})
-      return
-    }
-    defer resp.Body.Close()
+		if err := hmacext.Validate(body, fmt.Sprintf("sha256=%s", signature), minifluxSecret); err != nil {
+			slog.With(slog.Any("error", err)).Error("Failed signature validation")
+			json.NewEncoder(w).Encode(map[string]string{"error": "signature failed validation"})
+			return
+		}
 
-    json.NewEncoder(w).Encode(map[string]string{"status": resp.Status}) 
-  })
+		var minifluxPayload models.MinifluxSavedEntry
+
+		if err := json.Unmarshal(body, &minifluxPayload); err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to unmarshal request body"})
+			return
+		}
+
+		var largestImageUrl string
+		var largestImageSize int64
+
+		for _, e := range minifluxPayload.Entry.Enclosures {
+			if strings.HasPrefix(e.MimeType, "image/") {
+				if e.Size > largestImageSize {
+					largestImageUrl = e.URL
+				}
+			}
+		}
+
+		payload := readerPayload{
+			HTML:            minifluxPayload.Entry.Content,
+			URL:             minifluxPayload.Entry.URL,
+			ShouldCleanHTML: true,
+			ImageURL:        largestImageUrl,
+			SavedUsing:      "Gunslinger",
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to marshal payload"})
+			return
+		}
+
+		req, err := http.NewRequest("POST", "https://readwise.io/api/v3/save/", bytes.NewReader(data))
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to build request"})
+			return
+		}
+
+		req.Header.Add("Authorization", fmt.Sprintf("Token %s", rwToken))
+		req.Header.Add("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to send request"})
+			return
+		}
+		defer resp.Body.Close()
+
+		slog.With(slog.String("status", resp.Status), slog.String("url", payload.URL)).Info("Sent URL to Readwise")
+
+		json.NewEncoder(w).Encode(map[string]string{"status": resp.Status})
+	})
+
+	// Yes, this is garbage and doesn't deserve to be put in here
+	// It works for now though
+	mux.HandleFunc("/api/v4/readwise_ingest", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		rwToken := os.Getenv("READWISE_TOKEN")
+		if rwToken == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
+			return
+		}
+
+		ingestSecret := os.Getenv("INGEST_SECRET")
+		if ingestSecret == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
+			return
+		}
+
+		qVal := r.URL.Query()
+
+		if qVal.Get("token") != ingestSecret {
+			json.NewEncoder(w).Encode(map[string]string{"error": "ingest secret was incorrect"})
+			return
+		}
+
+		url := qVal.Get("url")
+
+		if url == "" {
+			json.NewEncoder(w).Encode(map[string]string{"error": "url was not provided"})
+			return
+		}
+
+		payload := readerPayload{
+			URL:        url,
+			SavedUsing: "Gunslinger",
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to marshal payload"})
+			return
+		}
+
+		req, err := http.NewRequest("POST", "https://readwise.io/api/v3/save/", bytes.NewReader(data))
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to build request"})
+			return
+		}
+
+		req.Header.Add("Authorization", fmt.Sprintf("Token %s", rwToken))
+		req.Header.Add("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "failed to send request"})
+			return
+		}
+		defer resp.Body.Close()
+
+		json.NewEncoder(w).Encode(map[string]string{"status": resp.Status})
+	})
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
