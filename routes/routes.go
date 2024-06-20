@@ -2,9 +2,11 @@ package routes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,6 +14,8 @@ import (
 	"time"
 
 	hmacext "github.com/alexellis/hmac/v2"
+	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
 
 	"github.com/marcus-crane/gunslinger/db"
@@ -173,6 +177,10 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			return
 		}
 
+		// Miniflux has native support for Readwise Reader but I'd like to
+		// do some extra stuff like rendering out sites that use JS to fetch
+		// content which Miniflux and Readwise Reader do not play well with at times
+
 		var largestImageUrl string
 		var largestImageSize int64
 
@@ -184,8 +192,43 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			}
 		}
 
+		var content string
+
+		// nzh site sucks so using a very cool proxy that requires js rendering :^)
+		if strings.Contains(minifluxPayload.Entry.URL, "nzherald.co.nz/") {
+			ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithLogf(log.Printf), chromedp.WithErrorf(log.Printf))
+			defer cancel()
+
+			ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
+			slog.Info("spinning up chrome headless")
+
+			url := fmt.Sprintf("https://nzhp.and.nz/%s", minifluxPayload.Entry.URL)
+			slog.With("url", url).Info("scraping site...")
+			err := chromedp.Run(ctx, chromedp.Navigate(url), chromedp.WaitVisible(`h1.article__heading`), chromedp.Evaluate("let node = document.querySelector('#header'); node.parentNode.removeChild(node)", nil), chromedp.ActionFunc(func(ctx context.Context) error {
+				node, err := dom.GetDocument().Do(ctx)
+				if err != nil {
+					return err
+				}
+				content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
+				return err
+			}))
+			if err != nil {
+				slog.With(slog.Any("error", err)).With(slog.String("url", url)).Error("failed to scrape site")
+				json.NewEncoder(w).Encode(map[string]string{"error": "failed to parse request"})
+				return
+			}
+
+			slog.Info("successfully scraped site")
+		}
+
+		if content == "" {
+			content = minifluxPayload.Entry.Content
+		}
+
 		payload := readerPayload{
-			HTML:            minifluxPayload.Entry.Content,
+			HTML:            content,
 			URL:             minifluxPayload.Entry.URL,
 			ShouldCleanHTML: true,
 			ImageURL:        largestImageUrl,
