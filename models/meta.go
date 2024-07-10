@@ -41,6 +41,7 @@ type ResponseMediaItem struct {
 	Source          string              `json:"source"`
 	Image           string              `json:"image"`
 	Duration        int                 `json:"duration_ms"`
+	Hash            uint64              `json:"hash"`
 	DominantColours SerializableColours `json:"dominant_colours"`
 }
 
@@ -87,11 +88,12 @@ type MediaItem struct {
 	Source          string              `json:"source"`
 	Image           string              `json:"image"`
 	DominantColours SerializableColours `json:"dominant_colours"`
+	Hash            uint64              `json:"hash"`
 	Backfilled      bool                `json:"-"`
 }
 
-func (m MediaItem) Hash() string {
-	return fmt.Sprintf(
+func (m MediaItem) GenerateHash() uint64 {
+	hash := fmt.Sprintf(
 		"%s-%s-%s-%t-%d-%d-%s-%s",
 		m.Title,
 		m.Subtitle,
@@ -102,4 +104,5 @@ func (m MediaItem) Hash() string {
 		m.Source,
 		m.Image,
 	)
+	return xxhash.Sum64String(hash)
 }

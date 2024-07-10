@@ -196,7 +196,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		playingItem.IsActive = false
 	}
 
-	if CurrentPlaybackItem.Hash() != playingItem.Hash() {
+	if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
 		byteStream := new(bytes.Buffer)
 		json.NewEncoder(byteStream).Encode(playingItem)
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})

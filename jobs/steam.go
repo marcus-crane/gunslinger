@@ -147,7 +147,7 @@ func GetCurrentlyPlayingSteam(store db.Store, client http.Client) {
 		Image:           imageLocation,
 	}
 
-	if CurrentPlaybackItem.Hash() != playingItem.Hash() {
+	if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
 		byteStream := new(bytes.Buffer)
 		json.NewEncoder(byteStream).Encode(playingItem)
 		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})

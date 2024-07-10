@@ -88,6 +88,7 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		jobs.CurrentPlaybackItem.Hash = jobs.CurrentPlaybackItem.GenerateHash()
 		json.NewEncoder(w).Encode(jobs.CurrentPlaybackItem)
 	})
 
