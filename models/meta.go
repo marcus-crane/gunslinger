@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/cespare/xxhash/v2"
 )
 
 // SerializableColours is a custom DB extension type that stores
@@ -45,6 +47,7 @@ type ResponseMediaItem struct {
 // Used in V4 but not renamed until V3 is deprecated
 type ComboDBMediaItem struct {
 	ID              uint                `json:"id" db:"id"`
+	Hash            uint64              `json:"hash" db:"-"`
 	OccuredAt       int64               `json:"occurred_at" db:"created_at"`
 	Title           string              `json:"title" db:"title"`
 	Subtitle        string              `json:"subtitle" db:"subtitle"`
@@ -56,6 +59,21 @@ type ComboDBMediaItem struct {
 	Image           string              `json:"image" db:"image"`
 	DominantColours SerializableColours `json:"dominant_colours" db:"dominant_colours"`
 	Backfilled      bool                `json:"-" db:"-"`
+}
+
+func GenerateHash(c ComboDBMediaItem) uint64 {
+	hash := fmt.Sprintf(
+		"%s-%s-%s-%t-%d-%d-%s-%s",
+		c.Title,
+		c.Subtitle,
+		c.Category,
+		c.IsActive,
+		c.Elapsed,
+		c.Duration,
+		c.Source,
+		c.Image,
+	)
+	return xxhash.Sum64String(hash)
 }
 
 type MediaItem struct {

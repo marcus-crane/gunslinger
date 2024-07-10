@@ -333,20 +333,21 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			return
 		}
 
-		playbackItems := []models.ComboDBMediaItem{
-			{
-				OccuredAt:       result.OccuredAt,
-				Title:           result.Title,
-				Subtitle:        result.Subtitle,
-				Category:        result.Category,
-				IsActive:        jobs.CurrentPlaybackItem.IsActive,
-				Source:          result.Source,
-				Image:           result.Image,
-				Elapsed:         jobs.CurrentPlaybackItem.Elapsed,
-				Duration:        result.Duration,
-				DominantColours: result.DominantColours,
-			},
+		var playbackItems []models.ComboDBMediaItem
+
+		playbackItem := models.ComboDBMediaItem{
+			OccuredAt:       result.OccuredAt,
+			Title:           result.Title,
+			Subtitle:        result.Subtitle,
+			Category:        result.Category,
+			IsActive:        jobs.CurrentPlaybackItem.IsActive,
+			Source:          result.Source,
+			Image:           result.Image,
+			Elapsed:         jobs.CurrentPlaybackItem.Elapsed,
+			Duration:        result.Duration,
+			DominantColours: result.DominantColours,
 		}
+		playbackItem.Hash = models.GenerateHash(playbackItem)
 		json.NewEncoder(w).Encode(playbackItems)
 	})
 
