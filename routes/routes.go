@@ -333,7 +333,7 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			return
 		}
 
-		var playbackItems []models.ComboDBMediaItem
+		playbackItems := []models.ComboDBMediaItem{}
 
 		playbackItem := models.ComboDBMediaItem{
 			OccuredAt:       result.OccuredAt,
@@ -348,6 +348,8 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 			DominantColours: result.DominantColours,
 		}
 		playbackItem.Hash = models.GenerateHash(playbackItem)
+
+		playbackItems = append(playbackItems, playbackItem)
 		json.NewEncoder(w).Encode(playbackItems)
 	})
 
