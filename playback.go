@@ -111,7 +111,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 		if !committed {
 			tx.Rollback()
 		} else {
-			ps.refreshCurrentPlayback()
+			ps.RefreshCurrentPlayback()
 		}
 	}()
 
@@ -191,7 +191,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	return nil
 }
 
-func (ps *PlaybackSystem) refreshCurrentPlayback() error {
+func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
 	entries, err := ps.GetActivePlayback()
 	if err != nil {
 		return err
@@ -205,6 +205,7 @@ func (ps *PlaybackSystem) refreshCurrentPlayback() error {
 	return nil
 }
 
+// ps.State is expected to always be up to date
 func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 	var results []FullPlaybackEntry
 
@@ -220,3 +221,5 @@ func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 
 	return results, err
 }
+
+// TODO: Get history

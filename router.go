@@ -1,4 +1,4 @@
-package routes
+package main
 
 import (
 	"bytes"
@@ -18,7 +18,6 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
 
-	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
@@ -46,7 +45,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func Register(mux *http.ServeMux, store db.Store) http.Handler {
+func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -88,8 +87,11 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		jobs.CurrentPlaybackItem.Hash = jobs.CurrentPlaybackItem.GenerateHash()
-		json.NewEncoder(w).Encode(jobs.CurrentPlaybackItem)
+		result := FullPlaybackEntry{}
+		if len(ps.State) >= 1 {
+			result = ps.State[0]
+		}
+		json.NewEncoder(w).Encode(result)
 	})
 
 	mux.HandleFunc("/api/v3/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -97,38 +99,38 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 		json.NewEncoder(w).Encode(&events.Sessions{SessionsSeen: events.SessionsSeen, ActiveSessions: events.ActiveSessions})
 	})
 
-	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		var response []models.ResponseMediaItem
-		// If nothing is playing, the "now playing" will likely be the same as the
-		// first history item so we skip it if now playing and index 0 of history match.
-		// We don't fully do an offset jump though as an item is only committed to the DB
-		// when it changes to inactive so we don't want to hide a valid item in that state
-		result, err := store.GetRecent()
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-		for idx, item := range result {
-			// A valid case is when I just listen to the same song over and over so
-			// we need to ensure we're in the right state to skip historical items
-			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-				continue
-			}
-			rItem := models.ResponseMediaItem{
-				OccuredAt:       time.Unix(item.OccuredAt, 0).Format(time.RFC3339),
-				Title:           item.Title,
-				Subtitle:        item.Subtitle,
-				Category:        item.Category,
-				Source:          item.Source,
-				Image:           item.Image,
-				Duration:        item.Duration,
-				DominantColours: item.DominantColours,
-			}
-			response = append(response, rItem)
-		}
-		json.NewEncoder(w).Encode(response)
-	})
+	// mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	var response []models.ResponseMediaItem
+	// 	// If nothing is playing, the "now playing" will likely be the same as the
+	// 	// first history item so we skip it if now playing and index 0 of history match.
+	// 	// We don't fully do an offset jump though as an item is only committed to the DB
+	// 	// when it changes to inactive so we don't want to hide a valid item in that state
+	// 	results, err := ps.GetActivePlayback()
+	// 	if err != nil {
+	// 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+	// 		return
+	// 	}
+	// 	for idx, item := range results {
+	// 		// A valid case is when I just listen to the same song over and over so
+	// 		// we need to ensure we're in the right state to skip historical items
+	// 		if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
+	// 			continue
+	// 		}
+	// 		rItem := models.ResponseMediaItem{
+	// 			OccuredAt:       time.Unix(item.CreatedAt.Unix(), 0).Format(time.RFC3339),
+	// 			Title:           item.Title,
+	// 			Subtitle:        item.Subtitle,
+	// 			Category:        item.Category,
+	// 			Source:          item.Source,
+	// 			Image:           item.Image,
+	// 			Duration:        item.Duration,
+	// 			DominantColours: item.DominantColours,
+	// 		}
+	// 		response = append(response, rItem)
+	// 	}
+	// 	json.NewEncoder(w).Encode(response)
+	// })
 
 	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -328,96 +330,73 @@ func Register(mux *http.ServeMux, store db.Store) http.Handler {
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		result, err := store.GetNewest()
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		playbackItems := []models.ComboDBMediaItem{}
-
-		playbackItem := models.ComboDBMediaItem{
-			OccuredAt:       result.OccuredAt,
-			Title:           result.Title,
-			Subtitle:        result.Subtitle,
-			Category:        result.Category,
-			IsActive:        jobs.CurrentPlaybackItem.IsActive,
-			Source:          result.Source,
-			Image:           result.Image,
-			Elapsed:         jobs.CurrentPlaybackItem.Elapsed,
-			Duration:        result.Duration,
-			DominantColours: result.DominantColours,
-		}
-		playbackItem.Hash = models.GenerateHash(playbackItem)
-
-		playbackItems = append(playbackItems, playbackItem)
-		json.NewEncoder(w).Encode(playbackItems)
+		json.NewEncoder(w).Encode(ps.State)
 	})
 
-	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		var response []models.ComboDBMediaItem
-		result, err := store.GetRecent()
-		// If nothing is playing, the "now playing" will likely be the same as the
-		// first history item so we skip it if now playing and index 0 of history match.
-		// We don't fully do an offset jump though as an item is only committed to the DB
-		// when it changes to inactive so we don't want to hide a valid item in that state
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-		for idx, item := range result {
-			// A valid case is when I just listen to the same song over and over so
-			// we need to ensure we're in the right state to skip historical items
-			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-				continue
-			}
-			rItem := models.ComboDBMediaItem{
-				ID:              item.ID,
-				OccuredAt:       item.OccuredAt,
-				Title:           item.Title,
-				Subtitle:        item.Subtitle,
-				Category:        item.Category,
-				Source:          item.Source,
-				Image:           item.Image,
-				Duration:        item.Duration,
-				DominantColours: item.DominantColours,
-			}
-			response = append(response, rItem)
-		}
-		json.NewEncoder(w).Encode(response)
-	})
+	// mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	var response []models.ComboDBMediaItem
+	// 	result, err := store.GetRecent()
+	// 	// If nothing is playing, the "now playing" will likely be the same as the
+	// 	// first history item so we skip it if now playing and index 0 of history match.
+	// 	// We don't fully do an offset jump though as an item is only committed to the DB
+	// 	// when it changes to inactive so we don't want to hide a valid item in that state
+	// 	if err != nil {
+	// 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+	// 		return
+	// 	}
+	// 	for idx, item := range result {
+	// 		// A valid case is when I just listen to the same song over and over so
+	// 		// we need to ensure we're in the right state to skip historical items
+	// 		if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
+	// 			continue
+	// 		}
+	// 		rItem := models.ComboDBMediaItem{
+	// 			ID:              item.ID,
+	// 			OccuredAt:       item.OccuredAt,
+	// 			Title:           item.Title,
+	// 			Subtitle:        item.Subtitle,
+	// 			Category:        item.Category,
+	// 			Source:          item.Source,
+	// 			Image:           item.Image,
+	// 			Duration:        item.Duration,
+	// 			DominantColours: item.DominantColours,
+	// 		}
+	// 		response = append(response, rItem)
+	// 	}
+	// 	json.NewEncoder(w).Encode(response)
+	// })
 
-	mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
-			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
-			return
-		}
-		qVal := r.URL.Query()
-		if !qVal.Has("token") {
-			renderJSONMessage(w, "Your request was not authorized")
-			return
-		}
-		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
-			renderJSONMessage(w, "Your request was not authorized")
-			return
-		}
-		if r.Method != http.MethodDelete {
-			renderJSONMessage(w, "That method is invalid for this endpoint")
-			return
-		}
-		if !qVal.Has("id") {
-			renderJSONMessage(w, "An ID did not appear to be provided")
-			return
-		}
-		id := qVal.Get("id")
-		err := store.ExecCustom("DELETE FROM db_media_items WHERE id = ?", id)
-		if err != nil {
-			renderJSONMessage(w, "Something went wrong trying to delete that item")
-			return
-		}
-		renderJSONMessage(w, "Operation was successfully executed")
-	})
+	// mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
+	// 	if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+	// 		renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+	// 		return
+	// 	}
+	// 	qVal := r.URL.Query()
+	// 	if !qVal.Has("token") {
+	// 		renderJSONMessage(w, "Your request was not authorized")
+	// 		return
+	// 	}
+	// 	if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+	// 		renderJSONMessage(w, "Your request was not authorized")
+	// 		return
+	// 	}
+	// 	if r.Method != http.MethodDelete {
+	// 		renderJSONMessage(w, "That method is invalid for this endpoint")
+	// 		return
+	// 	}
+	// 	if !qVal.Has("id") {
+	// 		renderJSONMessage(w, "An ID did not appear to be provided")
+	// 		return
+	// 	}
+	// 	id := qVal.Get("id")
+	// 	err := store.ExecCustom("DELETE FROM db_media_items WHERE id = ?", id)
+	// 	if err != nil {
+	// 		renderJSONMessage(w, "Something went wrong trying to delete that item")
+	// 		return
+	// 	}
+	// 	renderJSONMessage(w, "Operation was successfully executed")
+	// })
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 

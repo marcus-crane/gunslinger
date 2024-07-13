@@ -6,13 +6,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 	"golang.org/x/exp/slog"
 
-	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/jobs"
-	"github.com/marcus-crane/gunslinger/routes"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
@@ -26,18 +25,27 @@ func main() {
 
 	dsn := utils.MustEnv("DB_PATH")
 
-	database, err := db.NewSqliteStore(dsn)
+	db, err := sqlx.Connect("sqlite", dsn)
 	if err != nil {
 		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	if err := database.ApplyMigrations(embedMigrations); err != nil {
-		slog.Error("Failed to apply migrations to DB", slog.String("stack", err.Error()))
+	ps := NewPlaybackSystem(db)
+
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect(string(goose.DialectSQLite3)); err != nil {
+		slog.Error("Failed to set goose dialect", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	jobScheduler := jobs.SetupInBackground(database)
+	if err := goose.Up(db.DB, "migrations"); err != nil {
+		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+		os.Exit(1)
+	}
+
+	jobScheduler := SetupInBackground(ps)
 
 	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()
@@ -48,7 +56,7 @@ func main() {
 
 	events.Init()
 
-	router := routes.Register(http.NewServeMux(), database)
+	router := RegisterRoutes(http.NewServeMux(), ps)
 
 	slog.Info("Gunslinger is running at http://localhost:8080")
 
