@@ -4,7 +4,7 @@ CREATE TABLE playback_entries (
     id integer PRIMARY KEY AUTOINCREMENT,
     media_id TEXT,
     category TEXT,
-    started_at DATETIME,
+    created_at DATETIME,
     elapsed INTEGER,
     status TEXT,
     is_active BOOLEAN,

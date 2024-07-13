@@ -5,16 +5,18 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/models"
 )
 
 type MediaItem struct {
-	ID       string `db:"id"`
-	Title    string `db:"title"`
-	Subtitle string `db:"subtitle"`
-	Category string `db:"category"`
-	Duration int    `db:"duration"` // milliseconds
-	Source   string `db:"source"`
-	Image    string `db:"image"`
+	ID              string                     `db:"id"`
+	Title           string                     `db:"title"`
+	Subtitle        string                     `db:"subtitle"`
+	Category        string                     `db:"category"`
+	Duration        int                        `db:"duration"`
+	Source          string                     `db:"source"`
+	Image           string                     `db:"image"`
+	DominantColours models.SerializableColours `db:"dominant_colours"`
 }
 
 type PlaybackStatus string
@@ -51,7 +53,7 @@ type PlaybackEntry struct {
 	ID        int            `db:"id"`
 	MediaID   string         `db:"media_id"`
 	Category  string         `db:"category"`
-	StartedAt time.Time      `db:"started_at"`
+	CreatedAt time.Time      `db:"created_at"`
 	Elapsed   int            `db:"elapsed"` // milliseconds
 	Status    PlaybackStatus `db:"status"`
 	IsActive  bool           `db:"is_active"`
@@ -60,18 +62,19 @@ type PlaybackEntry struct {
 
 type FullPlaybackEntry struct {
 	// MediaItem fields
-	ID       string `db:"id" json:"id"`
-	Title    string `db:"title" json:"title"`
-	Subtitle string `db:"subtitle" json:"subtitle"`
-	Category string `db:"category" json:"category"`
-	Duration int    `db:"duration" json:"duration"`
-	Source   string `db:"source" json:"source"`
-	Image    string `db:"image" json:"image"`
+	ID              string                     `db:"id" json:"id"`
+	Title           string                     `db:"title" json:"title"`
+	Subtitle        string                     `db:"subtitle" json:"subtitle"`
+	Category        string                     `db:"category" json:"category"`
+	Duration        int                        `db:"duration" json:"duration_ms"` // TODO: Drop _ms suffix
+	Source          string                     `db:"source" json:"source"`
+	Image           string                     `db:"image" json:"image"`
+	DominantColours models.SerializableColours `db:"dominant_colours" json:"dominant_colours"`
 
 	// PlaybackEntry fields
 	PlaybackID int            `db:"playback_id" json:"-"`
-	StartedAt  time.Time      `db:"started_at" json:"started_at"`
-	Elapsed    int            `db:"elapsed" json:"elapsed"`
+	CreatedAt  time.Time      `db:"created_at" json:"created_at"`
+	Elapsed    int            `db:"elapsed" json:"elapsed_ms"` // TODO: Drop _ms suffix
 	Status     PlaybackStatus `db:"status" json:"status"`
 	IsActive   bool           `db:"is_active" json:"is_active"`
 	UpdatedAt  time.Time      `db:"updated_at" json:"updated_at"`
@@ -95,7 +98,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	defer tx.Rollback()
 
 	now := time.Now()
-	elapsedMs := int(update.Elapsed.Milliseconds())
+	elapsed := int(update.Elapsed.Milliseconds())
 	// TODO: Do we need to skip non-active stuff from being saved? Probably fine
 
 	var existingEntry PlaybackEntry
@@ -123,7 +126,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 			  UPDATE playback_entries
 			  SET elapsed = ?, status = ?, updated_at = ?
 			  WHERE id = ?`,
-				elapsedMs, update.Status, now, existingEntry.ID)
+				elapsed, update.Status, now, existingEntry.ID)
 			if err != nil {
 				return err
 			}
@@ -141,8 +144,8 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	// exists (ie; we've played it before) then we don't care, a no-op is perfectly fine.
 	_, err = tx.NamedExec(`
 	  INSERT INTO media_items
-	  (id, title, subtitle, category, duration, source, image)
-	  VALUES (:id, :title, :subtitle, :category, :duration, :source, :image)
+	  (id, title, subtitle, category, duration, source, image, dominant_colours)
+	  VALUES (:id, :title, :subtitle, :category, :duration, :source, :image, :dominant_colours)
 	  ON CONFLICT (id) DO NOTHING`,
 		update.MediaItem)
 	if err != nil {
@@ -152,9 +155,9 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	// Now we can insert our playback entry and wrap up the update process
 	_, err = tx.Exec(`
 	  INSERT INTO playback_entries
-	  (media_id, category, started_at, elapsed, status, is_active, updated_at)
+	  (media_id, category, created_at, elapsed, status, is_active, updated_at)
 	  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		update.MediaItem.ID, update.MediaItem.Category, now, elapsedMs, update.Status, true, now)
+		update.MediaItem.ID, update.MediaItem.Category, now, elapsed, update.Status, true, now)
 	if err != nil {
 		return err
 	}
@@ -167,8 +170,8 @@ func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 
 	err := ps.db.Select(&results, `
 	  SELECT
-	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image,
-		p.id as playback_id, p.started_at, p.elapsed, p.status, p.is_active, p.updated_at
+	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
 	  FROM media_items m
 	  JOIN playback_entries p ON m.id = p.media_id
 	  WHERE p.is_active = TRUE

@@ -7,7 +7,8 @@ CREATE TABLE media_items (
     category TEXT,
     duration INTEGER,
     source TEXT,
-    image TEXT
+    image TEXT,
+    dominant_colours TEXT
 );
 -- +goose StatementEnd
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/models"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
@@ -41,13 +42,14 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:       initialItemId,
-			Title:    "a good song",
-			Subtitle: "some artist",
-			Category: category,
-			Duration: 180000,
-			Source:   source,
-			Image:    "https://example.com/blah.jpg",
+			ID:              initialItemId,
+			Title:           "a good song",
+			Subtitle:        "some artist",
+			Category:        category,
+			Duration:        180000,
+			Source:          source,
+			Image:           "https://example.com/blah.jpg",
+			DominantColours: models.SerializableColours{"#abc123", "bcd234"},
 		},
 		Elapsed: 30 * time.Second,
 		Status:  StatusPlaying,
@@ -66,6 +68,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.Equal(t, 180000, mediaItem.Duration)
 	assert.Equal(t, source, mediaItem.Source)
 	assert.Equal(t, "https://example.com/blah.jpg", mediaItem.Image)
+	assert.Equal(t, models.SerializableColours{"#abc123", "bcd234"}, mediaItem.DominantColours)
 
 	// 1b. Confirm that our playback entry was inserted
 	var playbackEntry PlaybackEntry
@@ -89,13 +92,14 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	// 3. New item in same category should deactivate existing entry
 	update2 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:       secondItemId,
-			Title:    "a better song",
-			Subtitle: "another artist",
-			Category: category,
-			Duration: 150000,
-			Source:   "spotify", // not a real source currently but it doesn't matter
-			Image:    "https://blah.net/c.png",
+			ID:              secondItemId,
+			Title:           "a better song",
+			Subtitle:        "another artist",
+			Category:        category,
+			Duration:        150000,
+			Source:          "spotify", // not a real source currently but it doesn't matter
+			Image:           "https://blah.net/c.png",
+			DominantColours: models.SerializableColours{"#def345", "efg456"},
 		},
 		Elapsed: 18 * time.Second,
 		Status:  StatusPlaying,
@@ -124,10 +128,14 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	// Initial update should return one entry
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:       "plex:song:blah",
-			Title:    "a song",
-			Category: "track",
-			Duration: 120000,
+			ID:              "plex:song:blah",
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "blah",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
 		},
 		Elapsed: 20 * time.Second,
 		Status:  StatusPlaying,
@@ -140,7 +148,11 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	assert.Len(t, activePlayback, 1)
 	assert.Equal(t, "plex:song:blah", activePlayback[0].ID)
 	assert.Equal(t, "a song", activePlayback[0].Title)
+	assert.Equal(t, "artist", activePlayback[0].Subtitle)
 	assert.Equal(t, 20000, activePlayback[0].Elapsed)
 	assert.Equal(t, 120000, activePlayback[0].Duration)
+	assert.Equal(t, "blah", activePlayback[0].Source)
+	assert.Equal(t, "https://bleg.net", activePlayback[0].Image)
+	assert.Equal(t, models.SerializableColours{"#abc123"}, activePlayback[0].DominantColours)
 	assert.Equal(t, true, activePlayback[0].IsActive)
 }
