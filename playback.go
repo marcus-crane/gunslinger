@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -115,7 +116,6 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 		}
 	}()
 
-	now := time.Now()
 	elapsed := int(update.Elapsed.Milliseconds())
 	// TODO: Do we need to skip non-active stuff from being saved? Probably fine
 
@@ -134,7 +134,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 			  UPDATE playback_entries
 			  SET is_active = FALSE, status = ?, updated_at = ?
 			  WHERE id = ?`,
-				StatusStopped, now, existingEntry.ID)
+				StatusStopped, time.Now(), existingEntry.ID)
 			if err != nil {
 				return err
 			}
@@ -144,7 +144,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 			  UPDATE playback_entries
 			  SET elapsed = ?, status = ?, updated_at = ?
 			  WHERE id = ?`,
-				elapsed, update.Status, now, existingEntry.ID)
+				elapsed, update.Status, time.Now(), existingEntry.ID)
 			if err != nil {
 				return err
 			}
@@ -179,7 +179,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	  INSERT INTO playback_entries
 	  (media_id, category, created_at, elapsed, status, is_active, updated_at)
 	  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		update.MediaItem.ID, update.MediaItem.Category, now, elapsed, update.Status, true, now)
+		update.MediaItem.ID, update.MediaItem.Category, time.Now(), elapsed, update.Status, true, time.Now())
 	if err != nil {
 		return err
 	}
@@ -218,6 +218,26 @@ func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 	  WHERE p.is_active = TRUE
 	  ORDER BY p.updated_at DESC
 	`)
+
+	return results, err
+}
+
+func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
+	var results []FullPlaybackEntry
+
+	if limit <= 0 {
+		return results, fmt.Errorf("must request at least one historical item")
+	}
+
+	err := ps.db.Select(&results, `
+	  SELECT
+	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
+	  FROM media_items m
+	  JOIN playback_entries p ON m.id = p.media_id
+	  ORDER BY p.updated_at DESC
+	  LIMIT ?
+	`, limit)
 
 	return results, err
 }

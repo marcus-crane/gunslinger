@@ -172,3 +172,72 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	assert.Equal(t, models.SerializableColours{"#abc123"}, activePlayback[0].DominantColours)
 	assert.Equal(t, true, activePlayback[0].IsActive)
 }
+
+func TestPlaybackSystem_GetHistory(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	update := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "plex:song:blah",
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "blah",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 20 * time.Second,
+		Status:  StatusPlaying,
+	}
+	err := ps.UpdatePlaybackState(update)
+	require.NoError(t, err)
+
+	history, err := ps.GetHistory(1)
+	assert.NoError(t, err)
+	assert.Len(t, history, 1)
+	assert.Equal(t, "plex:song:blah", history[0].ID)
+	assert.Equal(t, "a song", history[0].Title)
+	assert.Equal(t, "artist", history[0].Subtitle)
+	assert.Equal(t, 20000, history[0].Elapsed)
+	assert.Equal(t, 120000, history[0].Duration)
+	assert.Equal(t, "blah", history[0].Source)
+	assert.Equal(t, "https://bleg.net", history[0].Image)
+	assert.Equal(t, models.SerializableColours{"#abc123"}, history[0].DominantColours)
+	assert.Equal(t, true, history[0].IsActive)
+
+	update2 := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "spotify:song:bleh",
+			Title:           "a better song",
+			Subtitle:        "another artist",
+			Category:        "track",
+			Duration:        150000,
+			Source:          "spotify", // not a real source currently but it doesn't matter
+			Image:           "https://blah.net/c.png",
+			DominantColours: models.SerializableColours{"#def345", "efg456"},
+		},
+		Elapsed: 18 * time.Second,
+		Status:  StatusPlaying,
+	}
+
+	err = ps.UpdatePlaybackState(update2)
+	assert.NoError(t, err)
+
+	history, err = ps.GetHistory(10)
+	assert.NoError(t, err)
+	assert.Len(t, history, 2)
+
+	// We expect newly updated songs to be returned first
+	assert.Equal(t, "spotify:song:bleh", history[0].ID)
+	assert.Equal(t, "plex:song:blah", history[1].ID)
+
+	_, err = ps.GetHistory(0)
+	assert.Error(t, err)
+
+	_, err = ps.GetHistory(-1)
+	assert.Error(t, err)
+}
