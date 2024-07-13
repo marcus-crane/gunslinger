@@ -99,38 +99,38 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 		json.NewEncoder(w).Encode(&events.Sessions{SessionsSeen: events.SessionsSeen, ActiveSessions: events.ActiveSessions})
 	})
 
-	// mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	var response []models.ResponseMediaItem
-	// 	// If nothing is playing, the "now playing" will likely be the same as the
-	// 	// first history item so we skip it if now playing and index 0 of history match.
-	// 	// We don't fully do an offset jump though as an item is only committed to the DB
-	// 	// when it changes to inactive so we don't want to hide a valid item in that state
-	// 	results, err := ps.GetActivePlayback()
-	// 	if err != nil {
-	// 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-	// 		return
-	// 	}
-	// 	for idx, item := range results {
-	// 		// A valid case is when I just listen to the same song over and over so
-	// 		// we need to ensure we're in the right state to skip historical items
-	// 		if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-	// 			continue
-	// 		}
-	// 		rItem := models.ResponseMediaItem{
-	// 			OccuredAt:       time.Unix(item.CreatedAt.Unix(), 0).Format(time.RFC3339),
-	// 			Title:           item.Title,
-	// 			Subtitle:        item.Subtitle,
-	// 			Category:        item.Category,
-	// 			Source:          item.Source,
-	// 			Image:           item.Image,
-	// 			Duration:        item.Duration,
-	// 			DominantColours: item.DominantColours,
-	// 		}
-	// 		response = append(response, rItem)
-	// 	}
-	// 	json.NewEncoder(w).Encode(response)
-	// })
+	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var response []models.ResponseMediaItem
+		// If nothing is playing, the "now playing" will likely be the same as the
+		// first history item so we skip it if now playing and index 0 of history match.
+		// We don't fully do an offset jump though as an item is only committed to the DB
+		// when it changes to inactive so we don't want to hide a valid item in that state
+		results, err := ps.GetHistory(7)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		for idx, item := range results {
+			// A valid case is when I just listen to the same song over and over so
+			// we need to ensure we're in the right state to skip historical items
+			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
+				continue
+			}
+			rItem := models.ResponseMediaItem{
+				OccuredAt:       time.Unix(item.CreatedAt.Unix(), 0).Format(time.RFC3339),
+				Title:           item.Title,
+				Subtitle:        item.Subtitle,
+				Category:        item.Category,
+				Source:          item.Source,
+				Image:           item.Image,
+				Duration:        item.Duration,
+				DominantColours: item.DominantColours,
+			}
+			response = append(response, rItem)
+		}
+		json.NewEncoder(w).Encode(response)
+	})
 
 	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -333,39 +333,39 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 		json.NewEncoder(w).Encode(ps.State)
 	})
 
-	// mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	var response []models.ComboDBMediaItem
-	// 	result, err := store.GetRecent()
-	// 	// If nothing is playing, the "now playing" will likely be the same as the
-	// 	// first history item so we skip it if now playing and index 0 of history match.
-	// 	// We don't fully do an offset jump though as an item is only committed to the DB
-	// 	// when it changes to inactive so we don't want to hide a valid item in that state
-	// 	if err != nil {
-	// 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-	// 		return
-	// 	}
-	// 	for idx, item := range result {
-	// 		// A valid case is when I just listen to the same song over and over so
-	// 		// we need to ensure we're in the right state to skip historical items
-	// 		if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-	// 			continue
-	// 		}
-	// 		rItem := models.ComboDBMediaItem{
-	// 			ID:              item.ID,
-	// 			OccuredAt:       item.OccuredAt,
-	// 			Title:           item.Title,
-	// 			Subtitle:        item.Subtitle,
-	// 			Category:        item.Category,
-	// 			Source:          item.Source,
-	// 			Image:           item.Image,
-	// 			Duration:        item.Duration,
-	// 			DominantColours: item.DominantColours,
-	// 		}
-	// 		response = append(response, rItem)
-	// 	}
-	// 	json.NewEncoder(w).Encode(response)
-	// })
+	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var response []models.ComboDBMediaItem
+		result, err := ps.GetHistory(7)
+		// If nothing is playing, the "now playing" will likely be the same as the
+		// first history item so we skip it if now playing and index 0 of history match.
+		// We don't fully do an offset jump though as an item is only committed to the DB
+		// when it changes to inactive so we don't want to hide a valid item in that state
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		for idx, item := range result {
+			// A valid case is when I just listen to the same song over and over so
+			// we need to ensure we're in the right state to skip historical items
+			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
+				continue
+			}
+			rItem := models.ComboDBMediaItem{
+				ID:              item.ID,
+				OccuredAt:       item.CreatedAt.Unix(),
+				Title:           item.Title,
+				Subtitle:        item.Subtitle,
+				Category:        item.Category,
+				Source:          item.Source,
+				Image:           item.Image,
+				Duration:        item.Duration,
+				DominantColours: item.DominantColours,
+			}
+			response = append(response, rItem)
+		}
+		json.NewEncoder(w).Encode(response)
+	})
 
 	// mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
 	// 	if os.Getenv("SUPER_SECRET_TOKEN") == "" {

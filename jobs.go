@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/marcus-crane/gunslinger/jobs"
 )
 
 func SetupInBackground(ps *PlaybackSystem) *gocron.Scheduler {
@@ -13,7 +12,7 @@ func SetupInBackground(ps *PlaybackSystem) *gocron.Scheduler {
 
 	client := http.Client{}
 
-	s.Every(1).Seconds().Do(jobs.GetCurrentlyPlayingPlex, ps, client)
+	s.Every(1).Seconds().Do(GetCurrentlyPlayingPlex, ps, client)
 
 	// If we're redeployed, we'll populate the latest state
 	ps.RefreshCurrentPlayback()

@@ -173,6 +173,91 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	assert.Equal(t, true, activePlayback[0].IsActive)
 }
 
+func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	update := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "plex:song:blah",
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "plex",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 20 * time.Second,
+		Status:  StatusPlaying,
+	}
+	err := ps.UpdatePlaybackState(update)
+	require.NoError(t, err)
+
+	sourcePlayback, err := ps.GetActivePlaybackBySource(string(Plex))
+	assert.NoError(t, err)
+	assert.Len(t, sourcePlayback, 1)
+	assert.Equal(t, "plex:song:blah", sourcePlayback[0].ID)
+	assert.Equal(t, "plex", sourcePlayback[0].Source)
+
+	update2 := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "spotify:song:bleh",
+			Title:           "a better song",
+			Subtitle:        "another artist",
+			Category:        "track",
+			Duration:        150000,
+			Source:          "spotify", // not a real source currently but it doesn't matter
+			Image:           "https://blah.net/c.png",
+			DominantColours: models.SerializableColours{"#def345", "efg456"},
+		},
+		Elapsed: 18 * time.Second,
+		Status:  StatusPlaying,
+	}
+
+	err = ps.UpdatePlaybackState(update2)
+	assert.NoError(t, err)
+
+	// NOTE: Current behaviour is to assume only one instance of a category across many sources is valid
+	// This can potentially mean rubber banding if say; watching two TV shows at once but generally there
+	// is little to no reason for me to ever do this.
+	sourcePlayback, err = ps.GetActivePlaybackBySource(string(Plex))
+	assert.NoError(t, err)
+	assert.Len(t, sourcePlayback, 0)
+
+	// Mark our Plex song as active once again
+	err = ps.UpdatePlaybackState(update)
+	assert.NoError(t, err)
+
+	update3 := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "steam:game:dogs",
+			Title:           "wobbledogs",
+			Subtitle:        "game maker",
+			Category:        "game",
+			Duration:        0, // Games don't have a duration
+			Source:          "steam",
+			Image:           "https://blah.net/c.png",
+			DominantColours: models.SerializableColours{"#def345", "efg456"},
+		},
+		Elapsed: 0,
+		Status:  StatusPlaying,
+	}
+
+	// Now start up a Steam game
+	err = ps.UpdatePlaybackState(update3)
+	assert.NoError(t, err)
+
+	// We should expect that our Plex song is still active
+	sourcePlayback, err = ps.GetActivePlaybackBySource(string(Plex))
+	assert.NoError(t, err)
+	assert.Len(t, sourcePlayback, 1)
+	assert.Equal(t, "plex:song:blah", sourcePlayback[0].ID)
+	assert.Equal(t, "plex", sourcePlayback[0].Source)
+}
+
 func TestPlaybackSystem_GetHistory(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

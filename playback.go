@@ -113,6 +113,10 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 			tx.Rollback()
 		} else {
 			ps.RefreshCurrentPlayback()
+			// TODO: Publish update to clients
+			// byteStream := new(bytes.Buffer)
+			// json.NewEncoder(byteStream).Encode(update)
+			// events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		}
 	}()
 
@@ -222,6 +226,22 @@ func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 	return results, err
 }
 
+func (ps *PlaybackSystem) GetActivePlaybackBySource(source string) ([]FullPlaybackEntry, error) {
+	var results []FullPlaybackEntry
+
+	err := ps.db.Select(&results, `
+	  SELECT
+	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
+	  FROM media_items m
+	  JOIN playback_entries p ON m.id = p.media_id
+	  WHERE p.is_active = TRUE AND m.source = ?
+	  ORDER BY p.updated_at DESC
+	`, source)
+
+	return results, err
+}
+
 func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 	var results []FullPlaybackEntry
 
@@ -241,5 +261,3 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 
 	return results, err
 }
-
-// TODO: Get history
