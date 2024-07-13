@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -68,7 +69,7 @@ type FullPlaybackEntry struct {
 	Category        string                     `db:"category" json:"category"`
 	Duration        int                        `db:"duration" json:"duration_ms"` // TODO: Drop _ms suffix
 	Source          string                     `db:"source" json:"source"`
-	Image           string                     `db:"image" json:"image"`
+	Image           string                     `db:"image" json:"image"` // TODO: Construct image URL from media_id
 	DominantColours models.SerializableColours `db:"dominant_colours" json:"dominant_colours"`
 
 	// PlaybackEntry fields
@@ -87,7 +88,16 @@ type PlaybackUpdate struct {
 }
 
 type PlaybackSystem struct {
-	db *sqlx.DB
+	State []FullPlaybackEntry
+	db    *sqlx.DB
+	m     sync.RWMutex
+}
+
+func NewPlaybackSystem(db *sqlx.DB) *PlaybackSystem {
+	return &PlaybackSystem{
+		State: []FullPlaybackEntry{},
+		db:    db,
+	}
 }
 
 func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
@@ -95,7 +105,15 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+
+	var committed bool
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		} else {
+			ps.refreshCurrentPlayback()
+		}
+	}()
 
 	now := time.Now()
 	elapsed := int(update.Elapsed.Milliseconds())
@@ -132,7 +150,11 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 			}
 			// We already know this item is saved since it's in progress so we can
 			// bail out of our transaction early
-			return tx.Commit()
+			if err = tx.Commit(); err != nil {
+				return err
+			}
+			committed = true
+			return nil
 		}
 		// TODO: sqlx variant of NoRows?
 	} else if err != sql.ErrNoRows {
@@ -162,7 +184,25 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 		return err
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+func (ps *PlaybackSystem) refreshCurrentPlayback() error {
+	entries, err := ps.GetActivePlayback()
+	if err != nil {
+		return err
+	}
+
+	ps.m.Lock()
+	defer ps.m.Unlock()
+
+	ps.State = entries
+
+	return nil
 }
 
 func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {

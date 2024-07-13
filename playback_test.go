@@ -34,6 +34,8 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 
 	ps := &PlaybackSystem{db: db}
 
+	assert.Len(t, ps.State, 0)
+
 	// 1. Persisting a new media item + playback entry
 	category := string(Track)
 	source := string(Plex)
@@ -80,6 +82,11 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.Equal(t, StatusPlaying, playbackEntry.Status)
 	assert.Equal(t, true, playbackEntry.IsActive)
 
+	// 1c. Confirm that the PlaybackSystem has fresh state
+	assert.Len(t, ps.State, 1)
+	assert.Equal(t, ps.State[0].Title, mediaItem.Title)
+	assert.Equal(t, ps.State[0].Elapsed, 30000)
+
 	// 2. Update existing playback entry
 	update.Elapsed = 60 * time.Second
 	err = ps.UpdatePlaybackState(update)
@@ -88,6 +95,11 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	err = db.Get(&playbackEntry, "SELECT * FROM playback_entries WHERE media_id = ?", initialItemId)
 	assert.NoError(t, err)
 	assert.Equal(t, 60000, playbackEntry.Elapsed)
+
+	// 2a. Confirm that PlaybackSystem state is updated
+	assert.Len(t, ps.State, 1)
+	assert.Equal(t, ps.State[0].Title, mediaItem.Title)
+	assert.Equal(t, 60000, ps.State[0].Elapsed)
 
 	// 3. New item in same category should deactivate existing entry
 	update2 := PlaybackUpdate{
@@ -117,6 +129,10 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	err = db.Get(&playbackEntry, "SELECT * FROM playback_entries WHERE media_id = ?", secondItemId)
 	assert.NoError(t, err)
 	assert.Equal(t, true, playbackEntry.IsActive)
+
+	// 3c. Check that PlaybackSystem has updated
+	assert.Len(t, ps.State, 1)
+	assert.Equal(t, ps.State[0].Title, "a better song")
 }
 
 func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
