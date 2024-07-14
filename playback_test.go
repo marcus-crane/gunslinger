@@ -39,12 +39,9 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	// 1. Persisting a new media item + playback entry
 	category := string(Track)
 	source := string(Plex)
-	initialItemId := "plex:track:abc123"
-	secondItemId := "spotify:track:abc123"
 
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              initialItemId,
 			Title:           "a good song",
 			Subtitle:        "some artist",
 			Category:        category,
@@ -56,6 +53,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 		Elapsed: 30 * time.Second,
 		Status:  StatusPlaying,
 	}
+	initialItemId := GenerateMediaID(&update)
 
 	err := ps.UpdatePlaybackState(update)
 	assert.NoError(t, err)
@@ -104,7 +102,6 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	// 3. New item in same category should deactivate existing entry
 	update2 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              secondItemId,
 			Title:           "a better song",
 			Subtitle:        "another artist",
 			Category:        category,
@@ -116,6 +113,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 		Elapsed: 18 * time.Second,
 		Status:  StatusPlaying,
 	}
+	secondItemId := GenerateMediaID(&update2)
 
 	err = ps.UpdatePlaybackState(update2)
 	assert.NoError(t, err)
@@ -133,6 +131,25 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	// 3c. Check that PlaybackSystem has updated
 	assert.Len(t, ps.State, 1)
 	assert.Equal(t, ps.State[0].Title, "a better song")
+}
+
+func TestPlaybackUpdate_GenerateMediaID(t *testing.T) {
+	// Initial update should return one entry
+	update := PlaybackUpdate{
+		MediaItem: MediaItem{
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "blah",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 20 * time.Second,
+		Status:  StatusPlaying,
+	}
+	update.MediaItem.ID = GenerateMediaID(&update)
+	assert.Equal(t, "blah:track:11590915539609183728", update.MediaItem.ID)
 }
 
 func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
@@ -162,7 +179,7 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	activePlayback, err := ps.GetActivePlayback()
 	assert.NoError(t, err)
 	assert.Len(t, activePlayback, 1)
-	assert.Equal(t, "plex:song:blah", activePlayback[0].ID)
+	assert.Equal(t, GenerateMediaID(&update), activePlayback[0].ID)
 	assert.Equal(t, "a song", activePlayback[0].Title)
 	assert.Equal(t, "artist", activePlayback[0].Subtitle)
 	assert.Equal(t, 20000, activePlayback[0].Elapsed)
@@ -181,7 +198,6 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "plex:song:blah",
 			Title:           "a song",
 			Subtitle:        "artist",
 			Category:        "track",
@@ -199,12 +215,11 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	sourcePlayback, err := ps.GetActivePlaybackBySource(string(Plex))
 	assert.NoError(t, err)
 	assert.Len(t, sourcePlayback, 1)
-	assert.Equal(t, "plex:song:blah", sourcePlayback[0].ID)
+	assert.Equal(t, GenerateMediaID(&update), sourcePlayback[0].ID)
 	assert.Equal(t, "plex", sourcePlayback[0].Source)
 
 	update2 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "spotify:song:bleh",
 			Title:           "a better song",
 			Subtitle:        "another artist",
 			Category:        "track",
@@ -233,7 +248,6 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 
 	update3 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "steam:game:dogs",
 			Title:           "wobbledogs",
 			Subtitle:        "game maker",
 			Category:        "game",
@@ -254,7 +268,7 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	sourcePlayback, err = ps.GetActivePlaybackBySource(string(Plex))
 	assert.NoError(t, err)
 	assert.Len(t, sourcePlayback, 1)
-	assert.Equal(t, "plex:song:blah", sourcePlayback[0].ID)
+	assert.Equal(t, GenerateMediaID(&update), sourcePlayback[0].ID)
 	assert.Equal(t, "plex", sourcePlayback[0].Source)
 }
 
@@ -266,7 +280,6 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "plex:song:blah",
 			Title:           "a song",
 			Subtitle:        "artist",
 			Category:        "track",
@@ -283,7 +296,6 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 
 	update2 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "plex:movie:bleh",
 			Title:           "action movie",
 			Subtitle:        "directed by person",
 			Category:        "movie",
@@ -300,7 +312,6 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 
 	update3 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "steam:game:dogs",
 			Title:           "wobbledogs",
 			Subtitle:        "game maker",
 			Category:        "game",
@@ -319,9 +330,9 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 	sourcePlayback, err := ps.GetActivePlaybackBySource(string(Plex))
 	assert.NoError(t, err)
 	assert.Len(t, sourcePlayback, 2)
-	assert.Equal(t, "plex:movie:bleh", sourcePlayback[0].ID)
+	assert.Equal(t, GenerateMediaID(&update2), sourcePlayback[0].ID)
 	assert.Equal(t, "plex", sourcePlayback[0].Source)
-	assert.Equal(t, "plex:song:blah", sourcePlayback[1].ID)
+	assert.Equal(t, GenerateMediaID(&update), sourcePlayback[1].ID)
 	assert.Equal(t, "plex", sourcePlayback[1].Source)
 
 	err = ps.DeactivateBySource(string(Plex))
@@ -333,7 +344,7 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 
 	activePlayback, err := ps.GetActivePlayback()
 	assert.NoError(t, err)
-	assert.Equal(t, "steam:game:dogs", activePlayback[0].ID)
+	assert.Equal(t, GenerateMediaID(&update3), activePlayback[0].ID)
 	assert.Equal(t, "steam", activePlayback[0].Source)
 }
 
@@ -345,7 +356,6 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 
 	update := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "plex:song:blah",
 			Title:           "a song",
 			Subtitle:        "artist",
 			Category:        "track",
@@ -363,7 +373,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 	history, err := ps.GetHistory(1)
 	assert.NoError(t, err)
 	assert.Len(t, history, 1)
-	assert.Equal(t, "plex:song:blah", history[0].ID)
+	assert.Equal(t, GenerateMediaID(&update), history[0].ID)
 	assert.Equal(t, "a song", history[0].Title)
 	assert.Equal(t, "artist", history[0].Subtitle)
 	assert.Equal(t, 20000, history[0].Elapsed)
@@ -375,7 +385,6 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 
 	update2 := PlaybackUpdate{
 		MediaItem: MediaItem{
-			ID:              "spotify:song:bleh",
 			Title:           "a better song",
 			Subtitle:        "another artist",
 			Category:        "track",
@@ -396,8 +405,8 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 	assert.Len(t, history, 2)
 
 	// We expect newly updated songs to be returned first
-	assert.Equal(t, "spotify:song:bleh", history[0].ID)
-	assert.Equal(t, "plex:song:blah", history[1].ID)
+	assert.Equal(t, GenerateMediaID(&update2), history[0].ID)
+	assert.Equal(t, GenerateMediaID(&update), history[1].ID)
 
 	_, err = ps.GetHistory(0)
 	assert.Error(t, err)

@@ -6,20 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/marcus-crane/gunslinger/models"
 )
-
-type MediaItem struct {
-	ID              string                     `db:"id"`
-	Title           string                     `db:"title"`
-	Subtitle        string                     `db:"subtitle"`
-	Category        string                     `db:"category"`
-	Duration        int                        `db:"duration"`
-	Source          string                     `db:"source"`
-	Image           string                     `db:"image"`
-	DominantColours models.SerializableColours `db:"dominant_colours"`
-}
 
 type PlaybackStatus string
 
@@ -51,6 +41,10 @@ const (
 	TraktCasts Source = "traktcasts"
 )
 
+// PlaybackEntry is a unique instance of a piece of media being played. If a movie is watched 5 times,
+// there will be one MediaItem entry with five unique PlaybackEntry instances. PlaybackEntry instances
+// may be "revived" such as if a podcast is paused and then picked up again the next day. Once completed,
+// a PlaybackEntry should not be reused though.
 type PlaybackEntry struct {
 	ID        int            `db:"id"`
 	MediaID   string         `db:"media_id"`
@@ -62,6 +56,24 @@ type PlaybackEntry struct {
 	UpdatedAt time.Time      `db:"updated_at"`
 }
 
+// MediaItem stores metadata about each piece of media that is played ie; movies, tv series, games
+// It's generic enough to support differences in media types such as music tracks needing a title,
+// album name and artist while a game may need a title, developer name and year. Currently, each
+// media source scraper is responsible for constructing the appropriate titles such as joining
+// a movie name and year into a title field. In future, an explicit author field may be added.
+type MediaItem struct {
+	ID              string                     `db:"id"`
+	Title           string                     `db:"title"`
+	Subtitle        string                     `db:"subtitle"`
+	Category        string                     `db:"category"`
+	Duration        int                        `db:"duration"`
+	Source          string                     `db:"source"`
+	Image           string                     `db:"image"`
+	DominantColours models.SerializableColours `db:"dominant_colours"`
+}
+
+// FullPlaybackEntry reflects a single PlaybackEntry with MediaItem metadata attached
+// in order to power any clients that want to render full playback info.
 type FullPlaybackEntry struct {
 	// MediaItem fields
 	ID              string                     `db:"id" json:"id"`
@@ -88,6 +100,23 @@ type PlaybackUpdate struct {
 	Status    PlaybackStatus
 }
 
+func GenerateMediaID(p *PlaybackUpdate) string {
+	hashString := fmt.Sprintf("%s-%s-%s-%d-%s-%s",
+		p.MediaItem.Title,
+		p.MediaItem.Subtitle,
+		p.MediaItem.Category,
+		p.MediaItem.Duration,
+		p.MediaItem.Source,
+		p.MediaItem.Image,
+	)
+	return fmt.Sprintf(
+		"%s:%s:%d",
+		p.MediaItem.Source,
+		p.MediaItem.Category,
+		xxhash.Sum64String(hashString),
+	)
+}
+
 type PlaybackSystem struct {
 	State []FullPlaybackEntry
 	db    *sqlx.DB
@@ -102,6 +131,10 @@ func NewPlaybackSystem(db *sqlx.DB) *PlaybackSystem {
 }
 
 func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
+	// Ensure we have an ID. It's deterministic so doesn't matter
+	// if we run it a bunch of times
+	update.MediaItem.ID = GenerateMediaID(&update)
+
 	tx, err := ps.db.Beginx()
 	if err != nil {
 		return err
