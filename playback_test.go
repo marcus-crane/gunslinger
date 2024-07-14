@@ -258,6 +258,85 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	assert.Equal(t, "plex", sourcePlayback[0].Source)
 }
 
+func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	update := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "plex:song:blah",
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "plex",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 20 * time.Second,
+		Status:  StatusPlaying,
+	}
+	err := ps.UpdatePlaybackState(update)
+	require.NoError(t, err)
+
+	update2 := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "plex:movie:bleh",
+			Title:           "action movie",
+			Subtitle:        "directed by person",
+			Category:        "movie",
+			Duration:        999999,
+			Source:          "plex",
+			Image:           "https://example.com/movie.jpg",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 60 * time.Minute,
+		Status:  StatusPlaying,
+	}
+	err = ps.UpdatePlaybackState(update2)
+	require.NoError(t, err)
+
+	update3 := PlaybackUpdate{
+		MediaItem: MediaItem{
+			ID:              "steam:game:dogs",
+			Title:           "wobbledogs",
+			Subtitle:        "game maker",
+			Category:        "game",
+			Duration:        0, // Games don't have a duration
+			Source:          "steam",
+			Image:           "https://blah.net/c.png",
+			DominantColours: models.SerializableColours{"#def345", "efg456"},
+		},
+		Elapsed: 0,
+		Status:  StatusPlaying,
+	}
+
+	err = ps.UpdatePlaybackState(update3)
+	assert.NoError(t, err)
+
+	sourcePlayback, err := ps.GetActivePlaybackBySource(string(Plex))
+	assert.NoError(t, err)
+	assert.Len(t, sourcePlayback, 2)
+	assert.Equal(t, "plex:movie:bleh", sourcePlayback[0].ID)
+	assert.Equal(t, "plex", sourcePlayback[0].Source)
+	assert.Equal(t, "plex:song:blah", sourcePlayback[1].ID)
+	assert.Equal(t, "plex", sourcePlayback[1].Source)
+
+	err = ps.DeactivateBySource(string(Plex))
+	assert.NoError(t, err)
+
+	sourcePlayback, err = ps.GetActivePlaybackBySource(string(Plex))
+	assert.NoError(t, err)
+	assert.Len(t, sourcePlayback, 0)
+
+	activePlayback, err := ps.GetActivePlayback()
+	assert.NoError(t, err)
+	assert.Equal(t, "steam:game:dogs", activePlayback[0].ID)
+	assert.Equal(t, "steam", activePlayback[0].Source)
+}
+
 func TestPlaybackSystem_GetHistory(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

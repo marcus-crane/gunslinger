@@ -131,7 +131,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update PlaybackUpdate) error {
 		update.MediaItem.Category)
 
 	if err == nil {
-		// We have an active entry to compare our new state to
+		// We have an active entry to compare our new state
 		if existingEntry.MediaID != update.MediaItem.ID {
 			// We now have a newly active entry so let's deactivate the current one
 			_, err := tx.Exec(`
@@ -240,6 +240,40 @@ func (ps *PlaybackSystem) GetActivePlaybackBySource(source string) ([]FullPlayba
 	`, source)
 
 	return results, err
+}
+
+func (ps *PlaybackSystem) DeactivateBySource(source string) error {
+	tx, err := ps.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	var committed bool
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		} else {
+			ps.RefreshCurrentPlayback()
+		}
+	}()
+
+	_, err = tx.Exec(`
+		UPDATE playback_entries
+		SET is_active = FALSE, status = ?, updated_at = ?
+		WHERE is_active = TRUE AND media_id IN (
+			SELECT id FROM media_items WHERE source = ?
+		)
+	`, StatusStopped, time.Now(), source)
+
+	if err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+	return nil
 }
 
 func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
