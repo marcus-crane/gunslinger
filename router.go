@@ -335,7 +335,6 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		var response []models.ComboDBMediaItem
 		result, err := ps.GetHistory(7)
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
@@ -345,26 +344,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
-		for idx, item := range result {
-			// A valid case is when I just listen to the same song over and over so
-			// we need to ensure we're in the right state to skip historical items
-			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-				continue
-			}
-			rItem := models.ComboDBMediaItem{
-				ID:              item.ID,
-				OccuredAt:       item.CreatedAt.Unix(),
-				Title:           item.Title,
-				Subtitle:        item.Subtitle,
-				Category:        item.Category,
-				Source:          item.Source,
-				Image:           item.Image,
-				Duration:        item.Duration,
-				DominantColours: item.DominantColours,
-			}
-			response = append(response, rItem)
-		}
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(result)
 	})
 
 	// mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
