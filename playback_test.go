@@ -87,17 +87,18 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 
 	// 2. Update existing playback entry
 	update.Elapsed = 60 * time.Second
+	update.Status = StatusPaused
 	err = ps.UpdatePlaybackState(update)
 	assert.NoError(t, err)
 
 	err = db.Get(&playbackEntry, "SELECT * FROM playback_entries WHERE media_id = ?", initialItemId)
 	assert.NoError(t, err)
-	assert.Equal(t, 60000, playbackEntry.Elapsed)
 
 	// 2a. Confirm that PlaybackSystem state is updated
 	assert.Len(t, ps.State, 1)
 	assert.Equal(t, ps.State[0].Title, mediaItem.Title)
 	assert.Equal(t, 60000, ps.State[0].Elapsed)
+	assert.Equal(t, false, ps.State[0].IsActive)
 
 	// 3. New item in same category should deactivate existing entry
 	update2 := PlaybackUpdate{

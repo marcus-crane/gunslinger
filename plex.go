@@ -91,23 +91,10 @@ func GetCurrentlyPlayingPlex(ps *PlaybackSystem, client http.Client) {
 		}
 		imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
-		playingItem := models.MediaItem{
-			CreatedAt:       time.Now().Unix(),
-			Title:           mediaItem.Title,
-			Category:        mediaItem.Type,
-			Elapsed:         mediaItem.ViewOffset,
-			Duration:        mediaItem.Duration,
-			Source:          "plex",
-			DominantColours: domColours,
-			Image:           imageLocation,
-		}
-
-		if mediaItem.Player.State == "playing" {
-			playingItem.IsActive = true
-		}
+		title := mediaItem.Title
 
 		if mediaItem.Type == "episode" {
-			playingItem.Title = fmt.Sprintf(
+			title = fmt.Sprintf(
 				"%02dx%02d %s",
 				mediaItem.ParentIndex, // Season number
 				mediaItem.Index,       // Episode number
@@ -115,19 +102,50 @@ func GetCurrentlyPlayingPlex(ps *PlaybackSystem, client http.Client) {
 			)
 		}
 
+		var subtitle string
+
 		if mediaItem.Type == "movie" {
-			playingItem.Subtitle = mediaItem.Director[0].Name
+			subtitle = mediaItem.Director[0].Name
 		} else {
-			playingItem.Subtitle = mediaItem.GrandparentTitle
+			subtitle = mediaItem.GrandparentTitle
 		}
 
-		// TODO: Save image one time
-		// if err := saveCover(guid.String(), image, extension); err != nil {
-		// 	slog.Error("Failed to save cover for Plex",
-		// 		slog.String("stack", err.Error()),
-		// 		slog.String("guid", guid.String()),
-		// 		slog.String("title", playingItem.Title),
-		// 	)
-		// }
+		// If an item is stopped, it'll just not be here at all
+		status := StatusPlaying
+
+		if mediaItem.Player.State == "paused" {
+			status = StatusPaused
+		}
+
+		elapsed := mediaItem.ViewOffset * int(time.Millisecond)
+
+		update := PlaybackUpdate{
+			MediaItem: MediaItem{
+				Title:           title,
+				Subtitle:        subtitle,
+				Category:        mediaItem.Type,
+				Duration:        mediaItem.Duration,
+				Source:          string(Plex),
+				Image:           imageLocation,
+				DominantColours: domColours,
+			},
+			Elapsed: time.Duration(elapsed),
+			Status:  status,
+		}
+
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Plex update",
+				slog.String("stack", err.Error()),
+				slog.String("title", title))
+		}
+
+		hash := GenerateMediaID(&update)
+		if err := saveCover(hash, image, extension); err != nil {
+			slog.Error("Failed to save cover for Plex",
+				slog.String("stack", err.Error()),
+				slog.String("guid", hash),
+				slog.String("title", update.MediaItem.Title),
+			)
+		}
 	}
 }
