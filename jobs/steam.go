@@ -156,7 +156,7 @@ func GetCurrentlyPlayingSteam(store db.Store, client http.Client) {
 		previousItem, err := store.GetByCategory(playingItem.Category)
 		if err == nil || err.Error() == "sql: no rows in result set" {
 			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-				if err := saveCover(guid.String(), image, extension); err != nil {
+				if err := utils.SaveCover(guid.String(), image, extension); err != nil {
 					slog.Error("Failed to save cover for Steam",
 						slog.String("stack", err.Error()),
 						slog.String("guid", guid.String()),

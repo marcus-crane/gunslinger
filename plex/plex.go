@@ -3,112 +3,20 @@ package plex
 import (
 	"encoding/json"
 	"fmt"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/marcus-crane/gunslinger/shared"
+	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
 const (
-	SESSION_ENDPOINT = "/status/sessions"
+	plexSessionEndpoint = "/status/sessions"
 )
-
-type Client struct {
-	APIKey     string
-	BaseURL    string
-	HTTPClient *http.Client
-}
-
-func NewClient(apiKey string) *Client {
-	return &Client{
-		APIKey:  apiKey,
-		BaseURL: "http://netocean:32400",
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
-}
-
-// TODO: Use a URL builder to ensure slashes are normalised
-func (c *Client) buildUrl(endpoint string) string {
-	return fmt.Sprintf("%s%s?X-Plex-Token=%s", c.BaseURL, endpoint, c.APIKey)
-}
-
-func (c *Client) getUserPlaying() (PlexResponse, error) {
-	var plexResponse PlexResponse
-	endpoint := c.buildUrl(SESSION_ENDPOINT)
-	fmt.Println(endpoint)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return plexResponse, err
-	}
-	req.Header = http.Header{
-		"Accept":       []string{"application/json"},
-		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{shared.USER_AGENT},
-	}
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return plexResponse, err
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return plexResponse, err
-	}
-	if err := json.Unmarshal(body, &plexResponse); err != nil {
-		return plexResponse, err
-	}
-	return plexResponse, err
-}
-
-func (c *Client) QueryMediaState() ([]shared.DBMediaItem, error) {
-	var plexState []shared.DBMediaItem
-	status, err := c.getUserPlaying()
-	if err != nil {
-		return plexState, err
-	}
-	if status.MediaContainer.Size == 0 {
-		return plexState, err
-	}
-	for _, entry := range status.MediaContainer.Metadata {
-		// We don't want to capture movie trailers as historical items
-		if entry.Type == shared.CATEGORY_CLIP {
-			continue
-		}
-		mediaItem := shared.DBMediaItem{
-			Title:    entry.Title,
-			Subtitle: entry.GrandparentTitle,
-			Category: entry.Type,
-			Elapsed:  entry.ViewOffset,
-			Duration: entry.Duration,
-			Source:   shared.SOURCE_PLEX,
-		}
-		if entry.Player.State == shared.PLAYER_STATE_PLAYING {
-			mediaItem.IsActive = true
-		}
-		if entry.Type == shared.CATEGORY_EPISODE {
-			mediaItem.Title = fmt.Sprintf(
-				"%02dx%02d %s",
-				entry.ParentIndex, // Season number
-				entry.Index,       // Episode number
-				entry.Title,
-			)
-		}
-		if entry.Type == shared.CATEGORY_MOVIE {
-			mediaItem.Author = entry.Director[0].Name
-		}
-
-		if entry.Type == shared.CATEGORY_TRACK {
-			mediaItem.Subtitle = entry.ParentTitle
-			mediaItem.Author = entry.GrandparentTitle
-		}
-
-		plexState = append(plexState, mediaItem)
-	}
-	return plexState, nil
-}
 
 type PlexResponse struct {
 	MediaContainer MediaContainer `json:"MediaContainer"`
@@ -127,12 +35,12 @@ type Metadata struct {
 	ParentThumb      string     `json:"parentThumb"`
 	Index            int        `json:"index"`
 	ParentIndex      int        `json:"parentIndex"`
-	ParentTitle      string     `json:"parentTitle"`
 	Title            string     `json:"title"`
 	Type             string     `json:"type"`
 	ViewOffset       int        `json:"viewOffset"`
 	Director         []Director `json:"Director"`
 	Player           Player     `json:"Player"`
+	User             User       `json:"User"`
 }
 
 type Director struct {
@@ -141,4 +49,140 @@ type Director struct {
 
 type Player struct {
 	State string `json:"state"`
+}
+
+type User struct {
+	Id string `json:"id"`
+}
+
+func buildPlexURL(endpoint string) string {
+	plexHostURL := utils.MustEnv("PLEX_URL")
+	plexToken := utils.MustEnv("PLEX_TOKEN")
+	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
+}
+
+func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
+	sessionURL := buildPlexURL(plexSessionEndpoint)
+	req, err := http.NewRequest("GET", sessionURL, nil)
+	if err != nil {
+		slog.Error("Failed to prepare Plex request", slog.String("stack", err.Error()))
+		return
+	}
+	req.Header = http.Header{
+		"Accept":       []string{"application/json"},
+		"Content-Type": []string{"application/json"},
+		"User-Agent":   []string{utils.UserAgent},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		slog.Error("Failed to contact Plex for updates", slog.String("stack", err.Error()))
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		slog.Error("Failed to parse Plex response", slog.String("stack", err.Error()))
+		return
+	}
+	var plexResponse PlexResponse
+
+	if err = json.Unmarshal(body, &plexResponse); err != nil {
+		slog.Error("Error fetching Plex data", slog.String("stack", err.Error()))
+	}
+
+	// index := 0
+
+	if plexResponse.MediaContainer.Size == 0 {
+		// Nothing is playing so mark all existing items as inactive
+		ps.DeactivateBySource(string(playback.Plex))
+		return
+	}
+
+	for idx, entry := range plexResponse.MediaContainer.Metadata {
+		// We don't want to capture movie trailers as historical items
+		if entry.Type == "clip" {
+			continue
+		}
+		// Skip sessions that aren't from my own account
+		if entry.User.Id != "1" {
+			continue
+		}
+		mediaItem := plexResponse.MediaContainer.Metadata[idx]
+		thumbnail := mediaItem.Thumb
+
+		// Tracks generally don't have a unique cover so we should use the album cover instead
+		// This should hold true even for singles though
+		if mediaItem.Type == "track" {
+			thumbnail = mediaItem.ParentThumb
+		}
+
+		thumbnailUrl := buildPlexURL(thumbnail)
+		image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
+		if err != nil {
+			slog.Error("Failed to extract image content",
+				slog.String("stack", err.Error()),
+				slog.String("image_url", thumbnailUrl),
+			)
+			continue
+		}
+		imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
+
+		title := mediaItem.Title
+
+		if mediaItem.Type == "episode" {
+			title = fmt.Sprintf(
+				"%02dx%02d %s",
+				mediaItem.ParentIndex, // Season number
+				mediaItem.Index,       // Episode number
+				mediaItem.Title,
+			)
+		}
+
+		var subtitle string
+
+		if mediaItem.Type == "movie" {
+			subtitle = mediaItem.Director[0].Name
+		} else {
+			subtitle = mediaItem.GrandparentTitle
+		}
+
+		// If an item is stopped, it'll just not be here at all
+		status := playback.StatusPlaying
+
+		if mediaItem.Player.State == "paused" {
+			status = playback.StatusPaused
+		}
+
+		elapsed := mediaItem.ViewOffset * int(time.Millisecond)
+
+		update := playback.Update{
+			MediaItem: playback.MediaItem{
+				Title:           title,
+				Subtitle:        subtitle,
+				Category:        mediaItem.Type,
+				Duration:        mediaItem.Duration,
+				Source:          string(playback.Plex),
+				Image:           imageLocation,
+				DominantColours: domColours,
+			},
+			Elapsed: time.Duration(elapsed),
+			Status:  status,
+		}
+
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Plex update",
+				slog.String("stack", err.Error()),
+				slog.String("title", title))
+		}
+
+		hash := playback.GenerateMediaID(&update)
+		if err := utils.SaveCover(hash, image, extension); err != nil {
+			slog.Error("Failed to save cover for Plex",
+				slog.String("stack", err.Error()),
+				slog.String("guid", hash),
+				slog.String("title", update.MediaItem.Title),
+			)
+		}
+	}
 }

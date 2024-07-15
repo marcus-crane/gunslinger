@@ -21,6 +21,8 @@ import (
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
 type readerPayload struct {
@@ -45,7 +47,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
+func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -63,7 +65,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 		}
 		guid := coverSegments[1]
 		extension := coverSegments[2]
-		image, err := jobs.LoadCover(guid, extension)
+		image, err := utils.LoadCover(guid, extension)
 		if err != nil {
 			w.WriteHeader(http.StatusGone)
 			return
@@ -87,7 +89,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *PlaybackSystem) http.Handler {
 
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		result := FullPlaybackEntry{}
+		result := playback.FullPlaybackEntry{}
 		if len(ps.State) >= 1 {
 			result = ps.State[0]
 		}

@@ -164,7 +164,7 @@ func GetRecentlyReadManga(store db.Store, client http.Client) {
 
 			discImage, guid := utils.BytesToGUIDLocation(image, extension)
 
-			if err := saveCover(guid.String(), image, extension); err != nil {
+			if err := utils.SaveCover(guid.String(), image, extension); err != nil {
 				slog.Error("Failed to save cover for Anilist",
 					slog.String("stack", err.Error()),
 					slog.String("guid", guid.String()),

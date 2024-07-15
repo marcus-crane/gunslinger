@@ -1,10 +1,11 @@
-package main
+package playback
 
 import (
 	"testing"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/models"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
@@ -17,12 +18,12 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 	require.NoError(t, err)
 
 	// embed is defined in main.go
-	goose.SetBaseFS(embedMigrations)
+	goose.SetBaseFS(migrations.GetMigrations())
 
 	err = goose.SetDialect("sqlite3")
 	require.NoError(t, err)
 
-	err = goose.Up(db.DB, "migrations")
+	err = goose.Up(db.DB, ".")
 	require.NoError(t, err)
 
 	return db
@@ -40,7 +41,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	category := string(Track)
 	source := string(Plex)
 
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			Title:           "a good song",
 			Subtitle:        "some artist",
@@ -101,7 +102,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.Equal(t, false, ps.State[0].IsActive)
 
 	// 3. New item in same category should deactivate existing entry
-	update2 := PlaybackUpdate{
+	update2 := Update{
 		MediaItem: MediaItem{
 			Title:           "a better song",
 			Subtitle:        "another artist",
@@ -136,7 +137,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 
 func TestPlaybackUpdate_GenerateMediaID(t *testing.T) {
 	// Initial update should return one entry
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			Title:           "a song",
 			Subtitle:        "artist",
@@ -160,7 +161,7 @@ func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
 	ps := &PlaybackSystem{db: db}
 
 	// Initial update should return one entry
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			ID:              "plex:song:blah",
 			Title:           "a song",
@@ -197,7 +198,7 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 
 	ps := &PlaybackSystem{db: db}
 
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			Title:           "a song",
 			Subtitle:        "artist",
@@ -219,7 +220,7 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	assert.Equal(t, GenerateMediaID(&update), sourcePlayback[0].ID)
 	assert.Equal(t, "plex", sourcePlayback[0].Source)
 
-	update2 := PlaybackUpdate{
+	update2 := Update{
 		MediaItem: MediaItem{
 			Title:           "a better song",
 			Subtitle:        "another artist",
@@ -247,7 +248,7 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	err = ps.UpdatePlaybackState(update)
 	assert.NoError(t, err)
 
-	update3 := PlaybackUpdate{
+	update3 := Update{
 		MediaItem: MediaItem{
 			Title:           "wobbledogs",
 			Subtitle:        "game maker",
@@ -279,7 +280,7 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 
 	ps := &PlaybackSystem{db: db}
 
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			Title:           "a song",
 			Subtitle:        "artist",
@@ -295,7 +296,7 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 	err := ps.UpdatePlaybackState(update)
 	require.NoError(t, err)
 
-	update2 := PlaybackUpdate{
+	update2 := Update{
 		MediaItem: MediaItem{
 			Title:           "action movie",
 			Subtitle:        "directed by person",
@@ -311,7 +312,7 @@ func TestPlaybackSystem_DeactivateBySource(t *testing.T) {
 	err = ps.UpdatePlaybackState(update2)
 	require.NoError(t, err)
 
-	update3 := PlaybackUpdate{
+	update3 := Update{
 		MediaItem: MediaItem{
 			Title:           "wobbledogs",
 			Subtitle:        "game maker",
@@ -355,7 +356,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 
 	ps := &PlaybackSystem{db: db}
 
-	update := PlaybackUpdate{
+	update := Update{
 		MediaItem: MediaItem{
 			Title:           "a song",
 			Subtitle:        "artist",
@@ -384,7 +385,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 	assert.Equal(t, models.SerializableColours{"#abc123"}, history[0].DominantColours)
 	assert.Equal(t, true, history[0].IsActive)
 
-	update2 := PlaybackUpdate{
+	update2 := Update{
 		MediaItem: MediaItem{
 			Title:           "a better song",
 			Subtitle:        "another artist",

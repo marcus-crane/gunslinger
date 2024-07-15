@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,11 +11,10 @@ import (
 	"golang.org/x/exp/slog"
 
 	"github.com/marcus-crane/gunslinger/events"
+	"github.com/marcus-crane/gunslinger/migrations"
+	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
-
-//go:embed migrations/*.sql
-var embedMigrations embed.FS
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -31,16 +29,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	ps := NewPlaybackSystem(db)
+	ps := playback.NewPlaybackSystem(db)
 
-	goose.SetBaseFS(embedMigrations)
+	goose.SetBaseFS(migrations.GetMigrations())
 
 	if err := goose.SetDialect(string(goose.DialectSQLite3)); err != nil {
 		slog.Error("Failed to set goose dialect", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	if err := goose.Up(db.DB, "migrations"); err != nil {
+	if err := goose.Up(db.DB, "."); err != nil {
 		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
