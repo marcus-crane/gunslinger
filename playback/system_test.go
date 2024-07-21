@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/models"
 	_ "github.com/mattn/go-sqlite3"
@@ -25,6 +26,9 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 
 	err = goose.Up(db.DB, ".")
 	require.NoError(t, err)
+
+	// Gross, PlaybackSystem should handle this
+	events.Init()
 
 	return db
 }
@@ -96,10 +100,9 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2a. Confirm that PlaybackSystem state is updated
-	assert.Len(t, ps.State, 1)
-	assert.Equal(t, ps.State[0].Title, mediaItem.Title)
-	assert.Equal(t, 60000, ps.State[0].Elapsed)
-	assert.Equal(t, false, ps.State[0].IsActive)
+	assert.Len(t, ps.State, 0)
+	assert.Equal(t, 60000, playbackEntry.Elapsed)
+	assert.Equal(t, false, playbackEntry.IsActive)
 
 	// 3. New item in same category should deactivate existing entry
 	update2 := Update{
@@ -237,12 +240,10 @@ func TestPlaybackSystem_GetActivePlaybackBySource(t *testing.T) {
 	err = ps.UpdatePlaybackState(update2)
 	assert.NoError(t, err)
 
-	// NOTE: Current behaviour is to assume only one instance of a category across many sources is valid
-	// This can potentially mean rubber banding if say; watching two TV shows at once but generally there
-	// is little to no reason for me to ever do this.
+	// We expect that our Plex song is still active as we query playback by category and source
 	sourcePlayback, err = ps.GetActivePlaybackBySource(string(Plex))
 	assert.NoError(t, err)
-	assert.Len(t, sourcePlayback, 0)
+	assert.Len(t, sourcePlayback, 1)
 
 	// Mark our Plex song as active once again
 	err = ps.UpdatePlaybackState(update)
@@ -367,7 +368,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 			DominantColours: models.SerializableColours{"#abc123"},
 		},
 		Elapsed: 20 * time.Second,
-		Status:  StatusPlaying,
+		Status:  StatusPaused,
 	}
 	err := ps.UpdatePlaybackState(update)
 	require.NoError(t, err)
@@ -383,7 +384,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 	assert.Equal(t, "blah", history[0].Source)
 	assert.Equal(t, "https://bleg.net", history[0].Image)
 	assert.Equal(t, models.SerializableColours{"#abc123"}, history[0].DominantColours)
-	assert.Equal(t, true, history[0].IsActive)
+	assert.Equal(t, false, history[0].IsActive)
 
 	update2 := Update{
 		MediaItem: MediaItem{
@@ -396,7 +397,7 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 			DominantColours: models.SerializableColours{"#def345", "efg456"},
 		},
 		Elapsed: 18 * time.Second,
-		Status:  StatusPlaying,
+		Status:  StatusStopped,
 	}
 
 	err = ps.UpdatePlaybackState(update2)
