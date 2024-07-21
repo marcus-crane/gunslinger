@@ -8,10 +8,16 @@ import (
 	"image/color"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/marcus-crane/gunslinger/models"
 	color_extractor "github.com/marekm4/color-extractor"
+)
+
+var (
+	STORAGE_DIR = GetEnv("STORAGE_DIR", "/tmp")
 )
 
 const (
@@ -75,4 +81,16 @@ func colorToHexString(c color.Color) string {
 	r, g, b, a := c.RGBA()
 	rgba := color.RGBA{uint8(r), uint8(g), uint8(b), uint8(a)}
 	return fmt.Sprintf("#%.2x%.2x%.2x", rgba.R, rgba.G, rgba.B)
+}
+
+func LoadCover(hash string, extension string) (string, error) {
+	img, err := os.ReadFile(fmt.Sprintf("%s/%s.%s", STORAGE_DIR, strings.ReplaceAll(hash, ":", "."), extension))
+	if err != nil {
+		return "", err
+	}
+	return string(img), nil
+}
+
+func SaveCover(hash string, image []byte, extension string) error {
+	return os.WriteFile(fmt.Sprintf("%s/%s.%s", STORAGE_DIR, strings.ReplaceAll(hash, ":", "."), extension), image, 0644)
 }

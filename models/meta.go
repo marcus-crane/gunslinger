@@ -47,7 +47,7 @@ type ResponseMediaItem struct {
 
 // Used in V4 but not renamed until V3 is deprecated
 type ComboDBMediaItem struct {
-	ID              uint                `json:"id" db:"id"`
+	ID              string              `json:"id" db:"id"`
 	Hash            uint64              `json:"hash" db:"-"`
 	OccuredAt       int64               `json:"occurred_at" db:"created_at"`
 	Title           string              `json:"title" db:"title"`

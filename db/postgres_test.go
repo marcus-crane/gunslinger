@@ -20,11 +20,11 @@ func TestPostgresStore_GetRecent(t *testing.T) {
 	p := fakePostgresStore(t, query, rows)
 	want := []models.ComboDBMediaItem{
 		{
-			ID:    1,
+			ID:    "1",
 			Title: "blah",
 		},
 		{
-			ID:    2,
+			ID:    "2",
 			Title: "bleh",
 		},
 	}
@@ -46,7 +46,7 @@ func TestPostgresStore_GetNewest(t *testing.T) {
 
 	p := fakePostgresStore(t, query, rows)
 	want := models.ComboDBMediaItem{
-		ID:    1,
+		ID:    "1",
 		Title: "blah",
 	}
 	got, err := p.GetNewest()

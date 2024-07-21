@@ -1,18 +1,20 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE db_media_items (
+CREATE TABLE playback_entries (
     id integer PRIMARY KEY AUTOINCREMENT,
-    created_at TEXT,
-    title TEXT,
-    subtitle TEXT,
+    media_id TEXT,
     category TEXT,
+    created_at DATETIME,
+    elapsed INTEGER,
+    status TEXT,
     is_active BOOLEAN,
+    updated_at DATETIME,
     source TEXT,
-    image TEXT
+    FOREIGN KEY(media_id) REFERENCES media_items(id)
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE db_media_items;
+DROP TABLE playback_entries;
 -- +goose StatementEnd
