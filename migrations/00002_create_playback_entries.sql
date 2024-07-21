@@ -9,6 +9,7 @@ CREATE TABLE playback_entries (
     status TEXT,
     is_active BOOLEAN,
     updated_at DATETIME,
+    source TEXT,
     FOREIGN KEY(media_id) REFERENCES media_items(id)
 );
 -- +goose StatementEnd

@@ -60,6 +60,7 @@ type PlaybackEntry struct {
 	Status    Status    `db:"status"`
 	IsActive  bool      `db:"is_active"`
 	UpdatedAt time.Time `db:"updated_at"`
+	Source    Source    `db:"source"`
 }
 
 // MediaItem stores metadata about each piece of media that is played ie; movies, tv series, games

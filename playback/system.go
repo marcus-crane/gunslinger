@@ -3,10 +3,13 @@ package playback
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/events"
+	"github.com/r3labs/sse/v2"
 )
 
 type PlaybackSystem struct {
@@ -46,39 +49,47 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	}()
 
 	elapsed := int(update.Elapsed.Milliseconds())
-	// TODO: Do we need to skip non-active stuff from being saved? Probably fine
 
 	var existingEntry PlaybackEntry
 	err = tx.Get(&existingEntry, `
-	  SELECT id, media_id, elapsed, status
+	  SELECT id, media_id, elapsed, status, is_active
 	  FROM playback_entries
-	  WHERE category = ? AND is_active = TRUE`,
-		update.MediaItem.Category)
+	  WHERE category = ? AND source = ?
+	  ORDER BY updated_at DESC LIMIT 1`,
+		update.MediaItem.Category, update.MediaItem.Source)
 
 	if err == nil {
+		slog.Debug("Found existing entry to update",
+			slog.String("media_id", update.MediaItem.ID),
+			slog.String("old_status", string(existingEntry.Status)),
+			slog.String("new_status", string(update.Status)))
 		// We have an active entry to compare our new state
 		if existingEntry.MediaID != update.MediaItem.ID {
-			// We now have a newly active entry so let's deactivate the current one
+			// We now have a newly active entry so let's ensure the current one
+			// is deactivated if it isn't already
 			_, err := tx.Exec(`
 			  UPDATE playback_entries
 			  SET is_active = FALSE, status = ?, updated_at = ?
 			  WHERE id = ?`,
 				StatusStopped, time.Now(), existingEntry.ID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to deactivate old entry: %+v", err)
 			}
 		} else {
-			// The same media item has been seen again so we'll save the updated state
-			_, err := tx.Exec(`
-			  UPDATE playback_entries
-			  SET elapsed = ?, status = ?, updated_at = ?
-			  WHERE id = ?`,
-				elapsed, update.Status, time.Now(), existingEntry.ID)
-			if err != nil {
-				return err
+			if existingEntry.Status != update.Status || existingEntry.Elapsed != elapsed {
+				_, err := tx.Exec(`
+				UPDATE playback_entries
+				SET elapsed = ?, status = ?, is_active = ?, updated_at = ?
+				WHERE id = ?`,
+					elapsed, update.Status, update.Status == StatusPlaying, time.Now(), existingEntry.ID)
+				if err != nil {
+					return err
+				}
+				ps.broadcastEvent()
 			}
-			// We already know this item is saved since it's in progress so we can
-			// bail out of our transaction early
+
+			slog.Debug("Updated existing entry", slog.String("media_id", update.MediaItem.ID))
+
 			if err = tx.Commit(); err != nil {
 				return err
 			}
@@ -100,24 +111,39 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	  ON CONFLICT (id) DO NOTHING`,
 		update.MediaItem)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert new item: %+v", err)
 	}
 
 	// Now we can insert our playback entry and wrap up the update process
 	_, err = tx.Exec(`
 	  INSERT INTO playback_entries
-	  (media_id, category, created_at, elapsed, status, is_active, updated_at)
-	  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		update.MediaItem.ID, update.MediaItem.Category, time.Now(), elapsed, update.Status, true, time.Now())
+	  (media_id, category, created_at, elapsed, status, is_active, updated_at, source)
+	  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		update.MediaItem.ID, update.MediaItem.Category, time.Now(), elapsed, update.Status, update.Status == StatusPlaying, time.Now(), update.MediaItem.Source)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert new playback entry: %+v", err)
 	}
+
+	ps.broadcastEvent()
+
+	slog.Debug("Inserted new playback entry", slog.String("media_id", update.MediaItem.ID))
 
 	if err = tx.Commit(); err != nil {
 		return err
 	}
 	committed = true
 	return nil
+}
+
+type Event struct {
+}
+
+func (ps *PlaybackSystem) broadcastEvent() {
+	// We don't really need to send the payload and attempt anything super complex.
+	// Just enough to ping the client to rehydrate itself
+	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
+	// to ensure a transition between animations rather than fully re-rendering them from scratch
+	events.Server.Publish("playback", &sse.Event{Data: []byte{}})
 }
 
 func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
@@ -214,6 +240,7 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
 	  FROM media_items m
 	  JOIN playback_entries p ON m.id = p.media_id
+	  WHERE p.is_active = FALSE
 	  ORDER BY p.updated_at DESC
 	  LIMIT ?
 	`, limit)

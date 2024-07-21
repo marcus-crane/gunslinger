@@ -58,14 +58,16 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 
 	mux.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		cover := strings.Trim(r.URL.Path, "/static/")
-		coverSegments := strings.Split(cover, ".")
-		if len(coverSegments) != 3 {
+		// plex:track:8080643347135712210.jpeg
+		// translated into plex.track.<id>.jpeg internally as colons are valid in URIs but not all filesystems
+		coverSegments := strings.SplitAfter(cover, ".")
+		if len(coverSegments) != 2 {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		guid := coverSegments[1]
-		extension := coverSegments[2]
-		image, err := utils.LoadCover(guid, extension)
+		filename := coverSegments[0]
+		extension := coverSegments[1]
+		image, err := utils.LoadCover(filename, extension)
 		if err != nil {
 			w.WriteHeader(http.StatusGone)
 			return
@@ -89,11 +91,17 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 
 	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		result := playback.FullPlaybackEntry{}
-		if len(ps.State) >= 1 {
-			result = ps.State[0]
+		if len(ps.State) == 0 {
+			// If nothing is playing, we'll return the most recent item
+			result, err := ps.GetHistory(1)
+			if err != nil {
+				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				return
+			}
+			json.NewEncoder(w).Encode(result)
+			return
 		}
-		json.NewEncoder(w).Encode(result)
+		json.NewEncoder(w).Encode(ps.State[0])
 	})
 
 	mux.HandleFunc("/api/v3/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +121,10 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
+		if len(results) == 0 {
+			json.NewEncoder(w).Encode([]string{})
+			return
+		}
 		for idx, item := range results {
 			// A valid case is when I just listen to the same song over and over so
 			// we need to ensure we're in the right state to skip historical items
@@ -125,7 +137,6 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 				Subtitle:        item.Subtitle,
 				Category:        item.Category,
 				Source:          item.Source,
-				Image:           item.Image,
 				Duration:        item.Duration,
 				DominantColours: item.DominantColours,
 			}
@@ -332,12 +343,22 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		if len(ps.State) == 0 {
+			// If nothing is playing, we'll return the most recent item
+			result, err := ps.GetHistory(1)
+			if err != nil {
+				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				return
+			}
+			json.NewEncoder(w).Encode(result)
+			return
+		}
 		json.NewEncoder(w).Encode(ps.State)
 	})
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		result, err := ps.GetHistory(7)
+		results, err := ps.GetHistory(7)
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
@@ -346,7 +367,11 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
-		json.NewEncoder(w).Encode(result)
+		if len(results) == 0 {
+			json.NewEncoder(w).Encode([]string{})
+			return
+		}
+		json.NewEncoder(w).Encode(results)
 	})
 
 	// mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
