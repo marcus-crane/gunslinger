@@ -100,13 +100,14 @@ func SetupSpotifyPoller(store db.Store) {
 		// Locally support using oauth instead of having a token (for server side)
 		accessToken, refreshToken, err = performOAuth2Flow(8081)
 		if err != nil {
-			panic(err)
+			slog.With("error", err).Error("failed to generate access tokens")
 		}
 	}
 
 	client, err := NewClient(deviceId, accessToken, refreshToken)
 	if err != nil {
-		panic(err)
+		slog.With("error", err).Error("failed to create spotify client")
+		return
 	}
 	client.Run(store)
 }
