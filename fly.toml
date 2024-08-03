@@ -8,9 +8,6 @@ primary_region = "syd"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
 
-[experimental]
-  auto_rollback = true
-
 [env]
   BACKGROUND_JOBS_ENABLED = "t"
   GOMEMLIMIT = "800MiB"
@@ -31,6 +28,18 @@ kill_timeout = "5s"
 
   [[services.ports]]
     port = 443
+    handlers = ["tls", "http"]
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8081
+
+  [[services.ports]]
+    port = 8081
     handlers = ["tls", "http"]
   [services.concurrency]
     type = "connections"
