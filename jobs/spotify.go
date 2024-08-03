@@ -437,15 +437,45 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 			fmt.Printf("failed to unmarshal cluster update %+v", err)
 			return
 		}
-		spotifyTrackId := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
-		track, err := c.sp.MetadataForTrack(spotifyTrackId)
-		if err != nil {
+		spotifyId := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
+
+		playingItem := models.MediaItem{
+			IsActive: !clusterUpdate.Cluster.PlayerState.IsPaused,
+			Elapsed:  int(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp()),
+			Duration: int(clusterUpdate.Cluster.PlayerState.GetDuration()),
+			Source:   "spotify",
+		}
+
+		var coverId string
+
+		if spotifyId.Type() == golibrespot.SpotifyIdTypeTrack {
+			track, err := c.sp.MetadataForTrack(spotifyId)
+			if err != nil {
+				return
+			}
+
+			playingItem.Title = track.GetName()
+			playingItem.Subtitle = track.GetArtist()[0].GetName()
+			playingItem.Category = "track"
+
+			coverId = pullAlbumCoverId(track)
+		} else if spotifyId.Type() == golibrespot.SpotifyIdTypeEpisode {
+			episode, err := c.sp.MetadataForEpisode(spotifyId)
+			if err != nil {
+				return
+			}
+
+			playingItem.Title = episode.GetName()
+			playingItem.Subtitle = episode.GetShow().GetName()
+			playingItem.Category = "podcast_episode"
+
+			coverId = pullEpisodeCoverId(episode)
+		} else {
+			// no idea what type this is
 			return
 		}
 
-		albumCoverId := pullAlbumCoverId(track)
-		imageUrl := c.prodInfo.ImageUrl(albumCoverId)
-
+		imageUrl := c.prodInfo.ImageUrl(coverId)
 		image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 		if err != nil {
 			slog.Error("Failed to extract image content",
@@ -456,19 +486,9 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 		}
 		imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
 
-		// TODO: Support podcasts and audiobooks
-		playingItem := models.MediaItem{
-			CreatedAt:       time.Now().Unix(),
-			Title:           track.GetName(),
-			Subtitle:        track.GetArtist()[0].GetName(),
-			IsActive:        !clusterUpdate.Cluster.PlayerState.IsPaused,
-			Category:        "track",
-			Elapsed:         int(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp()),
-			Duration:        int(clusterUpdate.Cluster.PlayerState.GetDuration()),
-			Source:          "spotify",
-			DominantColours: domColours,
-			Image:           imageLocation,
-		}
+		playingItem.CreatedAt = time.Now().Unix()
+		playingItem.DominantColours = domColours
+		playingItem.Image = imageLocation
 
 		if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
 			byteStream := new(bytes.Buffer)
@@ -534,4 +554,27 @@ func pullAlbumCoverId(track *metadatapb.Track) string {
 		albumCoverId = coverId
 	}
 	return hex.EncodeToString(albumCoverId)
+}
+
+func pullEpisodeCoverId(episode *metadatapb.Episode) string {
+	var episodeCoverId []byte
+	if len(episode.GetShow().GetCoverImage().GetImage()) > 0 {
+		coverId := episode.GetShow().GetCoverImage().GetImage()[0].FileId
+		for _, c := range episode.GetShow().GetCoverImage().GetImage() {
+			if c.GetSize() == metadatapb.Image_LARGE {
+				coverId = c.FileId
+			}
+		}
+		episodeCoverId = coverId
+	}
+	if len(episode.GetCoverImage().GetImage()) > 0 {
+		coverId := episode.GetCoverImage().GetImage() [0].FileId
+		for _, c := range episode.GetCoverImage().GetImage()  {
+			if c.GetSize() == metadatapb.Image_LARGE {
+				coverId = c.FileId
+			}
+		}
+		episodeCoverId = coverId
+	}
+	return hex.EncodeToString(episodeCoverId)
 }
