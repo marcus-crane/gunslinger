@@ -26,6 +26,7 @@ import (
 	"go-librespot/session"
 	"go-librespot/spclient"
 
+	"github.com/gregdel/pushover"
 	"github.com/r3labs/sse/v2"
 	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
@@ -37,18 +38,21 @@ import (
 )
 
 const (
-	redirectURI = "http://localhost:8081/callback"
-	authURL     = "https://accounts.spotify.com/authorize"
-	tokenURL    = "https://accounts.spotify.com/api/token"
+	defaultRedirectUri = "http://localhost:8081/callback"
+	authURL            = "https://accounts.spotify.com/authorize"
+	tokenURL           = "https://accounts.spotify.com/api/token"
 )
 
 var (
-	accessToken  = os.Getenv("SPOTIFY_ACCESS_TOKEN")
-	refreshToken = os.Getenv("SPOTIFY_REFRESH_TOKEN")
-	deviceId     = utils.MustEnv("SPOTIFY_DEVICE_ID")
-	clientID     = utils.MustEnv("SPOTIFY_CLIENT_ID")
-	clientSecret = utils.MustEnv("SPOTIFY_CLIENT_SECRET")
-	username     = utils.MustEnv("SPOTIFY_USERNAME")
+	accessToken       = os.Getenv("SPOTIFY_ACCESS_TOKEN")
+	refreshToken      = os.Getenv("SPOTIFY_REFRESH_TOKEN")
+	redirectUri       = os.Getenv("SPOTIFY_REDIRECT_URI")
+	deviceId          = utils.MustEnv("SPOTIFY_DEVICE_ID")
+	clientID          = utils.MustEnv("SPOTIFY_CLIENT_ID")
+	clientSecret      = utils.MustEnv("SPOTIFY_CLIENT_SECRET")
+	username          = utils.MustEnv("SPOTIFY_USERNAME")
+	pushoverToken     = utils.MustEnv("PUSHOVER_TOKEN")
+	pushoverRecipient = utils.MustEnv("PUSHOVER_RECIPIENT")
 )
 
 type ProductInfo struct {
@@ -94,7 +98,12 @@ type TokenResponse struct {
 }
 
 func SetupSpotifyPoller(store db.Store) {
+	var client *Client
 	var err error
+
+	if redirectUri == "" {
+		redirectUri = defaultRedirectUri
+	}
 
 	if accessToken == "" || refreshToken == "" {
 		// Locally support using oauth instead of having a token (for server side)
@@ -104,10 +113,20 @@ func SetupSpotifyPoller(store db.Store) {
 		}
 	}
 
-	client, err := NewClient(deviceId, accessToken, refreshToken)
+	client, err = NewClient(deviceId, accessToken, refreshToken)
 	if err != nil {
-		slog.With("error", err).Error("failed to create spotify client")
-		return
+		// we'll try oauth (which will ping my phone + let me auth remote) and see if we make it in time otherwise we'll need manual intervention
+		// also this should be made less repetitive but whatever
+		accessToken, refreshToken, err = performOAuth2Flow(8081)
+		if err != nil {
+			slog.With("error", err).Error("failed to perform oauth flow as fallback")
+			return
+		}
+		client, err = NewClient(deviceId, accessToken, refreshToken)
+		if err != nil {
+			slog.With("error", err).Error("failed to create spotify client and fallback to oauth")
+			return
+		}
 	}
 	client.Run(store)
 }
@@ -147,6 +166,9 @@ func performOAuth2Flow(port int) (string, string, error) {
 	ch := make(chan *TokenResponse)
 	var srv *http.Server
 
+	pushoverApp := pushover.New(pushoverToken)
+	recipient := pushover.NewRecipient(pushoverRecipient)
+
 	// TODO: Ideally integrate with existing router to make life easier + support
 	// possibly oauth refreshing server side (for bootstrapping)
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -177,9 +199,23 @@ func performOAuth2Flow(port int) (string, string, error) {
 	}
 
 	url := fmt.Sprintf("%s?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&state=%s",
-		authURL, clientID, url.QueryEscape(strings.Join(scopes, " ")), url.QueryEscape(redirectURI), state)
+		authURL, clientID, url.QueryEscape(strings.Join(scopes, " ")), url.QueryEscape(redirectUri), state)
 
 	slog.With(slog.String("url", url)).Info("Please open the following URL in your browser")
+	message := &pushover.Message{
+		Message:    "Refresh token has expired + you probably redeployed so we need to manually reauth",
+		Title:      "Please auth with Spotify for Gunslinger",
+		Priority:   pushover.PriorityHigh,
+		URL:        url,
+		URLTitle:   "Auth with Spotify",
+		Timestamp:  time.Now().Unix(),
+		DeviceName: "Gunslinger",
+	}
+	_, err := pushoverApp.SendMessage(message, recipient)
+	if err != nil {
+		fmt.Println(err)
+		return "", "", fmt.Errorf("failed to notify about oauth request")
+	}
 
 	token := <-ch
 	return token.AccessToken, token.RefreshToken, nil
@@ -189,7 +225,7 @@ func exchangeCodeForToken(code string) (*TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
+	data.Set("redirect_uri", redirectUri)
 
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
