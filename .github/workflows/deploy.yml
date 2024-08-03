@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true # clone go-librespot into jobs directory
+
       - uses: superfly/flyctl-actions@v1.4
         with:
           args: "deploy"

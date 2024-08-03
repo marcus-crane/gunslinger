@@ -1,6 +1,11 @@
 module github.com/marcus-crane/gunslinger
 
-go 1.21
+go 1.22.2
+
+toolchain go1.22.5
+
+// clone using git submodules until module path is directly clonable
+replace go-librespot => ./jobs/go-librespot
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -19,29 +24,38 @@ require (
 	github.com/pressly/goose/v3 v3.16.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.1
+	go-librespot v0.0.0-00010101000000-000000000000
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+	google.golang.org/protobuf v1.31.0
 	modernc.org/sqlite v1.27.0
 )
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
+	github.com/devgianlu/shannon v0.0.0-20230613115856-82ec90b7fa7e // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
+	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/xlab/vorbis-go v0.0.0-20210911202351-b5b85f1ec645 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
@@ -55,4 +69,5 @@ require (
 	modernc.org/opt v0.1.3 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
+	nhooyr.io/websocket v1.8.7 // indirect
 )
