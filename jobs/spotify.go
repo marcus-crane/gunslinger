@@ -41,18 +41,18 @@ const (
 	defaultRedirectUri = "http://localhost:8081/callback"
 	authURL            = "https://accounts.spotify.com/authorize"
 	tokenURL           = "https://accounts.spotify.com/api/token"
+	accessTokenID      = "spotify:accesstoken"
+	refreshTokenID     = "spotify:refreshtoken"
 )
 
 var (
-	accessToken       = os.Getenv("SPOTIFY_ACCESS_TOKEN")
-	refreshToken      = os.Getenv("SPOTIFY_REFRESH_TOKEN")
 	redirectUri       = os.Getenv("SPOTIFY_REDIRECT_URI")
-	deviceId          = utils.MustEnv("SPOTIFY_DEVICE_ID")
-	clientID          = utils.MustEnv("SPOTIFY_CLIENT_ID")
-	clientSecret      = utils.MustEnv("SPOTIFY_CLIENT_SECRET")
-	username          = utils.MustEnv("SPOTIFY_USERNAME")
-	pushoverToken     = utils.MustEnv("PUSHOVER_TOKEN")
-	pushoverRecipient = utils.MustEnv("PUSHOVER_RECIPIENT")
+	deviceId          = os.Getenv("SPOTIFY_DEVICE_ID")
+	clientID          = os.Getenv("SPOTIFY_CLIENT_ID")
+	clientSecret      = os.Getenv("SPOTIFY_CLIENT_SECRET")
+	username          = os.Getenv("SPOTIFY_USERNAME")
+	pushoverToken     = os.Getenv("PUSHOVER_TOKEN")
+	pushoverRecipient = os.Getenv("PUSHOVER_RECIPIENT")
 )
 
 type ProductInfo struct {
@@ -105,11 +105,21 @@ func SetupSpotifyPoller(store db.Store) {
 		redirectUri = defaultRedirectUri
 	}
 
+	accessToken := store.GetTokenByID(accessTokenID)
+	refreshToken := store.GetTokenByID(refreshTokenID)
+
 	if accessToken == "" || refreshToken == "" {
 		// Locally support using oauth instead of having a token (for server side)
 		accessToken, refreshToken, err = performOAuth2Flow(8081)
 		if err != nil {
 			slog.With("error", err).Error("failed to generate access tokens")
+		}
+		// Save our newly generated token
+		if err := store.UpsertToken(accessTokenID, accessToken); err != nil {
+			slog.With("error", err).Error("failed to save access token")
+		}
+		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
+			slog.With("error", err).Error("failed to save refresh token")
 		}
 	}
 
@@ -121,6 +131,12 @@ func SetupSpotifyPoller(store db.Store) {
 		if err != nil {
 			slog.With("error", err).Error("failed to perform oauth flow as fallback")
 			return
+		}
+		if err := store.UpsertToken(accessTokenID, accessToken); err != nil {
+			slog.With("error", err).Error("failed to save access token")
+		}
+		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
+			slog.With("error", err).Error("failed to save refresh token")
 		}
 		client, err = NewClient(deviceId, accessToken, refreshToken)
 		if err != nil {
@@ -568,8 +584,8 @@ func pullEpisodeCoverId(episode *metadatapb.Episode) string {
 		episodeCoverId = coverId
 	}
 	if len(episode.GetCoverImage().GetImage()) > 0 {
-		coverId := episode.GetCoverImage().GetImage() [0].FileId
-		for _, c := range episode.GetCoverImage().GetImage()  {
+		coverId := episode.GetCoverImage().GetImage()[0].FileId
+		for _, c := range episode.GetCoverImage().GetImage() {
 			if c.GetSize() == metadatapb.Image_LARGE {
 				coverId = c.FileId
 			}
