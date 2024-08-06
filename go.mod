@@ -23,7 +23,7 @@ require (
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/pressly/goose/v3 v3.16.0
 	github.com/r3labs/sse/v2 v2.10.0
-	github.com/rs/cors v1.10.1
+	github.com/rs/cors v1.11.0
 	go-librespot v0.0.0-00010101000000-000000000000
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	google.golang.org/protobuf v1.31.0
