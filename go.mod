@@ -25,7 +25,7 @@ require (
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.1
 	go-librespot v0.0.0-00010101000000-000000000000
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+	golang.org/x/exp 0cdaa3abc0fa
 	google.golang.org/protobuf v1.31.0
 	modernc.org/sqlite v1.27.0
 )
