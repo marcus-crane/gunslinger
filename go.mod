@@ -2,32 +2,32 @@ module github.com/marcus-crane/gunslinger
 
 go 1.22.2
 
-toolchain go1.22.5
+toolchain go1.22.6
 
 // clone using git submodules until module path is directly clonable
 replace go-librespot => ./jobs/go-librespot
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/PuerkitoBio/goquery v1.8.1
+	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/alexellis/hmac/v2 v2.0.0
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
-	github.com/chromedp/chromedp v0.9.5
-	github.com/go-co-op/gocron v1.36.1
+	github.com/chromedp/chromedp v0.10.0
+	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.4.0
-	github.com/jmoiron/sqlx v1.3.5
+	github.com/google/uuid v1.6.0
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/marekm4/color-extractor v1.2.1
-	github.com/pressly/goose/v3 v3.16.0
+	github.com/pressly/goose/v3 v3.21.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.1
 	go-librespot v0.0.0-00010101000000-000000000000
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	google.golang.org/protobuf v1.31.0
-	modernc.org/sqlite v1.27.0
+	modernc.org/sqlite v1.32.0
 )
 
 require (
