@@ -1,23 +1,21 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 	"golang.org/x/exp/slog"
 
-	"github.com/marcus-crane/gunslinger/db"
+	gdb "github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/jobs"
-	"github.com/marcus-crane/gunslinger/routes"
+	"github.com/marcus-crane/gunslinger/migrations"
+	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
-
-//go:embed migrations/*.sql
-var embedMigrations embed.FS
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -26,18 +24,36 @@ func main() {
 
 	dsn := utils.MustEnv("DB_PATH")
 
-	database, err := db.NewSqliteStore(dsn)
+	db, err := sqlx.Connect("sqlite", dsn)
 	if err != nil {
 		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	if err := database.ApplyMigrations(embedMigrations); err != nil {
-		slog.Error("Failed to apply migrations to DB", slog.String("stack", err.Error()))
+	// See https://blog.pecar.me/sqlite-prod
+	db.Exec("PRAGMA foreign_keys = ON")
+	db.Exec("PRAGMA journal_mode = WAL")
+	db.Exec("PRAGMA synchronous = NORMAL")
+	db.Exec("PRAGMA mmap_size = 134217728")
+	db.Exec("PRAGMA journal_size_limit = 27103364")
+	db.Exec("PRAGMA cache_size = 2000")
+
+	ps := playback.NewPlaybackSystem(db)
+	store := gdb.SqliteStore{DB: db}
+
+	goose.SetBaseFS(migrations.GetMigrations())
+
+	if err := goose.SetDialect(string(goose.DialectSQLite3)); err != nil {
+		slog.Error("Failed to set goose dialect", slog.String("stack", err.Error()))
 		os.Exit(1)
 	}
 
-	jobScheduler := jobs.SetupInBackground(database)
+	if err := goose.Up(db.DB, "."); err != nil {
+		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+		os.Exit(1)
+	}
+
+	jobScheduler := SetupInBackground(ps, &store)
 
 	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()
@@ -48,7 +64,7 @@ func main() {
 
 	events.Init()
 
-	router := routes.Register(http.NewServeMux(), database)
+	router := RegisterRoutes(http.NewServeMux(), ps)
 
 	slog.Info("Gunslinger is running at http://localhost:8080")
 

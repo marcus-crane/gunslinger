@@ -1,7 +1,6 @@
-package jobs
+package trakt
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,18 +10,15 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/marcus-crane/gunslinger/db"
-	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
-	"github.com/r3labs/sse/v2"
 )
 
 var (
 	traktListeningEndpoint = "https://api.trakt.tv/users/sentry/listening?extended=full"
 )
 
-func getArtFromApple(traktResponse models.NowPlayingResponse) (string, error) {
+func getArtFromApple(traktResponse NowPlayingResponse) (string, error) {
 	url := fmt.Sprintf("https://podcasts.apple.com/us/podcast/%s/id%d", traktResponse.Podcast.IDs.Slug, traktResponse.Podcast.IDs.Apple)
 	res, err := http.Get(url)
 	if err != nil {
@@ -55,7 +51,7 @@ func getArtFromApple(traktResponse models.NowPlayingResponse) (string, error) {
 	return coverUrl, nil
 }
 
-func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
+func GetCurrentlyListening(ps *playback.PlaybackSystem, client http.Client) {
 	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
 	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
 
@@ -84,12 +80,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	// Nothing is playing so we should check if anything needs to be cleaned up
 	// or if we need to do a state transition
 	if res.StatusCode == 204 {
-		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "traktcasts" {
-			CurrentPlaybackItem.IsActive = false
-			byteStream := new(bytes.Buffer)
-			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
-			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		}
+		ps.DeactivateBySource(string(playback.TraktCasts))
 		return
 	}
 
@@ -109,12 +100,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	// Nothing is playing so we should check if anything needs to be cleaned up
 	// or if we need to do a state transition
 	if res2.StatusCode == 204 {
-		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "traktcasts" {
-			CurrentPlaybackItem.IsActive = false
-			byteStream := new(bytes.Buffer)
-			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
-			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		}
+		ps.DeactivateBySource(string(playback.TraktCasts))
 		return
 	}
 
@@ -126,7 +112,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		)
 		return
 	}
-	var traktResponse models.NowPlayingResponse
+	var traktResponse NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
@@ -162,7 +148,7 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 		)
 		return
 	}
-	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
+	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
 	// We may pause and restart episodes so we need to infer the current progress by taking the runtime
 	// and checking the difference between now and when the scrobble expires
@@ -178,54 +164,32 @@ func GetCurrentlyListeningTrakt(store db.Store, client http.Client) {
 	duration := traktResponse.PodcastEpisode.Runtime * 1000
 	elapsed := duration - int(time.Until(ends).Milliseconds())
 
-	playingItem := models.MediaItem{
-		Title:           traktResponse.PodcastEpisode.Title,
-		Subtitle:        traktResponse.Podcast.Title,
-		CreatedAt:       time.Now().Unix(),
-		Category:        traktResponse.Type,
-		IsActive:        true,
-		Elapsed:         elapsed,
-		Duration:        duration,
-		Source:          "traktcasts",
-		DominantColours: domColours,
-		Image:           imageLocation,
+	update := playback.Update{
+		MediaItem: playback.MediaItem{
+			Title:           traktResponse.PodcastEpisode.Title,
+			Subtitle:        traktResponse.Podcast.Title,
+			Category:        traktResponse.Type,
+			Duration:        duration,
+			Source:          string(playback.Trakt),
+			Image:           imageLocation,
+			DominantColours: domColours,
+		},
+		Elapsed: time.Duration(elapsed) * time.Millisecond,
+		Status:  playback.StatusPlaying,
 	}
 
-	// Fallback in case a scrobble somehow runs too long
-	if time.Now().After(ends) {
-		playingItem.IsActive = false
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save Steam update",
+			slog.String("stack", err.Error()),
+			slog.String("title", update.MediaItem.Title))
 	}
 
-	if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
-		byteStream := new(bytes.Buffer)
-		json.NewEncoder(byteStream).Encode(playingItem)
-		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		// We want to make sure that we don't resave if the server restarts
-		// to ensure the history endpoint is relatively accurate
-		previousItem, err := store.GetByCategory(playingItem.Category)
-		if err == nil || err.Error() == "sql: no rows in result set" {
-			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-				if err := saveCover(guid.String(), image, extension); err != nil {
-					slog.Error("Failed to save cover for Traktcasts",
-						slog.String("stack", err.Error()),
-						slog.String("guid", guid.String()),
-						slog.String("title", playingItem.Title),
-					)
-				}
-				if err := store.Insert(playingItem); err != nil {
-					slog.Error("Failed to save DB entry",
-						slog.String("stack", err.Error()),
-						slog.String("title", playingItem.Title),
-					)
-				}
-			}
-		} else {
-			slog.Error("An unknown error occurred",
-				slog.String("stack", err.Error()),
-				slog.String("title", playingItem.Title),
-			)
-		}
+	hash := playback.GenerateMediaID(&update)
+	if err := utils.SaveCover(hash, image, extension); err != nil {
+		slog.Error("Failed to save cover for Steam",
+			slog.String("stack", err.Error()),
+			slog.String("guid", hash),
+			slog.String("title", update.MediaItem.Title),
+		)
 	}
-
-	CurrentPlaybackItem = playingItem
 }

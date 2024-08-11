@@ -20,11 +20,11 @@ func TestSqliteStore_GetRecent(t *testing.T) {
 	p := fakeSqliteStore(t, query, rows)
 	want := []models.ComboDBMediaItem{
 		{
-			ID:    1,
+			ID:    "1",
 			Title: "blah",
 		},
 		{
-			ID:    2,
+			ID:    "2",
 			Title: "bleh",
 		},
 	}
@@ -46,7 +46,7 @@ func TestSqliteStore_GetNewest(t *testing.T) {
 
 	p := fakeSqliteStore(t, query, rows)
 	want := models.ComboDBMediaItem{
-		ID:    1,
+		ID:    "1",
 		Title: "blah",
 	}
 	got, err := p.GetNewest()

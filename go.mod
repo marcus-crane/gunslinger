@@ -19,9 +19,11 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.1
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/pressly/goose/v3 v3.16.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.1
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	google.golang.org/protobuf v1.31.0
 	modernc.org/sqlite v1.27.0
@@ -31,6 +33,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/devgianlu/shannon v0.0.0-20230613115856-82ec90b7fa7e // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
@@ -42,11 +45,11 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/xlab/vorbis-go v0.0.0-20210911202351-b5b85f1ec645 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -58,6 +61,7 @@ require (
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
 	modernc.org/cc/v3 v3.41.0 // indirect
 	modernc.org/ccgo/v3 v3.16.15 // indirect

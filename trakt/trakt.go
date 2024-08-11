@@ -1,7 +1,6 @@
-package jobs
+package trakt
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,11 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/marcus-crane/gunslinger/db"
-	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
-	"github.com/r3labs/sse/v2"
 )
 
 var (
@@ -22,7 +18,59 @@ var (
 	tmdbEpisodeEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
 )
 
-func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (string, error) {
+type NowPlayingResponse struct {
+	ExpiresAt      string       `json:"expires_at"`
+	StartedAt      string       `json:"started_at"`
+	Action         string       `json:"action"`
+	Type           string       `json:"type"`
+	Movie          TraktSummary `json:"movie"`
+	Episode        TraktEpisode `json:"episode"`
+	Show           TraktSummary `json:"show"`
+	PodcastEpisode TraktEpisode `json:"podcast_episode"`
+	Podcast        TraktSummary `json:"podcast"`
+}
+
+type TraktEpisode struct {
+	Season        int      `json:"season"`
+	Number        int      `json:"number"`
+	Title         string   `json:"title"`
+	IDs           TraktIDs `json:"ids"`
+	Overview      string   `json:"overview"`
+	OverviewPlain string   `json:"overview_plain"`
+	Explicit      bool     `json:"explicit"`
+	Runtime       int      `json:"runtime"`
+}
+
+type TraktSummary struct {
+	Title         string   `json:"title"`
+	Year          int      `json:"year"`
+	IDs           TraktIDs `json:"ids"`
+	Overview      string   `json:"overview"`
+	OverviewPlain string   `json:"overview_plain"`
+	Author        string   `json:"author"`
+	Homepage      string   `json:"homepage"`
+}
+
+type TraktIDs struct {
+	Trakt int    `json:"trakt"`
+	Slug  string `json:"slug"`
+	TVDB  int    `json:"tvdb"`
+	IMDB  string `json:"imdb"`
+	TMDB  int    `json:"tmdb"`
+	Apple int    `json:"apple"`
+}
+
+type TMDBImageResponse struct {
+	ID      int         `json:"id"`
+	Stills  []TMDBImage `json:"stills"`
+	Posters []TMDBImage `json:"posters"`
+}
+
+type TMDBImage struct {
+	FilePath string `json:"file_path"`
+}
+
+func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, error) {
 	url := ""
 	if traktResponse.Type == "movie" {
 		url = fmt.Sprintf(tmdbMovieEndpoint, traktResponse.Movie.IDs.TMDB)
@@ -41,7 +89,7 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (str
 	if err != nil {
 		return "", err
 	}
-	var tmdbImageResponse models.TMDBImageResponse
+	var tmdbImageResponse TMDBImageResponse
 
 	if err = json.Unmarshal(body, &tmdbImageResponse); err != nil {
 		slog.Error("Failed to fetch image data from TMDB", slog.String("body", string(body)))
@@ -57,7 +105,7 @@ func getArtFromTMDB(apiKey string, traktResponse models.NowPlayingResponse) (str
 	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
-func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
+func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
 	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
 	tmdbToken := utils.MustEnv("TMDB_TOKEN")
@@ -84,15 +132,9 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 		return
 	}
 
-	// Nothing is playing so we should check if anything needs to be cleaned up
-	// or if we need to do a state transition
+	// Nothing is playing so we don't need to do any further work
 	if res.StatusCode == 204 {
-		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "trakt" {
-			CurrentPlaybackItem.IsActive = false
-			byteStream := new(bytes.Buffer)
-			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
-			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		}
+		ps.DeactivateBySource(string(playback.Trakt))
 		return
 	}
 
@@ -112,12 +154,7 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 	// Nothing is playing so we should check if anything needs to be cleaned up
 	// or if we need to do a state transition
 	if res2.StatusCode == 204 {
-		if CurrentPlaybackItem.IsActive && CurrentPlaybackItem.Source == "trakt" {
-			CurrentPlaybackItem.IsActive = false
-			byteStream := new(bytes.Buffer)
-			json.NewEncoder(byteStream).Encode(CurrentPlaybackItem)
-			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		}
+		ps.DeactivateBySource(string(playback.Trakt))
 		return
 	}
 
@@ -129,7 +166,7 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 		)
 		return
 	}
-	var traktResponse models.NowPlayingResponse
+	var traktResponse NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
@@ -165,7 +202,7 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 		)
 		return
 	}
-	imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
+	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
@@ -185,67 +222,44 @@ func GetCurrentlyPlayingTrakt(store db.Store, client http.Client) {
 	}
 
 	duration := int(ends.Sub(started).Milliseconds())
-	elapsed := int(time.Since(started).Milliseconds())
 
-	playingItem := models.MediaItem{
-		CreatedAt:       time.Now().Unix(),
-		Category:        traktResponse.Type,
-		IsActive:        true,
-		Elapsed:         elapsed,
-		Duration:        duration,
-		Source:          "trakt",
-		DominantColours: domColours,
-		Image:           imageLocation,
-	}
-
-	// Fallback in case a scrobble somehow runs too long
-	if time.Now().After(ends) {
-		playingItem.IsActive = false
+	update := playback.Update{
+		MediaItem: playback.MediaItem{
+			Category:        traktResponse.Type,
+			Duration:        duration,
+			Source:          string(playback.Trakt),
+			Image:           imageLocation,
+			DominantColours: domColours,
+		},
+		Elapsed: time.Since(started),
+		Status:  playback.StatusPlaying,
 	}
 
 	if traktResponse.Type == "movie" {
-		playingItem.Title = traktResponse.Movie.Title
-		playingItem.Subtitle = fmt.Sprint(traktResponse.Movie.Year)
+		update.MediaItem.Title = traktResponse.Movie.Title
+		update.MediaItem.Subtitle = fmt.Sprint(traktResponse.Movie.Year)
 	} else {
-		playingItem.Title = fmt.Sprintf(
+		update.MediaItem.Title = fmt.Sprintf(
 			"%02dx%02d %s",
 			traktResponse.Episode.Season, // Season number
 			traktResponse.Episode.Number, // Episode number
 			traktResponse.Episode.Title,
 		)
-		playingItem.Subtitle = traktResponse.Show.Title
+		update.MediaItem.Subtitle = traktResponse.Show.Title
 	}
 
-	if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
-		byteStream := new(bytes.Buffer)
-		json.NewEncoder(byteStream).Encode(playingItem)
-		events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-		// We want to make sure that we don't resave if the server restarts
-		// to ensure the history endpoint is relatively accurate
-		previousItem, err := store.GetByCategory(playingItem.Category)
-		if err == nil || err.Error() == "sql: no rows in result set" {
-			if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-				if err := saveCover(guid.String(), image, extension); err != nil {
-					slog.Error("Failed to save cover for Trakt",
-						slog.String("stack", err.Error()),
-						slog.String("guid", guid.String()),
-						slog.String("title", playingItem.Title),
-					)
-				}
-				if err := store.Insert(playingItem); err != nil {
-					slog.Error("Failed to save DB entry",
-						slog.String("stack", err.Error()),
-						slog.String("title", playingItem.Title),
-					)
-				}
-			}
-		} else {
-			slog.Error("An unknown error occurred",
-				slog.String("stack", err.Error()),
-				slog.String("title", playingItem.Title),
-			)
-		}
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save Steam update",
+			slog.String("stack", err.Error()),
+			slog.String("title", update.MediaItem.Title))
 	}
 
-	CurrentPlaybackItem = playingItem
+	hash := playback.GenerateMediaID(&update)
+	if err := utils.SaveCover(hash, image, extension); err != nil {
+		slog.Error("Failed to save cover for Steam",
+			slog.String("stack", err.Error()),
+			slog.String("guid", hash),
+			slog.String("title", update.MediaItem.Title),
+		)
+	}
 }

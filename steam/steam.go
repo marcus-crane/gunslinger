@@ -4,123 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"time"
 
-	"github.com/marcus-crane/gunslinger/shared"
+	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/utils"
 )
 
-const (
-	ERR_STORE_RESPONSE_MALFORMED = "failed to find game id in store request"
+var (
+	profileEndpoint    = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=76561197999386785"
+	gameDetailEndpoint = "https://store.steampowered.com/api/appdetails?appids=%s"
 )
-
-type Client struct {
-	APIKey       string
-	APIBaseURL   string
-	StoreBaseURL string
-	HTTPClient   *http.Client
-}
-
-func NewClient(apiKey string) *Client {
-	return &Client{
-		APIKey:       apiKey,
-		APIBaseURL:   "https://api.steampowered.com",
-		StoreBaseURL: "https://store.steampowered.com/api",
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
-}
-
-func (c *Client) getUserPlaying() (string, error) {
-	var steamResponse SteamPlayerSummary
-	var activeTitle string
-	endpoint := fmt.Sprintf("%s/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=76561197999386785", c.APIBaseURL, c.APIKey)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return activeTitle, err
-	}
-	req.Header = http.Header{
-		"Accept":       []string{"application/json"},
-		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{shared.USER_AGENT},
-	}
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return activeTitle, err
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return activeTitle, err
-	}
-	if err := json.Unmarshal(body, &steamResponse); err != nil {
-		return activeTitle, err
-	}
-	if len(steamResponse.Response.Players) == 0 {
-		return activeTitle, err
-	}
-	// There is only ever one active player but we'll just use
-	// a range to handle the unlikely case of no players found
-	for _, player := range steamResponse.Response.Players {
-		if player.GameID != "" {
-			activeTitle = player.GameID
-		}
-	}
-	return activeTitle, nil
-}
-
-func (c *Client) lookupStoreItem(appID string) (SteamAppDetail, error) {
-	var steamResponse map[string]SteamAppResponse
-	endpoint := fmt.Sprintf("%s/appdetails?appids=%s", c.StoreBaseURL, appID)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return SteamAppDetail{}, err
-	}
-	req.Header = http.Header{
-		"Accept":       []string{"application/json"},
-		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{shared.USER_AGENT},
-	}
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return SteamAppDetail{}, err
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return SteamAppDetail{}, err
-	}
-	if err := json.Unmarshal(body, &steamResponse); err != nil {
-		return SteamAppDetail{}, err
-	}
-	game, ok := steamResponse[appID]
-	if !ok {
-		return SteamAppDetail{}, fmt.Errorf(ERR_STORE_RESPONSE_MALFORMED)
-	}
-	return game.Data, nil
-}
-
-func (c *Client) QueryMediaState() (shared.DBMediaItem, error) {
-	userPlayingID, err := c.getUserPlaying()
-	if err != nil {
-		return shared.DBMediaItem{}, err
-	}
-	if userPlayingID == "" {
-		return shared.DBMediaItem{}, fmt.Errorf("empty game id found")
-	}
-	storeDetail, err := c.lookupStoreItem(userPlayingID)
-	if err != nil {
-		return shared.DBMediaItem{}, err
-	}
-	return shared.DBMediaItem{
-		Title:    storeDetail.Name,
-		Author:   storeDetail.Developers[0],
-		Category: shared.CATEGORY_VIDEOGAME,
-		IsActive: true,
-		Source:   shared.SOURCE_STEAM,
-	}, nil
-}
 
 type SteamPlayerSummary struct {
 	Response SteamResponse `json:"response"`
@@ -131,10 +25,8 @@ type SteamResponse struct {
 }
 
 type SteamUser struct {
-	GameID                   string `json:"gameid"`
-	CommunityVisibilityState int    `json:"communityvisibilitystate"`
-	ProfileState             int    `json:"profilestate"`
-	PersonaState             int    `json:"personastate"`
+	GameID       string `json:"gameid"`
+	PersonaState int    `json:"personastate"`
 }
 
 type SteamAppResponse struct {
@@ -146,4 +38,142 @@ type SteamAppDetail struct {
 	Name        string   `json:"name"`
 	HeaderImage string   `json:"header_image"`
 	Developers  []string `json:"developers"`
+}
+
+func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
+	steamApiKey := utils.MustEnv("STEAM_TOKEN")
+	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
+
+	req, err := http.NewRequest("GET", playingUrl, nil)
+	if err != nil {
+		slog.Error("Failed to prepare Steam request",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	req.Header = http.Header{
+		"Accept":       []string{"application/json"},
+		"Content-Type": []string{"application/json"},
+		"User-Agent":   []string{utils.UserAgent},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		slog.Error("Failed to contact Steam for updates",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		slog.Error("Failed to read Steam response",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	var steamResponse SteamPlayerSummary
+
+	if err = json.Unmarshal(body, &steamResponse); err != nil {
+		slog.Error("Error fetching Steam data",
+			slog.String("stack", err.Error()),
+		)
+	}
+
+	if len(steamResponse.Response.Players) == 0 {
+		ps.DeactivateBySource(string(playback.Steam))
+		return
+	}
+
+	gameId := steamResponse.Response.Players[0].GameID
+
+	if gameId == "" {
+		ps.DeactivateBySource(string(playback.Steam))
+		return
+	}
+
+	gameDetailUrl := fmt.Sprintf(gameDetailEndpoint, gameId)
+
+	req, err = http.NewRequest("GET", gameDetailUrl, nil)
+	if err != nil {
+		slog.Error("Failed to prepare Steam request for more detail",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	req.Header = http.Header{
+		"Accept":       []string{"application/json"},
+		"Content-Type": []string{"application/json"},
+		"User-Agent":   []string{utils.UserAgent},
+	}
+	res, err = client.Do(req)
+	if err != nil {
+		slog.Error("Failed to read Steam detail response",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err = io.ReadAll(res.Body)
+	if err != nil {
+		slog.Error("Failed to read Steam detail response",
+			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	var gameDetailResponse map[string]SteamAppResponse
+
+	if err = json.Unmarshal(body, &gameDetailResponse); err != nil {
+		slog.Error("Error fetching Steam app data",
+			slog.String("stack", err.Error()),
+		)
+	}
+
+	game := gameDetailResponse[gameId].Data
+
+	developer := "Unknown Developer"
+
+	if len(game.Developers) > 0 {
+		developer = game.Developers[0]
+	}
+
+	image, extension, domColours, err := utils.ExtractImageContent(game.HeaderImage)
+	if err != nil {
+		slog.Error("Failed to extract image content",
+			slog.String("stack", err.Error()),
+			slog.String("image_url", game.HeaderImage),
+		)
+		return
+	}
+
+	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
+
+	update := playback.Update{
+		MediaItem: playback.MediaItem{
+			Title:           game.Name,
+			Subtitle:        developer,
+			Category:        string(playback.Gaming),
+			Duration:        0,
+			Source:          string(playback.Steam),
+			Image:           imageLocation,
+			DominantColours: domColours,
+		},
+		Status: playback.StatusPlaying,
+	}
+
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save Steam update",
+			slog.String("stack", err.Error()),
+			slog.String("title", update.MediaItem.Title))
+	}
+
+	hash := playback.GenerateMediaID(&update)
+	if err := utils.SaveCover(hash, image, extension); err != nil {
+		slog.Error("Failed to save cover for Steam",
+			slog.String("stack", err.Error()),
+			slog.String("guid", hash),
+			slog.String("title", update.MediaItem.Title),
+		)
+	}
 }
