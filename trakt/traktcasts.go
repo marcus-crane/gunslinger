@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -19,7 +18,7 @@ var (
 	traktListeningEndpoint = "https://api.trakt.tv/users/sentry/listening?extended=full"
 )
 
-func getArtFromApple(traktResponse models.NowPlayingResponse) (string, error) {
+func getArtFromApple(traktResponse NowPlayingResponse) (string, error) {
 	url := fmt.Sprintf("https://podcasts.apple.com/us/podcast/%s/id%d", traktResponse.Podcast.IDs.Slug, traktResponse.Podcast.IDs.Apple)
 	res, err := http.Get(url)
 	if err != nil {
@@ -113,7 +112,7 @@ func GetCurrentlyListeningTrakt(ps *playback.PlaybackSystem, client http.Client)
 		)
 		return
 	}
-	var traktResponse models.NowPlayingResponse
+	var traktResponse NowPlayingResponse
 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
