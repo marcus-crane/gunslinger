@@ -1,7 +1,6 @@
-package jobs
+package spotify
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -27,13 +26,11 @@ import (
 	"github.com/devgianlu/go-librespot/spclient"
 
 	"github.com/gregdel/pushover"
-	"github.com/r3labs/sse/v2"
 	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/marcus-crane/gunslinger/db"
-	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
@@ -47,12 +44,12 @@ const (
 
 var (
 	redirectUri       = os.Getenv("SPOTIFY_REDIRECT_URI")
-	deviceId          = os.Getenv("SPOTIFY_DEVICE_ID")
-	clientID          = os.Getenv("SPOTIFY_CLIENT_ID")
-	clientSecret      = os.Getenv("SPOTIFY_CLIENT_SECRET")
-	username          = os.Getenv("SPOTIFY_USERNAME")
-	pushoverToken     = os.Getenv("PUSHOVER_TOKEN")
-	pushoverRecipient = os.Getenv("PUSHOVER_RECIPIENT")
+	deviceId          = utils.MustEnv("SPOTIFY_DEVICE_ID")
+	clientID          = utils.MustEnv("SPOTIFY_CLIENT_ID")
+	clientSecret      = utils.MustEnv("SPOTIFY_CLIENT_SECRET")
+	username          = utils.MustEnv("SPOTIFY_USERNAME")
+	pushoverToken     = utils.MustEnv("PUSHOVER_TOKEN")
+	pushoverRecipient = utils.MustEnv("PUSHOVER_RECIPIENT")
 )
 
 type ProductInfo struct {
@@ -97,7 +94,7 @@ type TokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-func SetupSpotifyPoller(store db.Store) {
+func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 	var client *Client
 	var err error
 
@@ -144,7 +141,7 @@ func SetupSpotifyPoller(store db.Store) {
 			return
 		}
 	}
-	client.Run(store)
+	client.Run(ps, store)
 }
 
 func NewClient(deviceId, accessToken, refreshToken string) (*Client, error) {
@@ -371,7 +368,7 @@ func (c *Client) reauthenticate() error {
 	return nil
 }
 
-func (c *Client) Run(store db.Store) {
+func (c *Client) Run(ps *playback.PlaybackSystem, store db.Store) {
 	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
 	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
 
@@ -380,7 +377,7 @@ func (c *Client) Run(store db.Store) {
 		case pkt := <-apRecv:
 			c.handleAccessPointPacket(pkt.Type, pkt.Payload)
 		case msg := <-msgChan:
-			c.handleMessage(msg, store)
+			c.handleMessage(msg, ps, store)
 		}
 	}
 }
@@ -407,7 +404,7 @@ func (c *Client) handleAccessPointPacket(pktType ap.PacketType, payload []byte) 
 	}
 }
 
-func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
+func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem, store db.Store) {
 	if strings.HasPrefix(msg.Uri, "hm://pusher/v1/connections/") {
 		spotConnId := msg.Headers["Spotify-Connection-Id"]
 		slog.With(slog.String("connection_id", spotConnId)).Info("Established connection to Spotify")
@@ -455,11 +452,19 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 		}
 		spotifyId := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
 
-		playingItem := models.MediaItem{
-			IsActive: !clusterUpdate.Cluster.PlayerState.IsPaused,
-			Elapsed:  int(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp()),
-			Duration: int(clusterUpdate.Cluster.PlayerState.GetDuration()),
-			Source:   "spotify",
+		status := playback.StatusPlaying
+
+		if clusterUpdate.Cluster.PlayerState.IsPaused {
+			status = playback.StatusPaused
+		}
+
+		update := playback.Update{
+			MediaItem: playback.MediaItem{
+				Duration: int(clusterUpdate.Cluster.PlayerState.GetDuration()),
+				Source:   string(playback.Spotify),
+			},
+			Elapsed: time.Duration(int(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp())),
+			Status:  status,
 		}
 
 		var coverId string
@@ -470,9 +475,9 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 				return
 			}
 
-			playingItem.Title = track.GetName()
-			playingItem.Subtitle = track.GetArtist()[0].GetName()
-			playingItem.Category = "track"
+			update.MediaItem.Title = track.GetName()
+			update.MediaItem.Subtitle = track.GetArtist()[0].GetName()
+			update.MediaItem.Category = "track"
 
 			coverId = pullAlbumCoverId(track)
 		} else if spotifyId.Type() == golibrespot.SpotifyIdTypeEpisode {
@@ -481,9 +486,9 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 				return
 			}
 
-			playingItem.Title = episode.GetName()
-			playingItem.Subtitle = episode.GetShow().GetName()
-			playingItem.Category = "podcast_episode"
+			update.MediaItem.Title = episode.GetName()
+			update.MediaItem.Subtitle = episode.GetShow().GetName()
+			update.MediaItem.Category = "podcast_episode"
 
 			coverId = pullEpisodeCoverId(episode)
 		} else {
@@ -500,43 +505,25 @@ func (c *Client) handleMessage(msg dealer.Message, store db.Store) {
 			)
 			return
 		}
-		imageLocation, guid := utils.BytesToGUIDLocation(image, extension)
+		imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
-		playingItem.CreatedAt = time.Now().Unix()
-		playingItem.DominantColours = domColours
-		playingItem.Image = imageLocation
+		update.MediaItem.DominantColours = domColours
+		update.MediaItem.Image = imageLocation
 
-		if CurrentPlaybackItem.GenerateHash() != playingItem.GenerateHash() {
-			byteStream := new(bytes.Buffer)
-			json.NewEncoder(byteStream).Encode(playingItem)
-			events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
-			// We want to make sure that we don't resave if the server restarts
-			// to ensure the history endpoint is relatively accurate
-			previousItem, err := store.GetByCategory(playingItem.Category)
-			if err == nil || err.Error() == "sql: no rows in result set" {
-				if CurrentPlaybackItem.Title != playingItem.Title && previousItem.Title != playingItem.Title {
-					if err := utils.SaveCover(guid.String(), image, extension); err != nil {
-						slog.Error("Failed to save cover for Plex",
-							slog.String("stack", err.Error()),
-							slog.String("guid", guid.String()),
-							slog.String("title", playingItem.Title),
-						)
-					}
-					if err := store.Insert(playingItem); err != nil {
-						slog.Error("Failed to save DB entry",
-							slog.String("stack", err.Error()),
-							slog.String("title", playingItem.Title),
-						)
-					}
-				}
-			} else {
-				slog.Error("An unknown error occurred",
-					slog.String("stack", err.Error()),
-					slog.String("title", playingItem.Title),
-				)
-			}
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Spotify update",
+				slog.String("stack", err.Error()),
+				slog.String("title", update.MediaItem.Title))
 		}
-		CurrentPlaybackItem = playingItem
+
+		hash := playback.GenerateMediaID(&update)
+		if err := utils.SaveCover(hash, image, extension); err != nil {
+			slog.Error("Failed to save cover for Spotify",
+				slog.String("stack", err.Error()),
+				slog.String("guid", hash),
+				slog.String("title", update.MediaItem.Title),
+			)
+		}
 	}
 }
 

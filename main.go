@@ -10,6 +10,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"golang.org/x/exp/slog"
 
+	gdb "github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/playback"
@@ -30,6 +31,7 @@ func main() {
 	}
 
 	ps := playback.NewPlaybackSystem(db)
+	store := gdb.SqliteStore{DB: db}
 
 	goose.SetBaseFS(migrations.GetMigrations())
 
@@ -43,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	jobScheduler := SetupInBackground(ps)
+	jobScheduler := SetupInBackground(ps, &store)
 
 	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
 		jobScheduler.StartAsync()

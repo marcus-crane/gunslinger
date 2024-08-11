@@ -42,6 +42,7 @@ type Source string
 const (
 	Anilist    Source = "anilist"
 	Plex       Source = "plex"
+	Spotify    Source = "spotify"
 	Steam      Source = "steam"
 	Trakt      Source = "trakt"
 	TraktCasts Source = "traktcasts"
