@@ -22,6 +22,7 @@ func SetupInBackground(ps *playback.PlaybackSystem, store db.Store) *gocron.Sche
 	client := http.Client{}
 
 	go spotify.SetupSpotifyPoller(ps, store)
+	// GetRecentlyReadManga
 	s.Every(1).Seconds().Do(plex.GetCurrentlyPlaying, ps, client)
 
 	// If we're redeployed, we'll populate the latest state

@@ -19,7 +19,6 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/jobs"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -125,12 +124,9 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			json.NewEncoder(w).Encode([]string{})
 			return
 		}
-		for idx, item := range results {
+		for _, item := range results {
 			// A valid case is when I just listen to the same song over and over so
 			// we need to ensure we're in the right state to skip historical items
-			if idx == 0 && item.Title == jobs.CurrentPlaybackItem.Title && jobs.CurrentPlaybackItem.Backfilled {
-				continue
-			}
 			rItem := models.ResponseMediaItem{
 				OccuredAt:       time.Unix(item.CreatedAt.Unix(), 0).Format(time.RFC3339),
 				Title:           item.Title,
