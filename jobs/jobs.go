@@ -9,6 +9,7 @@ import (
 
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/plex"
 )
 
 var (
@@ -20,7 +21,8 @@ func SetupInBackground(store db.Store) *gocron.Scheduler {
 
 	client := http.Client{}
 
-	// s.Every(1).Seconds().Do(plex.GetCurrentlyPlaying, store, client)
+	go SetupSpotifyPoller(store)
+	s.Every(1).Seconds().Do(plex.GetCurrentlyPlaying, store, client)
 	s.Every(15).Seconds().Do(GetRecentlyReadManga, store, client) // Rate limit: 90 req/sec
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingSteam, store, client)
 	s.Every(15).Seconds().Do(GetCurrentlyPlayingTrakt, store, client)

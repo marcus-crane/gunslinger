@@ -22,4 +22,6 @@ type Store interface {
 	Insert(item models.MediaItem) error
 	GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error)
 	ExecCustom(query string, args ...interface{}) error
+	GetTokenByID(id string) string
+	UpsertToken(id, value string) error
 }

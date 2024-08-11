@@ -81,6 +81,27 @@ func (s *SqliteStore) Insert(item models.MediaItem) error {
 	return err
 }
 
+func (s *SqliteStore) GetTokenByID(id string) string {
+	t := models.Token{}
+	err := s.DB.Get(&t, "SELECT * FROM tokens WHERE id = ?", id)
+	if err != nil {
+		return ""
+	}
+	return t.Value
+}
+
+func (s *SqliteStore) UpsertToken(id, value string) error {
+	query := `
+	INSERT INTO tokens (id, value)
+	VALUES (?, ?)
+	ON CONFLICT (id) DO UPDATE SET
+	value = excluded.value
+	WHERE id = ?
+	`
+	_, err := s.DB.Exec(query, id, value, id)
+	return err
+}
+
 func (s *SqliteStore) GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error) {
 	c := models.ComboDBMediaItem{}
 	err := s.DB.Get(&c, query, args...)

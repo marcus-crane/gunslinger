@@ -106,3 +106,8 @@ func (m MediaItem) GenerateHash() uint64 {
 	)
 	return xxhash.Sum64String(hash)
 }
+
+type Token struct {
+	ID    string `db:"id"`
+	Value string `db:"value"`
+}
