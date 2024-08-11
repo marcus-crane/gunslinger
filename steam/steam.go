@@ -40,8 +40,7 @@ type SteamAppDetail struct {
 	Developers  []string `json:"developers"`
 }
 
-func GetCurrentlyPlayingSteam(ps *playback.PlaybackSystem, client http.Client) {
-
+func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	steamApiKey := utils.MustEnv("STEAM_TOKEN")
 	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
 
@@ -82,12 +81,14 @@ func GetCurrentlyPlayingSteam(ps *playback.PlaybackSystem, client http.Client) {
 	}
 
 	if len(steamResponse.Response.Players) == 0 {
+		ps.DeactivateBySource(string(playback.Steam))
 		return
 	}
 
 	gameId := steamResponse.Response.Players[0].GameID
 
 	if gameId == "" {
+		ps.DeactivateBySource(string(playback.Steam))
 		return
 	}
 

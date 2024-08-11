@@ -105,7 +105,7 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
-func GetCurrentlyPlayingTrakt(ps *playback.PlaybackSystem, client http.Client) {
+func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
 	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
 	tmdbToken := utils.MustEnv("TMDB_TOKEN")

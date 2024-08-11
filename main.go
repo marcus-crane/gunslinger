@@ -30,6 +30,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// See https://blog.pecar.me/sqlite-prod
+	db.Exec("PRAGMA foreign_keys = ON")
+	db.Exec("PRAGMA journal_mode = WAL")
+	db.Exec("PRAGMA synchronous = NORMAL")
+	db.Exec("PRAGMA mmap_size = 134217728")
+	db.Exec("PRAGMA journal_size_limit = 27103364")
+	db.Exec("PRAGMA cache_size = 2000")
+
 	ps := playback.NewPlaybackSystem(db)
 	store := gdb.SqliteStore{DB: db}
 

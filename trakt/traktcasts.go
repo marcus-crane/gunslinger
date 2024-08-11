@@ -51,7 +51,7 @@ func getArtFromApple(traktResponse NowPlayingResponse) (string, error) {
 	return coverUrl, nil
 }
 
-func GetCurrentlyListeningTrakt(ps *playback.PlaybackSystem, client http.Client) {
+func GetCurrentlyListening(ps *playback.PlaybackSystem, client http.Client) {
 	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
 	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
 

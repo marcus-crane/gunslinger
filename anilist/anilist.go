@@ -85,8 +85,11 @@ func GetRecentlyReadManga(ps *playback.PlaybackSystem, store db.Store, client ht
 		return
 	}
 
-	for _, activity := range anilistResponse.Data.Page.Activities {
+	if len(anilistResponse.Data.Page.Activities) == 0 {
+		slog.Warn("Found no activities for Anilist")
+	}
 
+	for _, activity := range anilistResponse.Data.Page.Activities {
 		image, extension, domColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
 		if err != nil {
 			slog.Error("Failed to extract image content",
@@ -108,17 +111,19 @@ func GetRecentlyReadManga(ps *playback.PlaybackSystem, store db.Store, client ht
 				Image:           discImage,
 				DominantColours: domColours,
 			},
+			Elapsed: 0,
+			Status:  playback.StatusStopped,
 		}
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
-			slog.Error("Failed to save Steam update",
+			slog.Error("Failed to save Anilist update",
 				slog.String("stack", err.Error()),
 				slog.String("title", update.MediaItem.Title))
 		}
 
 		hash := playback.GenerateMediaID(&update)
 		if err := utils.SaveCover(hash, image, extension); err != nil {
-			slog.Error("Failed to save cover for Steam",
+			slog.Error("Failed to save cover for Anilist",
 				slog.String("stack", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),

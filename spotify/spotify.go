@@ -141,7 +141,7 @@ func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 			return
 		}
 	}
-	client.Run(ps, store)
+	client.Run(ps)
 }
 
 func NewClient(deviceId, accessToken, refreshToken string) (*Client, error) {
@@ -368,7 +368,7 @@ func (c *Client) reauthenticate() error {
 	return nil
 }
 
-func (c *Client) Run(ps *playback.PlaybackSystem, store db.Store) {
+func (c *Client) Run(ps *playback.PlaybackSystem) {
 	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
 	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
 
@@ -377,7 +377,7 @@ func (c *Client) Run(ps *playback.PlaybackSystem, store db.Store) {
 		case pkt := <-apRecv:
 			c.handleAccessPointPacket(pkt.Type, pkt.Payload)
 		case msg := <-msgChan:
-			c.handleMessage(msg, ps, store)
+			c.handleMessage(msg, ps)
 		}
 	}
 }
@@ -404,7 +404,7 @@ func (c *Client) handleAccessPointPacket(pktType ap.PacketType, payload []byte) 
 	}
 }
 
-func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem, store db.Store) {
+func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) {
 	if strings.HasPrefix(msg.Uri, "hm://pusher/v1/connections/") {
 		spotConnId := msg.Headers["Spotify-Connection-Id"]
 		slog.With(slog.String("connection_id", spotConnId)).Info("Established connection to Spotify")
