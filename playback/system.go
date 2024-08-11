@@ -247,3 +247,10 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 
 	return results, err
 }
+
+func (ps *PlaybackSystem) DeleteItem(id string) error {
+	if _, err := ps.db.Exec(`DELETE FROM media_items WHERE id = ?`, id); err != nil {
+		return err
+	}
+	return nil
+}

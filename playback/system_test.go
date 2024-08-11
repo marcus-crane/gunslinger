@@ -417,3 +417,44 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 	_, err = ps.GetHistory(-1)
 	assert.Error(t, err)
 }
+
+func TestPlaybackSystem_DeleteItem(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	update := Update{
+		MediaItem: MediaItem{
+			Title:           "a song",
+			Subtitle:        "artist",
+			Category:        "track",
+			Duration:        120000,
+			Source:          "blah",
+			Image:           "https://bleg.net",
+			DominantColours: models.SerializableColours{"#abc123"},
+		},
+		Elapsed: 20 * time.Second,
+		Status:  StatusPaused,
+	}
+	err := ps.UpdatePlaybackState(update)
+	require.NoError(t, err)
+
+	history, err := ps.GetHistory(1)
+	assert.NoError(t, err)
+	assert.Len(t, history, 1)
+	assert.Equal(t, GenerateMediaID(&update), history[0].ID)
+	assert.Equal(t, "a song", history[0].Title)
+	assert.Equal(t, "artist", history[0].Subtitle)
+	assert.Equal(t, 20000, history[0].Elapsed)
+	assert.Equal(t, 120000, history[0].Duration)
+	assert.Equal(t, "blah", history[0].Source)
+	assert.Equal(t, "https://bleg.net", history[0].Image)
+	assert.Equal(t, models.SerializableColours{"#abc123"}, history[0].DominantColours)
+	assert.Equal(t, false, history[0].IsActive)
+
+	ps.DeleteItem(history[0].ID)
+
+	history, err = ps.GetHistory(1)
+	assert.Len(t, history, 0)
+}
