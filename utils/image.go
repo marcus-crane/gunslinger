@@ -87,7 +87,7 @@ func colorToHexString(c color.Color) string {
 func LoadCover(hash string, extension string) (string, error) {
 	img, err := os.ReadFile(fmt.Sprintf("%s/%s.%s", STORAGE_DIR, strings.ReplaceAll(hash, ":", "."), extension))
 	if err != nil {
-		slog.With(slog.String("error", error.Error())).Error("Failed to load image")
+		slog.With(slog.String("error", err.Error())).Error("Failed to load image")
 		return "", err
 	}
 	return string(img), nil
