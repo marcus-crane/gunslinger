@@ -1,4 +1,4 @@
-package jobs
+package steam
 
 import (
 	"encoding/json"
