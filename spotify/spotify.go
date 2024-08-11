@@ -463,7 +463,8 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem, 
 				Duration: int(clusterUpdate.Cluster.PlayerState.GetDuration()),
 				Source:   string(playback.Spotify),
 			},
-			Elapsed: time.Duration(int(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp())),
+			// nanoseconds -> seconds
+			Elapsed: time.Duration(clusterUpdate.Cluster.PlayerState.GetPositionAsOfTimestamp() * 1000000),
 			Status:  status,
 		}
 
