@@ -21,6 +21,7 @@ import (
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/readwise"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
@@ -373,6 +374,60 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			return
 		}
 		json.NewEncoder(w).Encode(results)
+	})
+
+	mux.HandleFunc("/api/v4/readwise/tags", func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if r.Method != http.MethodGet {
+			renderJSONMessage(w, "That method is invalid for this endpoint")
+			return
+		}
+		tags, err := readwise.CountTags()
+		if err != nil {
+			renderJSONMessage(w, "Something went wrong trying to count tags")
+			return
+		}
+		json.NewEncoder(w).Encode(tags)
+		return
+	})
+
+	mux.HandleFunc("/api/v4/readwise/document_counts", func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if r.Method != http.MethodGet {
+			renderJSONMessage(w, "That method is invalid for this endpoint")
+			return
+		}
+		documentCounts, err := readwise.GetDocumentCounts()
+		if err != nil {
+			renderJSONMessage(w, "Something went wrong trying to count documents")
+			return
+		}
+		json.NewEncoder(w).Encode(documentCounts)
+		return
 	})
 
 	mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
