@@ -97,7 +97,11 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return
 			}
-			json.NewEncoder(w).Encode(result[0])
+			if len(results) == 0 {
+				json.NewEncoder(w).Encode(playback.FullPlaybackEntry{})
+				return
+			}
+			json.NewEncoder(w).Encode(results[0])
 			return
 		}
 		json.NewEncoder(w).Encode(ps.State[0])
