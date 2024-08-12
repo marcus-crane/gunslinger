@@ -92,12 +92,12 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 		w.Header().Set("Content-Type", "application/json")
 		if len(ps.State) == 0 {
 			// If nothing is playing, we'll return the most recent item
-			result, err := ps.GetHistory(1)
+			results, err := ps.GetHistory(1)
 			if err != nil {
 				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return
 			}
-			json.NewEncoder(w).Encode(result)
+			json.NewEncoder(w).Encode(result[0])
 			return
 		}
 		json.NewEncoder(w).Encode(ps.State[0])
