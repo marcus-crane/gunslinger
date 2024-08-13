@@ -57,7 +57,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	})
 
 	mux.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
-		cover := strings.Trim(r.URL.Path, "/static/")
+		cover := strings.ReplaceAll(r.URL.Path, "/static/", "")
 		// plex:track:8080643347135712210.jpeg
 		// translated into plex.track.<id>.jpeg internally as colons are valid in URIs but not all filesystems
 		coverSegments := strings.Split(cover, ".")
