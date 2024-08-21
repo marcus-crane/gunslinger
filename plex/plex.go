@@ -28,19 +28,20 @@ type MediaContainer struct {
 }
 
 type Metadata struct {
-	Attribution      string     `json:"attribution"`
-	Duration         int        `json:"duration"`
-	GrandparentTitle string     `json:"grandparentTitle"`
-	Thumb            string     `json:"thumb"`
-	ParentThumb      string     `json:"parentThumb"`
-	Index            int        `json:"index"`
-	ParentIndex      int        `json:"parentIndex"`
-	Title            string     `json:"title"`
-	Type             string     `json:"type"`
-	ViewOffset       int        `json:"viewOffset"`
-	Director         []Director `json:"Director"`
-	Player           Player     `json:"Player"`
-	User             User       `json:"User"`
+	Attribution         string     `json:"attribution"`
+	Duration            int        `json:"duration"`
+	GrandparentTitle    string     `json:"grandparentTitle"`
+	LibrarySectionTitle string     `json:"librarySectionTitle"`
+	Thumb               string     `json:"thumb"`
+	ParentThumb         string     `json:"parentThumb"`
+	Index               int        `json:"index"`
+	ParentIndex         int        `json:"parentIndex"`
+	Title               string     `json:"title"`
+	Type                string     `json:"type"`
+	ViewOffset          int        `json:"viewOffset"`
+	Director            []Director `json:"Director"`
+	Player              Player     `json:"Player"`
+	User                User       `json:"User"`
 }
 
 type Director struct {
@@ -106,6 +107,10 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 		}
 		// Skip sessions that aren't from my own account
 		if entry.User.Id != "1" {
+			continue
+		}
+		// Don't surface downloaded YouTube videos since they're mostly low quality junk
+		if entry.LibrarySectionTitle == "YouTube" {
 			continue
 		}
 		mediaItem := plexResponse.MediaContainer.Metadata[idx]
