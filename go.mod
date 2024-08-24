@@ -25,7 +25,7 @@ require (
 	github.com/rs/cors v1.10.1
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 	modernc.org/sqlite v1.27.0
 )
 
