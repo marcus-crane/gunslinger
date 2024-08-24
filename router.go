@@ -103,10 +103,17 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 				json.NewEncoder(w).Encode(playback.FullPlaybackEntry{})
 				return
 			}
+			for i, result := range results {
+				results[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+			}
 			json.NewEncoder(w).Encode(results[0])
 			return
 		}
-		json.NewEncoder(w).Encode(ps.State[0])
+		mutatingState := ps.State
+		for i, result := range mutatingState {
+			mutatingState[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+		}
+		json.NewEncoder(w).Encode(mutatingState[0])
 	})
 
 	mux.HandleFunc("/api/v3/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +146,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 				Subtitle:        item.Subtitle,
 				Category:        item.Category,
 				Source:          item.Source,
+				Image:           "/static/" + strings.ReplaceAll(item.ID, ":", ".") + ".jpeg",
 				Duration:        item.Duration,
 				DominantColours: item.DominantColours,
 			}
@@ -348,22 +356,26 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		if len(ps.State) == 0 {
 			// If nothing is playing, we'll return the most recent item
 			// TODO: Should return all that were playing? Maybe not
-			result, err := ps.GetHistory(1)
-			for _, result := range result {
-				result.Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
-			}
+			results, err := ps.GetHistory(1)
 			if err != nil {
 				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return
 			}
-			if len(result) == 0 {
+			if len(results) == 0 {
 				json.NewEncoder(w).Encode([]string{})
 				return
 			}
-			json.NewEncoder(w).Encode(result)
+			for i, result := range results {
+				results[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+			}
+			json.NewEncoder(w).Encode(results)
 			return
 		}
-		json.NewEncoder(w).Encode(ps.State)
+		mutatingState := ps.State
+		for i, result := range mutatingState {
+			mutatingState[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+		}
+		json.NewEncoder(w).Encode(mutatingState)
 	})
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
@@ -380,6 +392,9 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		if len(results) == 0 {
 			json.NewEncoder(w).Encode([]string{})
 			return
+		}
+		for i, result := range results {
+			results[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
 		}
 		json.NewEncoder(w).Encode(results)
 	})
