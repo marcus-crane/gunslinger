@@ -9,6 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -471,12 +472,16 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			renderJSONMessage(w, "That method is invalid for this endpoint")
 			return
 		}
-		if !qVal.Has("id") {
+		if !qVal.Has("playback_id") {
 			renderJSONMessage(w, "An ID did not appear to be provided")
 			return
 		}
-		id := strings.ReplaceAll(qVal.Get("id"), ".", ":")
-		if err := ps.DeleteItem(id); err != nil {
+		playback_id, err := strconv.ParseInt(qVal.Get("id"), 10, 64)
+		if err != nil {
+			renderJSONMessage(w, "That ID could not be converted into an integer")
+			return
+		}
+		if err := ps.DeleteItem(int(playback_id)); err != nil {
 			renderJSONMessage(w, "Something went wrong trying to delete that item")
 			return
 		}
