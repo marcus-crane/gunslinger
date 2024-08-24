@@ -476,7 +476,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			renderJSONMessage(w, "An ID did not appear to be provided")
 			return
 		}
-		playback_id, err := strconv.ParseInt(qVal.Get("id"), 10, 64)
+		playback_id, err := strconv.ParseInt(qVal.Get("playback_id"), 10, 0)
 		if err != nil {
 			renderJSONMessage(w, "That ID could not be converted into an integer")
 			return
