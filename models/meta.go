@@ -64,13 +64,12 @@ type ComboDBMediaItem struct {
 
 func GenerateHash(c ComboDBMediaItem) uint64 {
 	hash := fmt.Sprintf(
-		"%s-%s-%s-%t-%d-%d-%s-%s",
+		"%s-%s-%s-%t-%d-%s-%s",
 		c.Title,
 		c.Subtitle,
 		c.Category,
 		c.IsActive,
 		c.Elapsed,
-		c.Duration,
 		c.Source,
 		c.Image,
 	)
@@ -94,13 +93,12 @@ type MediaItem struct {
 
 func (m MediaItem) GenerateHash() uint64 {
 	hash := fmt.Sprintf(
-		"%s-%s-%s-%t-%d-%d-%s-%s",
+		"%s-%s-%s-%t-%d-%s-%s",
 		m.Title,
 		m.Subtitle,
 		m.Category,
 		m.IsActive,
 		m.Elapsed,
-		m.Duration,
 		m.Source,
 		m.Image,
 	)
