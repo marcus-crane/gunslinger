@@ -94,7 +94,7 @@ type FullPlaybackEntry struct {
 	DominantColours models.SerializableColours `db:"dominant_colours" json:"dominant_colours"`
 
 	// PlaybackEntry fields
-	PlaybackID int       `db:"playback_id" json:"-"`
+	PlaybackID int       `db:"playback_id" json:"playback_id"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	Elapsed    int       `db:"elapsed" json:"elapsed_ms"` // TODO: Drop _ms suffix
 	Status     Status    `db:"status" json:"status"`

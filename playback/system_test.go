@@ -453,7 +453,7 @@ func TestPlaybackSystem_DeleteItem(t *testing.T) {
 	assert.Equal(t, models.SerializableColours{"#abc123"}, history[0].DominantColours)
 	assert.Equal(t, false, history[0].IsActive)
 
-	ps.DeleteItem(history[0].ID)
+	ps.DeleteItem(history[0].PlaybackID)
 
 	history, err = ps.GetHistory(1)
 	assert.Len(t, history, 0)
