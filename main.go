@@ -20,12 +20,17 @@ import (
 func main() {
 	cfg := config.Config{}
 
-	dotEnvFeeder := feeder.DotEnv{Path: ".env"}
 	envFeeder := feeder.Env{}
+	feeders := []glc.Feeder{envFeeder}
+
+	if _, err := os.Stat(".env"); err == nil {
+		// We only load in .env if one is present or else we crash with file not exists error
+		feeders = append(feeders, feeder.DotEnv{Path: ".env"})
+	}
 
 	err := glc.
 		New().
-		AddFeeder(dotEnvFeeder, envFeeder).
+		AddFeeder(feeders...).
 		AddStruct(&cfg).
 		Feed()
 
