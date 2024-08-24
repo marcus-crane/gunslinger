@@ -349,6 +349,9 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			// If nothing is playing, we'll return the most recent item
 			// TODO: Should return all that were playing? Maybe not
 			result, err := ps.GetHistory(1)
+			for _, result := range result {
+				result.Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+			}
 			if err != nil {
 				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return

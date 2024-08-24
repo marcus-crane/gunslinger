@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/golobby/dotenv"
+	glc "github.com/golobby/config/v3"
+	"github.com/golobby/config/v3/pkg/feeder"
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 
@@ -18,10 +19,18 @@ import (
 
 func main() {
 	cfg := config.Config{}
-	file, err := os.Open(".env")
 
-	if err := dotenv.NewDecoder(file).Decode(&cfg); err != nil {
-		panic("Failed to load .env file")
+	dotEnvFeeder := feeder.DotEnv{Path: ".env"}
+	envFeeder := feeder.Env{}
+
+	err := glc.
+		New().
+		AddFeeder(dotEnvFeeder, envFeeder).
+		AddStruct(&cfg).
+		Feed()
+
+	if err != nil {
+		panic("Failed to load config")
 	}
 
 	logLevel := cfg.GetLogLevel()
