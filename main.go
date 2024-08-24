@@ -30,7 +30,7 @@ func main() {
 		Feed()
 
 	if err != nil {
-		panic("Failed to load config")
+		panic(err)
 	}
 
 	logLevel := cfg.GetLogLevel()
