@@ -1,30 +1,35 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/golobby/dotenv"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
-	"golang.org/x/exp/slog"
 
+	"github.com/marcus-crane/gunslinger/config"
 	gdb "github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/playback"
-	"github.com/marcus-crane/gunslinger/utils"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		fmt.Println(err)
+	cfg := config.Config{}
+	file, err := os.Open(".env")
+
+	if err := dotenv.NewDecoder(file).Decode(&cfg); err != nil {
+		panic("Failed to load .env file")
 	}
 
-	dsn := utils.MustEnv("DB_PATH")
+	logLevel := cfg.GetLogLevel()
+	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
+	slog.SetDefault(slog.New(h))
+	slog.With(slog.String("log_level", logLevel.Level().String())).Debug("Initialised logger")
 
-	db, err := sqlx.Connect("sqlite", dsn)
+	db, err := sqlx.Connect("sqlite", cfg.Gunslinger.DbPath)
 	if err != nil {
 		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
 		os.Exit(1)
@@ -53,18 +58,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	jobScheduler := SetupInBackground(ps, &store)
+	jobScheduler := SetupInBackground(cfg, ps, &store)
 
-	if utils.GetEnv("BACKGROUND_JOBS_ENABLED", "true") == "true" {
+	if cfg.Gunslinger.BackgroundJobsEnabled {
 		jobScheduler.StartAsync()
-		slog.Info("Background jobs have started up in the background.")
+		slog.Debug("Background jobs have started up in the background.")
 	} else {
-		slog.Info("Background jobs are disabled.")
+		slog.Debug("Background jobs are disabled.")
 	}
 
 	events.Init()
 
-	router := RegisterRoutes(http.NewServeMux(), ps)
+	router := RegisterRoutes(http.NewServeMux(), cfg, ps)
 
 	slog.Info("Gunslinger is running at http://localhost:8080")
 

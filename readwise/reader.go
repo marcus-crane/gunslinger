@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/marcus-crane/gunslinger/config"
 )
 
 type ReaderCount struct {
@@ -21,17 +23,17 @@ const (
 	DocumentListURL = "https://readwise.io/api/v3/list"
 )
 
-func GetDocumentCounts() (ReaderCount, error) {
+func GetDocumentCounts(cfg config.Config) (ReaderCount, error) {
 	var readerCount ReaderCount
-	newCount, err := getDocumentCount("new")
+	newCount, err := getDocumentCount(cfg, "new")
 	if err != nil {
 		return readerCount, err
 	}
-	laterCount, err := getDocumentCount("later")
+	laterCount, err := getDocumentCount(cfg, "later")
 	if err != nil {
 		return readerCount, err
 	}
-	archiveCount, err := getDocumentCount("archive")
+	archiveCount, err := getDocumentCount(cfg, "archive")
 	if err != nil {
 		return readerCount, err
 	}
@@ -41,12 +43,12 @@ func GetDocumentCounts() (ReaderCount, error) {
 	return readerCount, nil
 }
 
-func getDocumentCount(category string) (int, error) {
+func getDocumentCount(cfg config.Config, category string) (int, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/?location=%s", DocumentListURL, category), nil)
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", ReadwiseToken))
+	req.Header.Add("Authorization", fmt.Sprintf("Token %s", cfg.Readwise.Token))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return 0, err

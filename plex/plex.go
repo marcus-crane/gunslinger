@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -56,14 +57,12 @@ type User struct {
 	Id string `json:"id"`
 }
 
-func buildPlexURL(endpoint string) string {
-	plexHostURL := utils.MustEnv("PLEX_URL")
-	plexToken := utils.MustEnv("PLEX_TOKEN")
-	return fmt.Sprintf("%s%s?X-Plex-Token=%s", plexHostURL, endpoint, plexToken)
+func buildPlexURL(cfg config.Config, endpoint string) string {
+	return fmt.Sprintf("%s%s?X-Plex-Token=%s", cfg.Plex.URL, endpoint, cfg.Plex.Token)
 }
 
-func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
-	sessionURL := buildPlexURL(plexSessionEndpoint)
+func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
+	sessionURL := buildPlexURL(cfg, plexSessionEndpoint)
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
 		slog.Error("Failed to prepare Plex request", slog.String("stack", err.Error()))
@@ -122,7 +121,7 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 			thumbnail = mediaItem.ParentThumb
 		}
 
-		thumbnailUrl := buildPlexURL(thumbnail)
+		thumbnailUrl := buildPlexURL(cfg, thumbnail)
 		image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
 		if err != nil {
 			slog.Error("Failed to extract image content",
@@ -182,7 +181,7 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 		}
 
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(hash, image, extension); err != nil {
+		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Plex",
 				slog.String("stack", err.Error()),
 				slog.String("guid", hash),

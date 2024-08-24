@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -105,11 +106,7 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
-func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
-	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
-	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
-	tmdbToken := utils.MustEnv("TMDB_TOKEN")
-
+func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
 		slog.Error("Failed to build HEAD request for Trakt", slog.String("stack", err.Error()))
@@ -117,10 +114,10 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	}
 	req.Header = http.Header{
 		"Accept":            []string{"application/json"},
-		"Authorization":     []string{fmt.Sprintf("Bearer %s", traktBearerToken)},
+		"Authorization":     []string{fmt.Sprintf("Bearer %s", cfg.Trakt.BearerToken)},
 		"Content-Type":      []string{"application/json"},
 		"trakt-api-version": []string{"2"},
-		"trakt-api-key":     []string{traktClientID},
+		"trakt-api-key":     []string{cfg.Trakt.ClientId},
 		"User-Agent":        []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
@@ -187,7 +184,7 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 		return
 	}
 
-	imageUrl, err := getArtFromTMDB(tmdbToken, traktResponse)
+	imageUrl, err := getArtFromTMDB(cfg.Trakt.TMDBToken, traktResponse)
 	if err != nil {
 		slog.Error("Failed to retrieve art from TMDB",
 			slog.String("stack", err.Error()),
@@ -255,7 +252,7 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(hash, image, extension); err != nil {
+	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for Steam",
 			slog.String("stack", err.Error()),
 			slog.String("guid", hash),

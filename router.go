@@ -9,7 +9,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/playback"
@@ -47,7 +47,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handler {
+func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.PlaybackSystem) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -62,12 +62,13 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 		// translated into plex.track.<id>.jpeg internally as colons are valid in URIs but not all filesystems
 		coverSegments := strings.Split(cover, ".")
 		if len(coverSegments) != 4 {
+			slog.With(slog.String("cover", cover)).Error("Request for cover art with invalid segment length")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		filename := fmt.Sprintf("%s.%s.%s", coverSegments[0], coverSegments[1], coverSegments[2])
 		extension := coverSegments[3]
-		image, err := utils.LoadCover(filename, extension)
+		image, err := utils.LoadCover(cfg, filename, extension)
 		if err != nil {
 			w.WriteHeader(http.StatusGone)
 			return
@@ -149,13 +150,13 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		rwToken := os.Getenv("READWISE_TOKEN")
+		rwToken := cfg.Readwise.Token
 		if rwToken == "" {
 			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
 			return
 		}
 
-		minifluxSecret := os.Getenv("MINIFLUX_WEBHOOK_SECRET")
+		minifluxSecret := cfg.Miniflux.WebhookSecret
 		if minifluxSecret == "" {
 			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
 			return
@@ -285,13 +286,13 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	mux.HandleFunc("/api/v4/readwise_ingest", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		rwToken := os.Getenv("READWISE_TOKEN")
+		rwToken := cfg.Readwise.Token
 		if rwToken == "" {
 			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
 			return
 		}
 
-		ingestSecret := os.Getenv("INGEST_SECRET")
+		ingestSecret := cfg.Gunslinger.SuperSecretToken
 		if ingestSecret == "" {
 			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
 			return
@@ -381,7 +382,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	})
 
 	mux.HandleFunc("/api/v4/readwise/tags", func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+		if cfg.Gunslinger.SuperSecretToken == "" {
 			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
 			return
 		}
@@ -390,7 +391,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}
-		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}
@@ -398,7 +399,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			renderJSONMessage(w, "That method is invalid for this endpoint")
 			return
 		}
-		tags, err := readwise.CountTags()
+		tags, err := readwise.CountTags(cfg)
 		if err != nil {
 			renderJSONMessage(w, "Something went wrong trying to count tags")
 			return
@@ -408,7 +409,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	})
 
 	mux.HandleFunc("/api/v4/readwise/document_counts", func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+		if cfg.Gunslinger.SuperSecretToken == "" {
 			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
 			return
 		}
@@ -417,7 +418,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}
-		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}
@@ -425,7 +426,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			renderJSONMessage(w, "That method is invalid for this endpoint")
 			return
 		}
-		documentCounts, err := readwise.GetDocumentCounts()
+		documentCounts, err := readwise.GetDocumentCounts(cfg)
 		if err != nil {
 			renderJSONMessage(w, "Something went wrong trying to count documents")
 			return
@@ -435,7 +436,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 	})
 
 	mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("SUPER_SECRET_TOKEN") == "" {
+		if cfg.Gunslinger.SuperSecretToken == "" {
 			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
 			return
 		}
@@ -444,7 +445,7 @@ func RegisterRoutes(mux *http.ServeMux, ps *playback.PlaybackSystem) http.Handle
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}
-		if qVal.Get("token") != os.Getenv("SUPER_SECRET_TOKEN") {
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
 			renderJSONMessage(w, "Your request was not authorized")
 			return
 		}

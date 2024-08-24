@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -51,10 +52,7 @@ func getArtFromApple(traktResponse NowPlayingResponse) (string, error) {
 	return coverUrl, nil
 }
 
-func GetCurrentlyListening(ps *playback.PlaybackSystem, client http.Client) {
-	traktBearerToken := utils.MustEnv("TRAKT_BEARER_TOKEN")
-	traktClientID := utils.MustEnv("TRAKT_CLIENT_ID")
-
+func GetCurrentlyListening(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
 	req, err := http.NewRequest("HEAD", traktListeningEndpoint, nil)
 	if err != nil {
 		slog.Error("Failed to build HEAD request for Traktcasts", slog.String("stack", err.Error()))
@@ -62,10 +60,10 @@ func GetCurrentlyListening(ps *playback.PlaybackSystem, client http.Client) {
 	}
 	req.Header = http.Header{
 		"Accept":            []string{"application/json"},
-		"Authorization":     []string{fmt.Sprintf("Bearer %s", traktBearerToken)},
+		"Authorization":     []string{fmt.Sprintf("Bearer %s", cfg.Trakt.BearerToken)},
 		"Content-Type":      []string{"application/json"},
 		"trakt-api-version": []string{"2"},
-		"trakt-api-key":     []string{traktClientID},
+		"trakt-api-key":     []string{cfg.Trakt.ClientId},
 		"User-Agent":        []string{utils.UserAgent},
 	}
 	res, err := client.Do(req)
@@ -185,7 +183,7 @@ func GetCurrentlyListening(ps *playback.PlaybackSystem, client http.Client) {
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(hash, image, extension); err != nil {
+	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for Steam",
 			slog.String("stack", err.Error()),
 			slog.String("guid", hash),

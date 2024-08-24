@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -40,9 +41,8 @@ type SteamAppDetail struct {
 	Developers  []string `json:"developers"`
 }
 
-func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
-	steamApiKey := utils.MustEnv("STEAM_TOKEN")
-	playingUrl := fmt.Sprintf(profileEndpoint, steamApiKey)
+func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
+	playingUrl := fmt.Sprintf(profileEndpoint, cfg.Steam.Token)
 
 	req, err := http.NewRequest("GET", playingUrl, nil)
 	if err != nil {
@@ -169,7 +169,7 @@ func GetCurrentlyPlaying(ps *playback.PlaybackSystem, client http.Client) {
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(hash, image, extension); err != nil {
+	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for Steam",
 			slog.String("stack", err.Error()),
 			slog.String("guid", hash),

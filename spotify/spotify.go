@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -29,27 +28,17 @@ import (
 	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
 const (
-	defaultRedirectUri = "http://localhost:8081/callback"
-	authURL            = "https://accounts.spotify.com/authorize"
-	tokenURL           = "https://accounts.spotify.com/api/token"
-	accessTokenID      = "spotify:accesstoken"
-	refreshTokenID     = "spotify:refreshtoken"
-)
-
-var (
-	redirectUri       = os.Getenv("SPOTIFY_REDIRECT_URI")
-	deviceId          = utils.MustEnv("SPOTIFY_DEVICE_ID")
-	clientID          = utils.MustEnv("SPOTIFY_CLIENT_ID")
-	clientSecret      = utils.MustEnv("SPOTIFY_CLIENT_SECRET")
-	username          = utils.MustEnv("SPOTIFY_USERNAME")
-	pushoverToken     = utils.MustEnv("PUSHOVER_TOKEN")
-	pushoverRecipient = utils.MustEnv("PUSHOVER_RECIPIENT")
+	authURL        = "https://accounts.spotify.com/authorize"
+	tokenURL       = "https://accounts.spotify.com/api/token"
+	accessTokenID  = "spotify:accesstoken"
+	refreshTokenID = "spotify:refreshtoken"
 )
 
 type ProductInfo struct {
@@ -75,6 +64,7 @@ func (pi ProductInfo) ImageUrl(fileId string) string {
 }
 
 type Client struct {
+	cfg          config.Config
 	sess         *session.Session
 	dealer       *dealer.Dealer
 	sp           *spclient.Spclient
@@ -94,12 +84,14 @@ type TokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
+func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) {
 	var client *Client
 	var err error
 
+	redirectUri := cfg.Spotify.RedirectUri
+
 	if redirectUri == "" {
-		redirectUri = defaultRedirectUri
+		panic("Empty redirect URI configured")
 	}
 
 	accessToken := store.GetTokenByID(accessTokenID)
@@ -107,7 +99,7 @@ func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 
 	if accessToken == "" || refreshToken == "" {
 		// Locally support using oauth instead of having a token (for server side)
-		accessToken, refreshToken, err = performOAuth2Flow(8081)
+		accessToken, refreshToken, err = performOAuth2Flow(cfg, 8081)
 		if err != nil {
 			slog.With("error", err).Error("failed to generate access tokens")
 		}
@@ -120,11 +112,11 @@ func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 		}
 	}
 
-	client, err = NewClient(deviceId, accessToken, refreshToken)
+	client, err = NewClient(cfg, accessToken, refreshToken)
 	if err != nil {
 		// we'll try oauth (which will ping my phone + let me auth remote) and see if we make it in time otherwise we'll need manual intervention
 		// also this should be made less repetitive but whatever
-		accessToken, refreshToken, err = performOAuth2Flow(8081)
+		accessToken, refreshToken, err = performOAuth2Flow(cfg, 8081)
 		if err != nil {
 			slog.With("error", err).Error("failed to perform oauth flow as fallback")
 			return
@@ -135,7 +127,7 @@ func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
 			slog.With("error", err).Error("failed to save refresh token")
 		}
-		client, err = NewClient(deviceId, accessToken, refreshToken)
+		client, err = NewClient(cfg, accessToken, refreshToken)
 		if err != nil {
 			slog.With("error", err).Error("failed to create spotify client and fallback to oauth")
 			return
@@ -144,13 +136,13 @@ func SetupSpotifyPoller(ps *playback.PlaybackSystem, store db.Store) {
 	client.Run(ps)
 }
 
-func NewClient(deviceId, accessToken, refreshToken string) (*Client, error) {
+func NewClient(cfg config.Config, accessToken, refreshToken string) (*Client, error) {
 
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
-		DeviceId:   deviceId,
+		DeviceId:   cfg.Spotify.DeviceId,
 		Credentials: session.SpotifyTokenCredentials{
-			Username: username, // You might need to fetch the username separately
+			Username: cfg.Spotify.Username, // You might need to fetch the username separately
 			Token:    accessToken,
 		},
 	}
@@ -161,6 +153,7 @@ func NewClient(deviceId, accessToken, refreshToken string) (*Client, error) {
 	}
 
 	client := &Client{
+		cfg:          cfg,
 		sess:         sess,
 		dealer:       sess.Dealer(),
 		sp:           sess.Spclient(),
@@ -174,13 +167,13 @@ func NewClient(deviceId, accessToken, refreshToken string) (*Client, error) {
 	return client, nil
 }
 
-func performOAuth2Flow(port int) (string, string, error) {
+func performOAuth2Flow(cfg config.Config, port int) (string, string, error) {
 	state := generateRandomString(16)
 	ch := make(chan *TokenResponse)
 	var srv *http.Server
 
-	pushoverApp := pushover.New(pushoverToken)
-	recipient := pushover.NewRecipient(pushoverRecipient)
+	pushoverApp := pushover.New(cfg.Pushover.Token)
+	recipient := pushover.NewRecipient(cfg.Pushover.Recipient)
 
 	// TODO: Ideally integrate with existing router to make life easier + support
 	// possibly oauth refreshing server side (for bootstrapping)
@@ -190,7 +183,7 @@ func performOAuth2Flow(port int) (string, string, error) {
 			return
 		}
 		code := r.URL.Query().Get("code")
-		token, err := exchangeCodeForToken(code)
+		token, err := exchangeCodeForToken(cfg, code)
 		if err != nil {
 			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
 			return
@@ -212,7 +205,7 @@ func performOAuth2Flow(port int) (string, string, error) {
 	}
 
 	url := fmt.Sprintf("%s?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&state=%s",
-		authURL, clientID, url.QueryEscape(strings.Join(scopes, " ")), url.QueryEscape(redirectUri), state)
+		authURL, cfg.Spotify.ClientId, url.QueryEscape(strings.Join(scopes, " ")), url.QueryEscape(cfg.Spotify.RedirectUri), state)
 
 	slog.With(slog.String("url", url)).Info("Please open the following URL in your browser")
 	message := &pushover.Message{
@@ -234,11 +227,11 @@ func performOAuth2Flow(port int) (string, string, error) {
 	return token.AccessToken, token.RefreshToken, nil
 }
 
-func exchangeCodeForToken(code string) (*TokenResponse, error) {
+func exchangeCodeForToken(cfg config.Config, code string) (*TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", redirectUri)
+	data.Set("redirect_uri", cfg.Spotify.RedirectUri)
 
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -246,7 +239,7 @@ func exchangeCodeForToken(code string) (*TokenResponse, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret)))
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(cfg.Spotify.ClientId+":"+cfg.Spotify.ClientSecret)))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -282,7 +275,7 @@ func (c *Client) refreshTokens() error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret)))
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(c.cfg.Spotify.ClientId+":"+c.cfg.Spotify.ClientSecret)))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -332,7 +325,7 @@ func (c *Client) tokenRefreshLoop() {
 }
 
 func (c *Client) reauthenticate() error {
-	accessToken, refreshToken, err := performOAuth2Flow(8888)
+	accessToken, refreshToken, err := performOAuth2Flow(c.cfg, 8888)
 	if err != nil {
 		return fmt.Errorf("failed to reauthenticate: %v", err)
 	}
@@ -346,9 +339,9 @@ func (c *Client) reauthenticate() error {
 
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
-		DeviceId:   deviceId,
+		DeviceId:   c.cfg.Spotify.DeviceId,
 		Credentials: session.SpotifyTokenCredentials{
-			Username: username,
+			Username: c.cfg.Spotify.Username,
 			Token:    c.accessToken,
 		},
 	}
@@ -407,7 +400,7 @@ func (c *Client) handleAccessPointPacket(pktType ap.PacketType, payload []byte) 
 func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) {
 	if strings.HasPrefix(msg.Uri, "hm://pusher/v1/connections/") {
 		spotConnId := msg.Headers["Spotify-Connection-Id"]
-		slog.With(slog.String("connection_id", spotConnId)).Info("Established connection to Spotify")
+		slog.With(slog.String("connection_id", spotConnId)).Debug("Established connection to Spotify")
 		// TODO: Generate own client ID
 		clientId := hex.EncodeToString([]byte{0x65, 0xb7, 0x8, 0x7, 0x3f, 0xc0, 0x48, 0xe, 0xa9, 0x2a, 0x7, 0x72, 0x33, 0xca, 0x87, 0xbd})
 		putStateReq := &connectpb.PutStateRequest{
@@ -518,7 +511,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 		}
 
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(hash, image, extension); err != nil {
+		if err := utils.SaveCover(c.cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Spotify",
 				slog.String("stack", err.Error()),
 				slog.String("guid", hash),

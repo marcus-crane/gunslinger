@@ -6,15 +6,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/marcus-crane/gunslinger/utils"
+	"github.com/marcus-crane/gunslinger/config"
 )
 
 const (
 	BooksURL = "https://readwise.io/api/v2/books/?page_size=1000"
-)
-
-var (
-	ReadwiseToken = utils.MustEnv("READWISE_TOKEN")
 )
 
 type BookList struct {
@@ -47,13 +43,13 @@ type TagResult struct {
 	TweetsTotal           int `json:"tweets_total"`
 }
 
-func CountTags() (TagResult, error) {
+func CountTags(cfg config.Config) (TagResult, error) {
 	var tagResult TagResult
 	req, err := http.NewRequest("GET", BooksURL, nil)
 	if err != nil {
 		return tagResult, err
 	}
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", ReadwiseToken))
+	req.Header.Add("Authorization", fmt.Sprintf("Token %s", cfg.Readwise.Token))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return tagResult, err

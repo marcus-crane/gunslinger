@@ -6,9 +6,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -53,7 +53,7 @@ type MangaCover struct {
 	ExtraLarge string `json:"extraLarge"`
 }
 
-func GetRecentlyReadManga(ps *playback.PlaybackSystem, store db.Store, client http.Client) {
+func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store db.Store, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
@@ -62,7 +62,7 @@ func GetRecentlyReadManga(ps *playback.PlaybackSystem, store db.Store, client ht
 	}
 	req.Header = http.Header{
 		"Accept":        []string{"application/json"},
-		"Authorization": []string{fmt.Sprintf("Bearer %s", os.Getenv("ANILIST_TOKEN"))},
+		"Authorization": []string{fmt.Sprintf("Bearer %s", cfg.Anilist.Token)},
 		"Content-Type":  []string{"application/json"},
 		"User-Agent":    []string{utils.UserAgent},
 	}
@@ -122,7 +122,7 @@ func GetRecentlyReadManga(ps *playback.PlaybackSystem, store db.Store, client ht
 		}
 
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(hash, image, extension); err != nil {
+		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Anilist",
 				slog.String("stack", err.Error()),
 				slog.String("guid", hash),

@@ -13,11 +13,11 @@ require (
 	github.com/chromedp/chromedp v0.9.5
 	github.com/devgianlu/go-librespot v0.0.18-0.20240809003521-803de1bd05cb
 	github.com/go-co-op/gocron v1.36.1
+	github.com/golobby/dotenv v1.3.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.4.0
 	github.com/gregdel/pushover v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/joho/godotenv v1.5.1
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/pressly/goose/v3 v3.16.0
@@ -39,6 +39,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.2 // indirect
+	github.com/golobby/cast v1.3.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect

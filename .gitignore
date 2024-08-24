@@ -20,4 +20,6 @@ server
 
 gunslinger
 
-v2/.env
+*.db
+*.db-shm
+*.db-wal
