@@ -38,6 +38,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/devgianlu/go-librespot v0.0.18-0.20240903131419-b98dad6c894b h1:VchvluF6A2toUPkKdfC+GOH1M2skpJtW/iW9j33Hn8M=
 github.com/devgianlu/go-librespot v0.0.18-0.20240903131419-b98dad6c894b/go.mod h1:4ybcSiGtQS2WPVQTyY7lfLVSanasoJkhIYC4VxKn4+I=
+github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941 h1:a1S+0exehEKzj+kdB20AiMKvB0mjay29BqLYp8UN2bg=
+github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941/go.mod h1:4ybcSiGtQS2WPVQTyY7lfLVSanasoJkhIYC4VxKn4+I=
 github.com/devgianlu/shannon v0.0.0-20230613115856-82ec90b7fa7e h1:OoETp+L//8ZDtd5BWKaogHQjgA104yF4a2yqjfaG3mE=
 github.com/devgianlu/shannon v0.0.0-20230613115856-82ec90b7fa7e/go.mod h1:m5DMFz6BcaKJwxxPaSh9MxwPzK2GPSt1KRFC8Imf0ik=
 github.com/docker/cli v24.0.7+incompatible h1:wa/nIwYFW7BVTGa7SWPVyyXU9lgORqUb1xfI36MSkFg=
