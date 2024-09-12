@@ -11,7 +11,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
 	github.com/chromedp/chromedp v0.9.5
-	github.com/devgianlu/go-librespot v0.0.18-0.20240817112107-84b3c3febd5d
+	github.com/devgianlu/go-librespot v0.0.18-0.20240819135856-888787f94e6c
 	github.com/go-co-op/gocron v1.36.1
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
