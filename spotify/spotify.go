@@ -362,6 +362,9 @@ func (c *Client) reauthenticate() error {
 }
 
 func (c *Client) Run(ps *playback.PlaybackSystem) {
+	if err := c.sess.Dealer().Connect(); err != nil {
+		slog.With(slog.String("error", err.Error())).Error("Failed to connect to dealer")
+	}
 	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
 	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
 
