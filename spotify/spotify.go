@@ -23,6 +23,7 @@ import (
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
+	"github.com/go-co-op/gocron"
 
 	"github.com/gregdel/pushover"
 	"golang.org/x/exp/rand"
@@ -369,6 +370,13 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
 	reqRecv := c.sess.Dealer().ReceiveRequest("hm://connect-state/v1/player/command")
 
+	// Not sure if there is a way to poll Spotify for live state so instead we'll just
+	// fake it by incrementing in the background. Could do this client side but less
+	// futzing with Javascript if we just do it this side and kinda nicer API experience.
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(5).Seconds().Do(c.rehydratePlaybackState, ps)
+	s.StartAsync()
+
 	for {
 		select {
 		case pkt := <-apRecv:
@@ -378,6 +386,54 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 		case req := <-reqRecv:
 			c.handleDealerRequest(req, ps)
 		}
+	}
+}
+
+func (c *Client) rehydratePlaybackState(ps *playback.PlaybackSystem) {
+	playbackState, err := ps.GetActivePlaybackBySource(string(playback.Spotify))
+	if err != nil {
+		return
+	}
+	if len(playbackState) != 1 {
+		// Shouldn't be possible but not sure what to do here
+		return
+	}
+	state := playbackState[0]
+	if state.Status != playback.StatusPlaying {
+		slog.Debug("rehydration: status was not playing so skipping")
+		return
+	}
+	if state.CreatedAt.After(time.Now()) {
+		slog.Debug("rehydration: created at time was after now")
+		// should be impossible but we'll bail out since time travel is impossible
+		return
+	}
+	projectedElapsed := time.Now().Sub(state.CreatedAt)
+	projectedElapsedMs := int(projectedElapsed.Milliseconds())
+	if projectedElapsedMs >= state.Duration {
+		slog.Debug("rehydration: elapsed projected would be equal or after duration",
+			slog.Int("totalElapsed", projectedElapsedMs),
+			slog.Int("duration", state.Duration))
+		// we seem to have surpassed the end of the song so do nothing
+		return
+	}
+	fakeUpdate := playback.Update{
+		MediaItem: playback.MediaItem{
+			Title:           state.Title,
+			Subtitle:        state.Subtitle,
+			Category:        state.Category,
+			Duration:        state.Duration,
+			Source:          state.Source,
+			Image:           state.Image,
+			DominantColours: state.DominantColours,
+		},
+		Elapsed: projectedElapsed,
+		Status:  state.Status,
+	}
+	if err := ps.UpdatePlaybackState(fakeUpdate); err != nil {
+		slog.Error("Failed to save Spotify update",
+			slog.String("stack", err.Error()),
+			slog.String("title", fakeUpdate.MediaItem.Title))
 	}
 }
 
