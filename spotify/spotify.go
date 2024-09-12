@@ -412,7 +412,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			PutStateReason:      connectpb.PutStateReason_NEW_DEVICE,
 			Device: &connectpb.Device{
 				DeviceInfo: &connectpb.DeviceInfo{
-					Name:                  "Gunslinger",
+					Name:                  c.cfg.Spotify.ConnectPlayerName,
 					Volume:                0,
 					CanPlay:               false,
 					DeviceType:            devicespb.DeviceType_SMARTWATCH,

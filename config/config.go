@@ -48,11 +48,12 @@ type ReadwiseConfig struct {
 }
 
 type SpotifyConfig struct {
-	ClientId     string `env:"SPOTIFY_CLIENT_ID"`
-	ClientSecret string `env:"SPOTIFY_CLIENT_SECRET"`
-	DeviceId     string `env:"SPOTIFY_DEVICE_ID"`
-	RedirectUri  string `env:"SPOTIFY_REDIRECT_URI"`
-	Username     string `env:"SPOTIFY_USERNAME"`
+	ConnectPlayerName string `env:"SPOTIFY_CONNECT_PLAYER_NAME"`
+	ClientId          string `env:"SPOTIFY_CLIENT_ID"`
+	ClientSecret      string `env:"SPOTIFY_CLIENT_SECRET"`
+	DeviceId          string `env:"SPOTIFY_DEVICE_ID"`
+	RedirectUri       string `env:"SPOTIFY_REDIRECT_URI"`
+	Username          string `env:"SPOTIFY_USERNAME"`
 }
 
 type SteamConfig struct {
