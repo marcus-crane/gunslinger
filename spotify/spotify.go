@@ -367,6 +367,7 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 	}
 	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
 	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
+	reqRecv := c.sess.Dealer().ReceiveRequest("hm://connect-state/v1/player/command")
 
 	for {
 		select {
@@ -374,7 +375,32 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 			c.handleAccessPointPacket(pkt.Type, pkt.Payload)
 		case msg := <-msgChan:
 			c.handleMessage(msg, ps)
+		case req := <-reqRecv:
+			c.handleDealerRequest(req, ps)
 		}
+	}
+}
+
+func (c *Client) handleDealerRequest(req dealer.Request, ps *playback.PlaybackSystem) {
+	slog.With("uri", req.MessageIdent).Info("received request from spotify")
+	switch req.MessageIdent {
+	case "hm://connect-state/v1/player/command":
+		c.handlePlayerCommand(req.Payload, ps)
+	default:
+		slog.With(slog.String("ident", req.MessageIdent)).Warn("unknown dealer request: %s")
+	}
+}
+
+func (c *Client) handlePlayerCommand(req dealer.RequestPayload, _ *playback.PlaybackSystem) {
+	switch req.Command.Endpoint {
+	case "transfer":
+		var transferState connectpb.TransferState
+		if err := proto.Unmarshal(req.Command.Data, &transferState); err != nil {
+			slog.With(slog.String("error", err.Error())).Error("failed unmarshalling TransferState")
+		}
+		slog.With(slog.String("command", "transfer")).Info(transferState.GetPlayback().GetCurrentTrack().String())
+	default:
+		slog.With(slog.String("endpoint", req.Command.Endpoint)).Error("unsupported player command")
 	}
 }
 
@@ -401,6 +427,7 @@ func (c *Client) handleAccessPointPacket(pktType ap.PacketType, payload []byte) 
 }
 
 func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) {
+	slog.With("uri", msg.Uri).Info("received message from spotify")
 	if strings.HasPrefix(msg.Uri, "hm://pusher/v1/connections/") {
 		spotConnId := msg.Headers["Spotify-Connection-Id"]
 		slog.With(slog.String("connection_id", spotConnId)).Debug("Established connection to Spotify")
@@ -429,9 +456,12 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 						CommandAcks:             true,
 						DisableVolume:           true,
 						ConnectDisabled:         false,
+						SupportsPlaylistV2:      true,
 						Hidden:                  false,
 						NeedsFullPlayerState:    false,
 						SupportsTransferCommand: false,
+						SupportsCommandRequest:  true,
+						SupportsGzipPushes:      true,
 						ConnectCapabilities:     "",
 					},
 				},
