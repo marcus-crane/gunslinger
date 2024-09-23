@@ -55,6 +55,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		"Content-Type": []string{"application/json"},
 		"User-Agent":   []string{utils.UserAgent},
 	}
+	slog.Info("RA: Built request. About to request")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		slog.Error("Failed to contact RetroAchievements for updates",
@@ -62,6 +63,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		)
 		return
 	}
+	slog.Info("Got RA response back", slog.String("status", res.Status))
 	if res.StatusCode != 200 {
 		slog.Error("Received a non-200 status code from Retroachievements",
 			slog.String("status", res.Status),
