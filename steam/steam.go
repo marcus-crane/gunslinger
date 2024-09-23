@@ -78,6 +78,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		slog.Error("Error fetching Steam data",
 			slog.String("stack", err.Error()),
 		)
+		return
 	}
 
 	if len(steamResponse.Response.Players) == 0 {
