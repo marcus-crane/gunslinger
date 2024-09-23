@@ -88,7 +88,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	var lastPlayed RecentlyPlayedGame
 	slog.Info("Found recently played titles",
-		slog.Int("count", len(raProfile.RecentlyPlayed))
+		slog.Int("count", len(raProfile.RecentlyPlayed)),
 	)
 	for i, game := range raProfile.RecentlyPlayed {
 		if i == 0 {
@@ -117,7 +117,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 
 	slog.Info("Saw a recently played title on RA",
-		slog.String("last_seen", lastPlayed.LastPlayed)
+		slog.String("last_seen", lastPlayed.LastPlayed),
 	)
 
 	minutesSinceLastSeen := time.Now().UTC().Sub(lastSeen)
