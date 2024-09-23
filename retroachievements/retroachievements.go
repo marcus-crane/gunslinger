@@ -102,7 +102,10 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 
-	if time.Now().Sub(lastSeen).Minutes() >= 3 {
+	minutesSinceLastSeen := time.Now().UTC().Sub(lastSeen)
+
+	if minutesSinceLastSeen.Minutes() >= 3 {
+		slog.With(slog.String("last_seen", lastPlayed.LastPlayed), slog.String("minutes_passed", minutesSinceLastSeen.String())).Info("Not seen active on RA for period. Deactivating...")
 		// If we haven't seen this game in at least 5 minutes, we assume we're not playing anymore.
 		// RA appears to update each minute while connected via WiFi so this should be more than enough.
 		ps.DeactivateBySource(string(playback.RetroAchievements))
