@@ -85,6 +85,9 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 	var lastPlayed RecentlyPlayedGame
+	slog.Info("Found recently played titles",
+		slog.Int("count", len(raProfile.RecentlyPlayed))
+	)
 	for i, game := range raProfile.RecentlyPlayed {
 		if i == 0 {
 			lastPlayed = game
@@ -92,11 +95,13 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	// Somehow we got nothing played recently
 	if lastPlayed.GameID == 0 {
+		slog.Info("Found no last played title for RA")
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
 
 	if raProfile.LastGame.ID != lastPlayed.GameID {
+		slog.Info("Last played segment for RA didn't match latest entry in history list")
 		// We know the last game but seemingly a newer game exists. We need the timestamp to know whether it's active.
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
@@ -108,6 +113,10 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
+
+	slog.Info("Saw a recently played title on RA",
+		slog.String("last_seen", lastPlayed.LastPlayed)
+	)
 
 	minutesSinceLastSeen := time.Now().UTC().Sub(lastSeen)
 
