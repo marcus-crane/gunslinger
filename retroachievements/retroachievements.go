@@ -41,7 +41,7 @@ type LastPlayedGame struct {
 }
 
 func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
-	slog.Info("Processing Retroachievements")
+	slog.Debug("Processing Retroachievements")
 	url := fmt.Sprintf(ProfileURL, cfg.RetroAchievements.Username, cfg.RetroAchievements.Token)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -55,7 +55,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		"Content-Type": []string{"application/json"},
 		"User-Agent":   []string{utils.UserAgent},
 	}
-	slog.Info("RA: Built request. About to request")
+	slog.Debug("RA: Built request. About to request")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		slog.Error("Failed to contact RetroAchievements for updates",
@@ -63,7 +63,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		)
 		return
 	}
-	slog.Info("Got RA response back", slog.String("status", res.Status))
+	slog.Debug("Got RA response back", slog.String("status", res.Status))
 	if res.StatusCode != 200 {
 		slog.Error("Received a non-200 status code from Retroachievements",
 			slog.String("status", res.Status),
@@ -87,7 +87,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 	var lastPlayed RecentlyPlayedGame
-	slog.Info("Found recently played titles",
+	slog.Debug("Found recently played titles",
 		slog.Int("count", len(raProfile.RecentlyPlayed)),
 	)
 	for i, game := range raProfile.RecentlyPlayed {
@@ -97,38 +97,38 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	// Somehow we got nothing played recently
 	if lastPlayed.GameID == 0 {
-		slog.Info("Found no last played title for RA")
+		slog.Debug("Found no last played title for RA")
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
 
-    slog.Info("Found title", slog.String("game_id, lastPlayed.GameID))
+	slog.Debug("Found title", slog.Int("game_id", lastPlayed.GameID))
 
 	if raProfile.LastGame.ID != lastPlayed.GameID {
-		slog.Info("Last played segment for RA didn't match latest entry in history list")
+		slog.Debug("Last played segment for RA didn't match latest entry in history list")
 		// We know the last game but seemingly a newer game exists. We need the timestamp to know whether it's active.
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
 
-	lastSeen, err := time.Parse("2006-01-02 03:04:05", lastPlayed.LastPlayed)
+	lastSeen, err := time.Parse("2006-01-02 15:04:05", lastPlayed.LastPlayed)
 	if err != nil {
-        slog.Error("Failed to parse time for last seen",
-            slog.String("last_seen", lastPlayed.LastPlayed),
-        )
+		slog.Error("Failed to parse time for last seen",
+			slog.String("last_seen", lastPlayed.LastPlayed),
+		)
 		// We have no idea when this was last played so assume it was ages ago
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
 
-	slog.Info("Saw a recently played title on RA",
+	slog.Debug("Saw a recently played title on RA",
 		slog.String("last_seen", lastPlayed.LastPlayed),
 	)
 
 	minutesSinceLastSeen := time.Now().UTC().Sub(lastSeen)
 
 	if minutesSinceLastSeen.Minutes() >= 3 {
-		slog.With(slog.String("last_seen", lastPlayed.LastPlayed), slog.String("minutes_passed", minutesSinceLastSeen.String())).Info("Not seen active on RA for period. Deactivating...")
+		slog.With(slog.String("last_seen", lastPlayed.LastPlayed), slog.String("minutes_passed", minutesSinceLastSeen.String())).Debug("Not seen active on RA for period. Deactivating...")
 		// If we haven't seen this game in at least 5 minutes, we assume we're not playing anymore.
 		// RA appears to update each minute while connected via WiFi so this should be more than enough.
 		ps.DeactivateBySource(string(playback.RetroAchievements))
