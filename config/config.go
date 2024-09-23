@@ -6,15 +6,16 @@ import (
 )
 
 type Config struct {
-	Anilist    AnilistConfig
-	Gunslinger GunslingerConfig
-	Miniflux   MinifluxConfig
-	Plex       PlexConfig
-	Pushover   PushoverConfig
-	Readwise   ReadwiseConfig
-	Spotify    SpotifyConfig
-	Steam      SteamConfig
-	Trakt      TraktConfig
+	Anilist           AnilistConfig
+	Gunslinger        GunslingerConfig
+	Miniflux          MinifluxConfig
+	Plex              PlexConfig
+	Pushover          PushoverConfig
+	Readwise          ReadwiseConfig
+	RetroAchievements RetroAchievementsConfig
+	Spotify           SpotifyConfig
+	Steam             SteamConfig
+	Trakt             TraktConfig
 }
 
 type AnilistConfig struct {
@@ -45,6 +46,11 @@ type PushoverConfig struct {
 
 type ReadwiseConfig struct {
 	Token string `env:"READWISE_TOKEN"`
+}
+
+type RetroAchievementsConfig struct {
+	Username string `env:"RETROACHIEVEMENTS_USERNAME"`
+	Token    string `env:"RETROACHIEVEMENTS_TOKEN"`
 }
 
 type SpotifyConfig struct {
