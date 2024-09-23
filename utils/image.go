@@ -87,6 +87,10 @@ func colorToHexString(c color.Color) string {
 }
 
 func LoadCover(cfg config.Config, hash string, extension string) (string, error) {
+	// TODO: Properly standardise on webp or something
+	if strings.Contains(hash, "retroachievements") {
+		extension = "png"
+	}
 	coverLocation := fmt.Sprintf("%s/%s.%s", cfg.Gunslinger.StorageDir, strings.ReplaceAll(hash, ":", "."), extension)
 	slog.With(slog.String("cover_location", coverLocation)).Debug("Loading cover from disc")
 	img, err := os.ReadFile(coverLocation)
