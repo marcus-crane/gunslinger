@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/playback"
@@ -90,6 +91,20 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if raProfile.LastGame.ID != lastPlayed.GameID {
 		// We know the last game but seemingly a newer game exists. We need the timestamp to know whether it's active.
+		ps.DeactivateBySource(string(playback.RetroAchievements))
+		return
+	}
+
+	lastSeen, err := time.Parse("2006-01-02 03:04:05", lastPlayed.LastPlayed)
+	if err != nil {
+		// We have no idea when this was last played so assume it was ages ago
+		ps.DeactivateBySource(string(playback.RetroAchievements))
+		return
+	}
+
+	if time.Now().Sub(lastSeen).Minutes() >= 5 {
+		// If we haven't seen this game in at least 5 minutes, we assume we're not playing anymore.
+		// RA appears to update each minute while connected via WiFi so this should be more than enough.
 		ps.DeactivateBySource(string(playback.RetroAchievements))
 		return
 	}
