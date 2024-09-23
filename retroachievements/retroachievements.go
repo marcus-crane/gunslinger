@@ -41,6 +41,7 @@ type LastPlayedGame struct {
 }
 
 func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
+	slog.Info("Processing Retroachievements")
 	url := fmt.Sprintf(ProfileURL, cfg.RetroAchievements.Username, cfg.RetroAchievements.Token)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -58,6 +59,12 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	if err != nil {
 		slog.Error("Failed to contact RetroAchievements for updates",
 			slog.String("stack", err.Error()),
+		)
+		return
+	}
+	if res.StatusCode != 200 {
+		slog.Error("Received a non-200 status code from Retroachievements",
+			slog.String("status", res.Status),
 		)
 		return
 	}
@@ -145,6 +152,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		slog.Error("Failed to save RetroAchievements update",
 			slog.String("stack", err.Error()),
 			slog.String("title", update.MediaItem.Title))
+		return
 	}
 
 	hash := playback.GenerateMediaID(&update)
@@ -154,5 +162,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+		return
 	}
 }
