@@ -29,7 +29,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: "marcus-crane/gunslinger:latest,marcus-crane/gunslinger:${{ steps.slug.outputs.sha7 }}"
+          tags: |
+            ghcr.io/marcus-crane/gunslinger:latest
+            ghcr.io/marcus-crane/gunslinger:${{ steps.slug.outputs.sha7 }}
       - uses: superfly/flyctl-actions@v1.4
         with:
           args: "deploy"
