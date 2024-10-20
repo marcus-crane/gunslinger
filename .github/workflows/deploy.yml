@@ -32,6 +32,6 @@ jobs:
           tags: |
             ghcr.io/marcus-crane/gunslinger:latest
             ghcr.io/marcus-crane/gunslinger:${{ steps.slug.outputs.sha7 }}
-      - uses: superfly/flyctl-actions@v1.4
+      - uses: superfly/flyctl-actions@1.5
         with:
           args: "deploy"
