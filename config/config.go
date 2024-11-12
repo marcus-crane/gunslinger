@@ -74,9 +74,6 @@ type TraktConfig struct {
 
 func (c *Config) GetLogLevel() slog.Leveler {
 	logLevel := strings.ToLower(c.Gunslinger.LogLevel)
-	if logLevel == "" {
-		return nil // info is the default
-	}
 	if logLevel == "error" {
 		return slog.LevelError
 	}
