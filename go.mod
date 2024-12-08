@@ -1,15 +1,15 @@
 module github.com/marcus-crane/gunslinger
 
-go 1.22.2
+go 1.23
 
-toolchain go1.22.5
+toolchain go1.23.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/alexellis/hmac/v2 v2.0.0
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
+	github.com/chromedp/cdproto v0.0.0-20241202193831-ec840381567d
 	github.com/chromedp/chromedp v0.9.5
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
 	github.com/go-co-op/gocron v1.36.1
@@ -33,7 +33,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/chromedp/sysutil v1.0.0 // indirect
+	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/devgianlu/shannon v0.0.0-20230613115856-82ec90b7fa7e // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
