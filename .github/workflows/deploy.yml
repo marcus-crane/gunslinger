@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - main
-env:
-  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 jobs:
   deploy:
     name: Deploy gunslinger
@@ -32,6 +30,7 @@ jobs:
           tags: |
             ghcr.io/marcus-crane/gunslinger:latest
             ghcr.io/marcus-crane/gunslinger:${{ steps.slug.outputs.sha7 }}
-      - uses: superfly/flyctl-actions@v1.4
-        with:
-          args: "deploy"
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: "flyctl deploy"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
