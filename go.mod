@@ -12,10 +12,11 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20241202193831-ec840381567d
 	github.com/chromedp/chromedp v0.9.5
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
-	github.com/go-co-op/gocron v1.36.1
+	github.com/go-co-op/gocron v1.37.0
+	github.com/go-co-op/gocron/v2 v2.12.4
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/gregdel/pushover v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/marekm4/color-extractor v1.2.1
@@ -23,7 +24,7 @@ require (
 	github.com/pressly/goose/v3 v3.16.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
 	google.golang.org/protobuf v1.31.0
 	modernc.org/sqlite v1.27.0
