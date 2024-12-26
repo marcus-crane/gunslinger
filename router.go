@@ -489,7 +489,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "http://localhost:8080", "https://utf9k.pages.dev", "https://b.utf9k.net"},
+    AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
