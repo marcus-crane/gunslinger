@@ -24,7 +24,7 @@ require (
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	google.golang.org/protobuf v1.31.0
 	modernc.org/sqlite v1.27.0
 )
