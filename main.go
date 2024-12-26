@@ -72,10 +72,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	jobScheduler := SetupInBackground(cfg, ps, &store)
+	jobScheduler, err := SetupInBackground(cfg, ps, &store)
+	if err != nil {
+		slog.Error("Failed to start up scheduler", slog.String("stack", err.Error()))
+		os.Exit(1)
+	}
 
 	if cfg.Gunslinger.BackgroundJobsEnabled {
-		jobScheduler.StartAsync()
+		jobScheduler.Start()
 		slog.Debug("Background jobs have started up in the background.")
 	} else {
 		slog.Debug("Background jobs are disabled.")
@@ -88,8 +92,8 @@ func main() {
 	slog.Info("Gunslinger is running at http://localhost:8080")
 
 	if err := http.ListenAndServe(":8080", router); err != nil {
-		slog.Error("", slog.String("stack", err.Error()))
-		jobScheduler.Stop()
+		slog.Error("Failed while serving", slog.String("stack", err.Error()))
+		_ = jobScheduler.Shutdown()
 		os.Exit(1)
 	}
 }

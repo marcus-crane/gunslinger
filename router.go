@@ -424,7 +424,6 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			return
 		}
 		json.NewEncoder(w).Encode(tags)
-		return
 	})
 
 	mux.HandleFunc("/api/v4/readwise/document_counts", func(w http.ResponseWriter, r *http.Request) {
@@ -451,7 +450,6 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			return
 		}
 		json.NewEncoder(w).Encode(documentCounts)
-		return
 	})
 
 	mux.HandleFunc("/api/v4/item", func(w http.ResponseWriter, r *http.Request) {

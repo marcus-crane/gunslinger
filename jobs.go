@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/marcus-crane/gunslinger/anilist"
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/db"
@@ -16,22 +16,43 @@ import (
 	"github.com/marcus-crane/gunslinger/trakt"
 )
 
-func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) *gocron.Scheduler {
-	s := gocron.NewScheduler(time.UTC)
+func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) (gocron.Scheduler, error) {
+	s, err := gocron.NewScheduler(gocron.WithLocation(time.UTC))
+	if err != nil {
+		return nil, err
+	}
 
 	client := http.Client{}
 
 	go spotify.SetupSpotifyPoller(cfg, ps, store)
 
-	s.Every(1).Minutes().Do(retroachievements.GetCurrentlyPlaying, cfg, ps, client)
-	s.Every(1).Seconds().Do(plex.GetCurrentlyPlaying, cfg, ps, client)
-	s.Every(15).Seconds().Do(anilist.GetRecentlyReadManga, ps, store, client) // Rate limit: 90 req/sec
-	s.Every(15).Seconds().Do(steam.GetCurrentlyPlaying, cfg, ps, client)
-	s.Every(15).Seconds().Do(trakt.GetCurrentlyPlaying, cfg, ps, client)
-	s.Every(15).Seconds().Do(trakt.GetCurrentlyListening, cfg, ps, client)
+	s.NewJob(
+		gocron.DurationJob(time.Minute),
+		gocron.NewTask(retroachievements.GetCurrentlyPlaying, cfg, ps, client),
+	)
+
+	s.NewJob(
+		gocron.DurationJob(time.Second),
+		gocron.NewTask(plex.GetCurrentlyPlaying, cfg, ps, client),
+	)
+
+	s.NewJob(
+		gocron.DurationJob(time.Second*15),
+		gocron.NewTask(anilist.GetRecentlyReadManga, ps, store, client), // Rate limit: 90 req/sec
+	)
+
+	s.NewJob(
+		gocron.DurationJob(time.Second*15),
+		gocron.NewTask(steam.GetCurrentlyPlaying, cfg, ps, client),
+	)
+
+	s.NewJob(
+		gocron.DurationJob(time.Second*15),
+		gocron.NewTask(trakt.GetCurrentlyPlaying, cfg, ps, client),
+	)
 
 	// If we're redeployed, we'll populate the latest state
 	ps.RefreshCurrentPlayback()
 
-	return s
+	return s, nil
 }
