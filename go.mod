@@ -12,7 +12,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20241202193831-ec840381567d
 	github.com/chromedp/chromedp v0.9.5
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
-	github.com/go-co-op/gocron v1.36.1
+	github.com/go-co-op/gocron v1.37.0
 	github.com/go-co-op/gocron/v2 v2.14.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
