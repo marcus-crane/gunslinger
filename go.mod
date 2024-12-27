@@ -12,7 +12,6 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20241202193831-ec840381567d
 	github.com/chromedp/chromedp v0.9.5
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
-	github.com/go-co-op/gocron v1.36.1
 	github.com/go-co-op/gocron/v2 v2.14.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
@@ -57,7 +56,6 @@ require (
 	github.com/sethvargo/go-retry v0.2.4 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/xlab/vorbis-go v0.0.0-20210911202351-b5b85f1ec645 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.30.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
