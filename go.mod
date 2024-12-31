@@ -2,7 +2,7 @@ module github.com/marcus-crane/gunslinger
 
 go 1.23
 
-toolchain go1.23.3
+toolchain go1.23.4
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -11,7 +11,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/chromedp/cdproto v0.0.0-20241222144035-c16d098c0fb6
 	github.com/chromedp/chromedp v0.11.2
-	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
+	github.com/devgianlu/go-librespot v0.1.3
 	github.com/go-co-op/gocron/v2 v2.14.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
