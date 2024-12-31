@@ -23,7 +23,7 @@ import (
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 
 	"github.com/gregdel/pushover"
 	"golang.org/x/exp/rand"
@@ -373,9 +373,14 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 	// Not sure if there is a way to poll Spotify for live state so instead we'll just
 	// fake it by incrementing in the background. Could do this client side but less
 	// futzing with Javascript if we just do it this side and kinda nicer API experience.
-	s := gocron.NewScheduler(time.UTC)
-	s.Every(5).Seconds().Do(c.rehydratePlaybackState, ps)
-	s.StartAsync()
+	s, _ := gocron.NewScheduler(gocron.WithLocation(time.UTC))
+
+	s.NewJob(
+		gocron.DurationJob(time.Second*5),
+		gocron.NewTask(c.rehydratePlaybackState, ps),
+	)
+
+	s.Start()
 
 	for {
 		select {
