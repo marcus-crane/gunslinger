@@ -83,77 +83,8 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		renderJSONMessage(w, "This is the base of Gunslinger's various APIs")
 	})
 
-	mux.HandleFunc("/api/v3", func(w http.ResponseWriter, r *http.Request) {
-		renderJSONMessage(w, "This is the v3 endpoint of the API")
-	})
-
 	mux.HandleFunc("/api/v4", func(w http.ResponseWriter, r *http.Request) {
 		renderJSONMessage(w, "This is the v4 endpoint of the API")
-	})
-
-	mux.HandleFunc("/api/v3/playing", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if len(ps.State) == 0 {
-			// If nothing is playing, we'll return the most recent item
-			results, err := ps.GetHistory(1)
-			if err != nil {
-				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-				return
-			}
-			if len(results) == 0 {
-				json.NewEncoder(w).Encode(playback.FullPlaybackEntry{})
-				return
-			}
-			for i, result := range results {
-				results[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
-			}
-			json.NewEncoder(w).Encode(results[0])
-			return
-		}
-		mutatingState := ps.State
-		for i, result := range mutatingState {
-			mutatingState[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
-		}
-		json.NewEncoder(w).Encode(mutatingState[0])
-	})
-
-	mux.HandleFunc("/api/v3/sessions", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(&events.Sessions{SessionsSeen: events.SessionsSeen, ActiveSessions: events.ActiveSessions})
-	})
-
-	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		var response []models.ResponseMediaItem
-		// If nothing is playing, the "now playing" will likely be the same as the
-		// first history item so we skip it if now playing and index 0 of history match.
-		// We don't fully do an offset jump though as an item is only committed to the DB
-		// when it changes to inactive so we don't want to hide a valid item in that state
-		results, err := ps.GetHistory(7)
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-		if len(results) == 0 {
-			json.NewEncoder(w).Encode([]string{})
-			return
-		}
-		for _, item := range results {
-			// A valid case is when I just listen to the same song over and over so
-			// we need to ensure we're in the right state to skip historical items
-			rItem := models.ResponseMediaItem{
-				OccuredAt:       time.Unix(item.CreatedAt.Unix(), 0).Format(time.RFC3339),
-				Title:           item.Title,
-				Subtitle:        item.Subtitle,
-				Category:        item.Category,
-				Source:          item.Source,
-				Image:           "/static/" + strings.ReplaceAll(item.ID, ":", ".") + ".jpeg",
-				Duration:        item.Duration,
-				DominantColours: item.DominantColours,
-			}
-			response = append(response, rItem)
-		}
-		json.NewEncoder(w).Encode(response)
 	})
 
 	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
@@ -489,7 +420,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
 
 	c := cors.New(cors.Options{
-    AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},
+		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},
 		AllowedMethods: []string{"GET"},
 		AllowedHeaders: []string{"Origin, Content-Type, Accept"},
 	})
