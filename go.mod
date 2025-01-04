@@ -9,7 +9,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/alexellis/hmac/v2 v2.0.0
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/chromedp/cdproto v0.0.0-20241222144035-c16d098c0fb6
+	github.com/chromedp/cdproto v0.0.0-20250101192427-60a0ca35cb84
 	github.com/chromedp/chromedp v0.11.2
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
 	github.com/go-co-op/gocron/v2 v2.14.0
