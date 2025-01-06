@@ -57,7 +57,7 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
-		slog.Error("Failed to build Anilist manga payload", slog.String("stack", err.Error()))
+		slog.Error("Failed to build Anilist manga payload", slog.String("error", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -68,20 +68,20 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		slog.Error("Failed to contact Anilist for manga updates", slog.String("stack", err.Error()))
+		slog.Error("Failed to contact Anilist for manga updates", slog.String("error", err.Error()))
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		slog.Error("Failed to read Anilist response", slog.String("stack", err.Error()))
+		slog.Error("Failed to read Anilist response", slog.String("error", err.Error()))
 		return
 	}
 	var anilistResponse AnilistResponse
 
 	if err = json.Unmarshal(body, &anilistResponse); err != nil {
-		slog.Error("Error fetching Anilist data", slog.String("stack", err.Error()))
+		slog.Error("Error fetching Anilist data", slog.String("error", err.Error()))
 		return
 	}
 
@@ -93,7 +93,7 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 		image, extension, domColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
 		if err != nil {
 			slog.Error("Failed to extract image content",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("image_url", activity.Media.CoverImage.ExtraLarge),
 			)
 			return
@@ -117,14 +117,14 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Anilist update",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("title", update.MediaItem.Title))
 		}
 
 		hash := playback.GenerateMediaID(&update)
 		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Anilist",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)

@@ -45,7 +45,7 @@ func main() {
 
 	db, err := sqlx.Connect("sqlite", cfg.Gunslinger.DbPath)
 	if err != nil {
-		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+		slog.Error("Failed to create connection to DB", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -63,18 +63,18 @@ func main() {
 	goose.SetBaseFS(migrations.GetMigrations())
 
 	if err := goose.SetDialect(string(goose.DialectSQLite3)); err != nil {
-		slog.Error("Failed to set goose dialect", slog.String("stack", err.Error()))
+		slog.Error("Failed to set goose dialect", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	if err := goose.Up(db.DB, "."); err != nil {
-		slog.Error("Failed to create connection to DB", slog.String("stack", err.Error()))
+		slog.Error("Failed to create connection to DB", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	jobScheduler, err := SetupInBackground(cfg, ps, &store)
 	if err != nil {
-		slog.Error("Failed to start up scheduler", slog.String("stack", err.Error()))
+		slog.Error("Failed to start up scheduler", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -92,7 +92,7 @@ func main() {
 	slog.Info("Gunslinger is running at http://localhost:8080")
 
 	if err := http.ListenAndServe(":8080", router); err != nil {
-		slog.Error("Failed while serving", slog.String("stack", err.Error()))
+		slog.Error("Failed while serving", slog.String("error", err.Error()))
 		_ = jobScheduler.Shutdown()
 		os.Exit(1)
 	}

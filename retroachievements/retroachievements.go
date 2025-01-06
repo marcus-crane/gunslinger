@@ -46,7 +46,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		slog.Error("Failed to prepare RetroAchievements request",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -59,7 +59,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		slog.Error("Failed to contact RetroAchievements for updates",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -75,14 +75,14 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		slog.Error("Failed to read RetroAchievements response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
 	var raProfile Profile
 	if err = json.Unmarshal(body, &raProfile); err != nil {
 		slog.Error("Error fetching RetroAchievements data",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -143,7 +143,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 	if err != nil {
 		slog.Error("Failed to extract image content",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("image_url", imageUrl),
 		)
 		return
@@ -166,7 +166,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save RetroAchievements update",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("title", update.MediaItem.Title))
 		return
 	}
@@ -174,7 +174,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	hash := playback.GenerateMediaID(&update)
 	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for RetroAchievements",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)

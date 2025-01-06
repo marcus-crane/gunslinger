@@ -437,7 +437,7 @@ func (c *Client) rehydratePlaybackState(ps *playback.PlaybackSystem) {
 	}
 	if err := ps.UpdatePlaybackState(fakeUpdate); err != nil {
 		slog.Error("Failed to save Spotify update",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("title", fakeUpdate.MediaItem.Title))
 	}
 }
@@ -588,7 +588,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 		image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 		if err != nil {
 			slog.Error("Failed to extract image content",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("image_url", imageUrl),
 			)
 			return
@@ -600,14 +600,14 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Spotify update",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("title", update.MediaItem.Title))
 		}
 
 		hash := playback.GenerateMediaID(&update)
 		if err := utils.SaveCover(c.cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Spotify",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)

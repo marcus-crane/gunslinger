@@ -109,7 +109,7 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
-		slog.Error("Failed to build HEAD request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to build HEAD request for Trakt", slog.String("error", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -123,7 +123,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	res, err := client.Do(req)
 	if err != nil {
 		slog.Error("Failed to make HEAD request to Trakt",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("code", res.Status),
 		)
 		return
@@ -138,13 +138,13 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	// Do a proper, more expensive request now that we've got something fresh
 	req2, err := http.NewRequest("GET", traktPlayingEndpoint, nil)
 	if err != nil {
-		slog.Error("Failed to build GET request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to build GET request for Trakt", slog.String("error", err.Error()))
 		return
 	}
 	req2.Header = req.Header
 	res2, err := client.Do(req2)
 	if err != nil {
-		slog.Error("Failed to make GET request for Trakt", slog.String("stack", err.Error()))
+		slog.Error("Failed to make GET request for Trakt", slog.String("error", err.Error()))
 		return
 	}
 
@@ -158,7 +158,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	body, err := io.ReadAll(res2.Body)
 	if err != nil {
 		slog.Error("Failed to read Trakt response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("code", res2.Status),
 		)
 		return
@@ -168,7 +168,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	if err = json.Unmarshal(body, &traktResponse); err != nil {
 		// TODO: Check status code
 		slog.Error("Failed to unmarshal Trakt response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("code", res2.Status),
 		)
 		return
@@ -187,14 +187,14 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	imageUrl, err := getArtFromTMDB(cfg.Trakt.TMDBToken, traktResponse)
 	if err != nil {
 		slog.Error("Failed to retrieve art from TMDB",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
 	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
 	if err != nil {
 		slog.Error("Failed to extract image content",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("image_url", imageUrl),
 		)
 		return
@@ -204,7 +204,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
 		slog.Error("Failed to parse Trakt start time",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("started_at", traktResponse.StartedAt),
 		)
 		return
@@ -212,7 +212,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	ends, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.ExpiresAt)
 	if err != nil {
 		slog.Error("Failed to parse Trakt expiry time",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("expires_at", traktResponse.ExpiresAt),
 		)
 		return
@@ -247,14 +247,14 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save Steam update",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("title", update.MediaItem.Title))
 	}
 
 	hash := playback.GenerateMediaID(&update)
 	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for Steam",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)

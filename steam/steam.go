@@ -47,7 +47,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	req, err := http.NewRequest("GET", playingUrl, nil)
 	if err != nil {
 		slog.Error("Failed to prepare Steam request",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -59,7 +59,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	res, err := client.Do(req)
 	if err != nil {
 		slog.Error("Failed to contact Steam for updates",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -68,7 +68,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		slog.Error("Failed to read Steam response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -76,7 +76,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if err = json.Unmarshal(body, &steamResponse); err != nil {
 		slog.Error("Error fetching Steam data",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -98,7 +98,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	req, err = http.NewRequest("GET", gameDetailUrl, nil)
 	if err != nil {
 		slog.Error("Failed to prepare Steam request for more detail",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -110,7 +110,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	res, err = client.Do(req)
 	if err != nil {
 		slog.Error("Failed to read Steam detail response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -119,7 +119,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		slog.Error("Failed to read Steam detail response",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 		return
 	}
@@ -127,7 +127,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if err = json.Unmarshal(body, &gameDetailResponse); err != nil {
 		slog.Error("Error fetching Steam app data",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 		)
 	}
 
@@ -142,7 +142,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	image, extension, domColours, err := utils.ExtractImageContent(game.HeaderImage)
 	if err != nil {
 		slog.Error("Failed to extract image content",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("image_url", game.HeaderImage),
 		)
 		return
@@ -165,14 +165,14 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save Steam update",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("title", update.MediaItem.Title))
 	}
 
 	hash := playback.GenerateMediaID(&update)
 	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 		slog.Error("Failed to save cover for Steam",
-			slog.String("stack", err.Error()),
+			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)

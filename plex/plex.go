@@ -65,7 +65,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	sessionURL := buildPlexURL(cfg, plexSessionEndpoint)
 	req, err := http.NewRequest("GET", sessionURL, nil)
 	if err != nil {
-		slog.Error("Failed to prepare Plex request", slog.String("stack", err.Error()))
+		slog.Error("Failed to prepare Plex request", slog.String("error", err.Error()))
 		return
 	}
 	req.Header = http.Header{
@@ -75,20 +75,20 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		slog.Error("Failed to contact Plex for updates", slog.String("stack", err.Error()))
+		slog.Error("Failed to contact Plex for updates", slog.String("error", err.Error()))
 		return
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		slog.Error("Failed to parse Plex response", slog.String("stack", err.Error()))
+		slog.Error("Failed to parse Plex response", slog.String("error", err.Error()))
 		return
 	}
 	var plexResponse PlexResponse
 
 	if err = json.Unmarshal(body, &plexResponse); err != nil {
-		slog.Error("Error fetching Plex data", slog.String("stack", err.Error()))
+		slog.Error("Error fetching Plex data", slog.String("error", err.Error()))
 	}
 
 	// index := 0
@@ -125,7 +125,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
 		if err != nil {
 			slog.Error("Failed to extract image content",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("image_url", thumbnailUrl),
 			)
 			continue
@@ -176,14 +176,14 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Plex update",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("title", title))
 		}
 
 		hash := playback.GenerateMediaID(&update)
 		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
 			slog.Error("Failed to save cover for Plex",
-				slog.String("stack", err.Error()),
+				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)
