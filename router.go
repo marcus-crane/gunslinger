@@ -58,6 +58,12 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		fmt.Fprintf(w, "Welcome to Gunslinger, my handy do-everything API.\nYou can find the source code on <a href=\"https://github.com/marcus-crane/gunslinger\">Github</a>\n")
 	})
 
+	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: Properly set up text/template and what not
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "User-agent: *\nDisallow: /")
+	})
+
 	mux.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		cover := strings.ReplaceAll(r.URL.Path, "/static/", "")
 		// plex:track:8080643347135712210.jpeg
