@@ -18,6 +18,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
 
+	"github.com/marcus-crane/gunslinger/beeminder"
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
@@ -418,6 +419,62 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 	})
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)
+
+	mux.HandleFunc("/glance", func(w http.ResponseWriter, r *http.Request) {
+		renderJSONMessage(w, "This is the glance endpoint of the API")
+	})
+
+	mux.HandleFunc("/glance/beeminder", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Widget-Title", "Beeminder")
+		w.Header().Set("Widget-Content-Type", "html")
+		w.Header().Set("Content-Type", "text/html")
+		if cfg.Gunslinger.SuperSecretToken == "" {
+			w.Write([]byte("This endpoint is misconfigured and can not be used currently"))
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			w.Write([]byte("Your request was not authorized"))
+			return
+		}
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
+			w.Write([]byte("Your request was not authorized"))
+			return
+		}
+		if r.Method != http.MethodGet {
+			w.Write([]byte("That method is invalid for this endpoint"))
+			return
+		}
+		goals, err := beeminder.FetchGoals(cfg)
+		if err != nil {
+			w.Write([]byte("Something went wrong trying to fetch Beeminder goals"))
+			return
+		}
+		resp := `<ul class="list collapsible-container" data-collapse-after="5">`
+		for _, goal := range goals {
+			colorClass := "" // defaults to a normal colour
+			if goal.RoadStatusColor == "red" {
+				colorClass = "color-negative"
+			}
+			if goal.RoadStatusColor == "orange" {
+				colorClass = "color-primary"
+			}
+			if goal.RoadStatusColor == "blue" {
+				colorClass = "color-highlight"
+			}
+			if goal.RoadStatusColor == "green" {
+				colorClass = "color-subdue"
+			}
+			goalUrl := fmt.Sprintf("https://www.beeminder.com/utf9k/%s", goal.Slug)
+			resp += `<li><div class="flex gap-10 row-reverse-on-mobile thumbnail-parent">`
+			resp += fmt.Sprintf(`<a href="%s"><img class="forum-post-list-thumbnail thumbnail loaded finished-transition" src="%s" loading="lazy"></a>`, goal.GraphUrl, goal.ThumbUrl)
+			resp += fmt.Sprintf(`<div class="grow min-width-0"><a class="size-title-dynamic %s" href="%s" target="_blank" rel="noreferrer">%s</a>`, colorClass, goalUrl, goal.Slug)
+			resp += fmt.Sprintf(`<ul class="list-horizontal-text"><li>%s</li><li>$%d</li></ul>`, goal.SafeSum, int(goal.Contract.Amount))
+			resp += `</div></div></li>`
+		}
+		resp += `</ul>`
+		w.Write([]byte(resp))
+	})
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},

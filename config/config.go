@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Anilist           AnilistConfig
+	Beeminder         BeeminderConfig
 	Gunslinger        GunslingerConfig
 	Miniflux          MinifluxConfig
 	Plex              PlexConfig
@@ -20,6 +21,10 @@ type Config struct {
 
 type AnilistConfig struct {
 	Token string `env:"ANILIST_TOKEN"`
+}
+
+type BeeminderConfig struct {
+	Token string `env:"BEEMINDER_TOKEN"`
 }
 
 type GunslingerConfig struct {
