@@ -9,11 +9,13 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	hmacext "github.com/alexellis/hmac/v2"
+	"github.com/antchfx/htmlquery"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
@@ -42,6 +44,8 @@ type readerPayload struct {
 	Tags            []string `json:"tags,omitempty"`
 	Notes           string   `json:"notes,omitempty"`
 }
+
+var requestsRe = regexp.MustCompile(`(?m).*Marcus\W+(\d+).*requests`)
 
 func renderJSONMessage(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
@@ -422,6 +426,38 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			return
 		}
 		renderJSONMessage(w, "Operation was successfully executed")
+	})
+
+	mux.HandleFunc("/beeminder/oias", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.Gunslinger.SuperSecretToken == "" {
+			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if r.Method != http.MethodPost {
+			renderJSONMessage(w, "That method is invalid for this endpoint")
+			return
+		}
+		doc, err := htmlquery.LoadURL("https://fyi.org.nz/categorise/play")
+		if err != nil {
+			panic(err)
+		}
+		topLeaders := htmlquery.FindOne(doc, "//body/div[1]/div[4]/div/div[1]/div[1]/table[2]")
+		match := requestsRe.FindAllStringSubmatch(htmlquery.InnerText(topLeaders), -1)
+		matchCount := match[0][1]
+		err = beeminder.SubmitDatapoint(cfg, "oiacategorisation", matchCount, fmt.Sprintf("%d requests categorised", matchCount))
+		if err != nil {
+			w.WriteHeader(422)
+		}
+		w.WriteHeader(200)
 	})
 
 	mux.HandleFunc("/events", events.Server.ServeHTTP)

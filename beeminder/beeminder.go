@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	goalsUrl = "https://www.beeminder.com/api/v1/users/utf9k/goals.json"
+	datapointsFmtUrl = "https://www.beeminder.com/api/v1/users/utf9k/goals/%s/datapoints.json"
+	goalsUrl         = "https://www.beeminder.com/api/v1/users/utf9k/goals.json"
 )
 
 type Goal struct {
@@ -49,4 +50,22 @@ func FetchGoals(cfg config.Config) ([]Goal, error) {
 		return goals, err
 	}
 	return goals, nil
+}
+
+func SubmitDatapoint(cfg config.Config, goalName string, value string, comment string) error {
+	url := fmt.Sprintf(datapointsFmtUrl, goalName)
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Form.Add("value", value)
+	req.Form.Add("comment", fmt.Sprintf("[Gunslinger] %s", comment))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == 200 {
+		return nil
+	}
+	return err
 }
