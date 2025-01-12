@@ -453,7 +453,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		topLeaders := htmlquery.FindOne(doc, "//body/div[1]/div[4]/div/div[1]/div[1]/table[2]")
 		match := requestsRe.FindAllStringSubmatch(htmlquery.InnerText(topLeaders), -1)
 		matchCount := match[0][1]
-		err = beeminder.SubmitDatapoint(cfg, "oiacategorisation", matchCount, fmt.Sprintf("%d requests categorised", matchCount))
+		err = beeminder.SubmitDatapoint(cfg, "oiacategorisation", matchCount, fmt.Sprintf("%s requests categorised", matchCount))
 		if err != nil {
 			w.WriteHeader(422)
 		}
