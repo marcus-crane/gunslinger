@@ -47,7 +47,6 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 			// json.NewEncoder(byteStream).Encode(update)
 			// events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		}
-		ps.broadcastEvent()
 	}()
 
 	elapsed := int(update.Elapsed.Milliseconds())
