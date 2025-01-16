@@ -537,6 +537,11 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			fmt.Printf("failed to unmarshal cluster update %+v", err)
 			return
 		}
+		// TODO: Check if newer versions of golibrespot handle this
+		if strings.Contains(clusterUpdate.Cluster.PlayerState.Track.Uri, ":ad:") {
+			// This is an ad and we can't do anything with it. In 0.0.18 at least, SpotifyIdFromUri will crash
+			return
+		}
 		spotifyId := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
 
 		status := playback.StatusPlaying
@@ -583,6 +588,10 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			// no idea what type this is
 			return
 		}
+
+		// We know this will be something so we'll deactivate all other Spotify
+		// playbacks and resume them again. It might even be this one but that's ok.
+		ps.DeactivateBySource(string(playback.Spotify))
 
 		imageUrl := c.prodInfo.ImageUrl(coverId)
 		image, extension, domColours, err := utils.ExtractImageContent(imageUrl)

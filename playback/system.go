@@ -2,6 +2,7 @@ package playback
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -143,7 +144,8 @@ func (ps *PlaybackSystem) broadcastEvent() {
 	// Just enough to ping the client to rehydrate itself
 	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
 	// to ensure a transition between animations rather than fully re-rendering them from scratch
-	events.Server.Publish("playback", &sse.Event{Data: []byte{}})
+	jsonState, _ := json.Marshal(ps.State)
+	events.Server.Publish("playback", &sse.Event{Data: jsonState})
 }
 
 func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
