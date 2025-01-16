@@ -47,6 +47,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 			// json.NewEncoder(byteStream).Encode(update)
 			// events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
 		}
+		ps.broadcastEvent()
 	}()
 
 	elapsed := int(update.Elapsed.Milliseconds())
@@ -124,8 +125,6 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	if err != nil {
 		return fmt.Errorf("failed to insert new playback entry: %+v", err)
 	}
-
-	ps.broadcastEvent()
 
 	slog.Debug("Inserted new playback entry", slog.String("media_id", update.MediaItem.ID))
 
