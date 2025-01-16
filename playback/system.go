@@ -37,6 +37,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	}
 
 	var committed bool
+	var broadcast bool
 	defer func() {
 		if !committed {
 			tx.Rollback()
@@ -46,6 +47,9 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 			// byteStream := new(bytes.Buffer)
 			// json.NewEncoder(byteStream).Encode(update)
 			// events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+		}
+		if broadcast {
+			ps.broadcastEvent()
 		}
 	}()
 
@@ -86,7 +90,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 				if err != nil {
 					return err
 				}
-				ps.broadcastEvent()
+				broadcast = true
 			}
 
 			slog.Debug("Updated existing entry", slog.String("media_id", update.MediaItem.ID))
@@ -130,6 +134,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+	broadcast = true
 	committed = true
 	return nil
 }
