@@ -6,7 +6,6 @@ toolchain go1.23.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/alexellis/hmac/v2 v2.0.0
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -32,7 +31,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
-	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/xpath v1.3.3 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
