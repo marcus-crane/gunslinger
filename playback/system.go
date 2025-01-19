@@ -2,6 +2,7 @@ package playback
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -36,6 +37,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	}
 
 	var committed bool
+	var broadcast bool
 	defer func() {
 		if !committed {
 			tx.Rollback()
@@ -45,6 +47,9 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 			// byteStream := new(bytes.Buffer)
 			// json.NewEncoder(byteStream).Encode(update)
 			// events.Server.Publish("playback", &sse.Event{Data: byteStream.Bytes()})
+		}
+		if broadcast {
+			ps.broadcastEvent()
 		}
 	}()
 
@@ -85,7 +90,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 				if err != nil {
 					return err
 				}
-				ps.broadcastEvent()
+				broadcast = true
 			}
 
 			slog.Debug("Updated existing entry", slog.String("media_id", update.MediaItem.ID))
@@ -124,13 +129,12 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 		return fmt.Errorf("failed to insert new playback entry: %+v", err)
 	}
 
-	ps.broadcastEvent()
-
 	slog.Debug("Inserted new playback entry", slog.String("media_id", update.MediaItem.ID))
 
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+	broadcast = true
 	committed = true
 	return nil
 }
@@ -143,7 +147,8 @@ func (ps *PlaybackSystem) broadcastEvent() {
 	// Just enough to ping the client to rehydrate itself
 	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
 	// to ensure a transition between animations rather than fully re-rendering them from scratch
-	events.Server.Publish("playback", &sse.Event{Data: []byte{}})
+	jsonState, _ := json.Marshal(ps.State)
+	events.Server.Publish("playback", &sse.Event{Data: jsonState})
 }
 
 func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
