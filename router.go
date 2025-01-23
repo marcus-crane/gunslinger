@@ -2,28 +2,20 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
-	hmacext "github.com/alexellis/hmac/v2"
 	"github.com/antchfx/htmlquery"
-	"github.com/chromedp/cdproto/dom"
-	"github.com/chromedp/chromedp"
 	"github.com/rs/cors"
 
 	"github.com/marcus-crane/gunslinger/beeminder"
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/events"
-	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/readwise"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -96,140 +88,6 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 
 	mux.HandleFunc("/api/v4", func(w http.ResponseWriter, r *http.Request) {
 		renderJSONMessage(w, "This is the v4 endpoint of the API")
-	})
-
-	mux.HandleFunc("/api/v4/miniflux", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		rwToken := cfg.Readwise.Token
-		if rwToken == "" {
-			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
-			return
-		}
-
-		minifluxSecret := cfg.Miniflux.WebhookSecret
-		if minifluxSecret == "" {
-			json.NewEncoder(w).Encode(map[string]string{"error": "this endpoint is not properly configured"})
-			return
-		}
-
-		if r.Header.Get("X-Miniflux-Event-Type") != "save_entry" {
-			json.NewEncoder(w).Encode(map[string]string{"error": "this event type is not supported"})
-			return
-		}
-
-		signature := r.Header.Get("X-Miniflux-Signature")
-
-		slog.With(slog.String("signature", signature)).Info("Received signature")
-
-		if signature == "" {
-			json.NewEncoder(w).Encode(map[string]string{"error": "no signature was provided"})
-			return
-		}
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": "failed to read request body as part of signature validation"})
-			return
-		}
-
-		if err := hmacext.Validate(body, fmt.Sprintf("sha256=%s", signature), minifluxSecret); err != nil {
-			slog.With(slog.Any("error", err)).Error("Failed signature validation")
-			json.NewEncoder(w).Encode(map[string]string{"error": "signature failed validation"})
-			return
-		}
-
-		var minifluxPayload models.MinifluxSavedEntry
-
-		if err := json.Unmarshal(body, &minifluxPayload); err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": "failed to unmarshal request body"})
-			return
-		}
-
-		// Miniflux has native support for Readwise Reader but I'd like to
-		// do some extra stuff like rendering out sites that use JS to fetch
-		// content which Miniflux and Readwise Reader do not play well with at times
-
-		var largestImageUrl string
-		var largestImageSize int64
-
-		for _, e := range minifluxPayload.Entry.Enclosures {
-			if strings.HasPrefix(e.MimeType, "image/") {
-				if e.Size > largestImageSize {
-					largestImageUrl = e.URL
-				}
-			}
-		}
-
-		var content string
-
-		// nzh site sucks so using a very cool proxy that requires js rendering :^)
-		if strings.Contains(minifluxPayload.Entry.URL, "nzherald.co.nz/") {
-			ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithLogf(log.Printf), chromedp.WithErrorf(log.Printf))
-			defer cancel()
-
-			ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
-
-			slog.Info("spinning up chrome headless")
-
-			url := fmt.Sprintf("https://nzhp.and.nz/%s", minifluxPayload.Entry.URL)
-			slog.With("url", url).Info("scraping site...")
-			err := chromedp.Run(ctx, chromedp.Navigate(url), chromedp.WaitVisible(`h1.article__heading`), chromedp.Evaluate("let node = document.querySelector('#header'); node.parentNode.removeChild(node)", nil), chromedp.ActionFunc(func(ctx context.Context) error {
-				node, err := dom.GetDocument().Do(ctx)
-				if err != nil {
-					return err
-				}
-				content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
-				return err
-			}))
-			if err != nil {
-				slog.With(slog.Any("error", err)).With(slog.String("url", url)).Error("failed to scrape site")
-				json.NewEncoder(w).Encode(map[string]string{"error": "failed to parse request"})
-				return
-			}
-
-			slog.Info("successfully scraped site")
-		}
-
-		if content == "" {
-			content = minifluxPayload.Entry.Content
-		}
-
-		payload := readerPayload{
-			HTML:            content,
-			URL:             minifluxPayload.Entry.URL,
-			ShouldCleanHTML: true,
-			ImageURL:        largestImageUrl,
-			SavedUsing:      "Gunslinger",
-		}
-
-		data, err := json.Marshal(payload)
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": "failed to marshal payload"})
-			return
-		}
-
-		req, err := http.NewRequest("POST", "https://readwise.io/api/v3/save/", bytes.NewReader(data))
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": "failed to build request"})
-			return
-		}
-
-		req.Header.Add("Authorization", fmt.Sprintf("Token %s", rwToken))
-		req.Header.Add("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"error": "failed to send request"})
-			return
-		}
-		defer resp.Body.Close()
-
-		slog.With(slog.String("status", resp.Status), slog.String("url", payload.URL)).Info("Sent URL to Readwise")
-
-		json.NewEncoder(w).Encode(map[string]string{"status": resp.Status})
 	})
 
 	// Yes, this is garbage and doesn't deserve to be put in here
