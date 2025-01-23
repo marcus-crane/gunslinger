@@ -46,7 +46,6 @@ const (
 	Spotify           Source = "spotify"
 	Steam             Source = "steam"
 	Trakt             Source = "trakt"
-	TraktCasts        Source = "traktcasts"
 )
 
 // PlaybackEntry is a unique instance of a piece of media being played. If a movie is watched 5 times,
