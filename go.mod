@@ -2,14 +2,14 @@ module github.com/marcus-crane/gunslinger
 
 go 1.23
 
-toolchain go1.23.3
+toolchain go1.23.5
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
-	github.com/go-co-op/gocron/v2 v2.14.0
+	github.com/devgianlu/go-librespot v0.2.0
+	github.com/go-co-op/gocron/v2 v2.15.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -17,13 +17,13 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.24
-	github.com/pressly/goose/v3 v3.24.0
+	github.com/pressly/goose/v3 v3.24.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	google.golang.org/protobuf v1.36.1
-	modernc.org/sqlite v1.34.4
+	google.golang.org/protobuf v1.36.4
+	modernc.org/sqlite v1.34.5
 )
 
 require (
