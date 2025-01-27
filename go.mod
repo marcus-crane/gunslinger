@@ -2,14 +2,14 @@ module github.com/marcus-crane/gunslinger
 
 go 1.23
 
-toolchain go1.23.3
+toolchain go1.23.5
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
-	github.com/go-co-op/gocron/v2 v2.14.0
+	github.com/go-co-op/gocron/v2 v2.15.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -17,13 +17,13 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.24
-	github.com/pressly/goose/v3 v3.24.0
+	github.com/pressly/goose/v3 v3.24.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	google.golang.org/protobuf v1.36.1
-	modernc.org/sqlite v1.34.4
+	google.golang.org/protobuf v1.36.4
+	modernc.org/sqlite v1.34.5
 )
 
 require (
@@ -38,8 +38,7 @@ require (
 	github.com/golobby/cast v1.3.3 // indirect
 	github.com/golobby/dotenv v1.3.2 // indirect
 	github.com/golobby/env/v2 v2.2.4 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/jonboulle/clockwork v0.4.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
@@ -55,15 +54,12 @@ require (
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/gc/v3 v3.0.0-20241223112719-96e2e1e4408d // indirect
-	modernc.org/libc v1.61.6 // indirect
+	modernc.org/libc v1.61.9 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.8.0 // indirect
-	modernc.org/strutil v1.2.1 // indirect
-	modernc.org/token v1.1.0 // indirect
+	modernc.org/memory v1.8.2 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
