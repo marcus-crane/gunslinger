@@ -8,7 +8,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
+	github.com/devgianlu/go-librespot v0.2.0
 	github.com/go-co-op/gocron/v2 v2.15.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
