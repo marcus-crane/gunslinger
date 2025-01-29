@@ -9,6 +9,7 @@ type Config struct {
 	Anilist           AnilistConfig
 	Beeminder         BeeminderConfig
 	Gunslinger        GunslingerConfig
+	Kagi              KagiConfig
 	Plex              PlexConfig
 	Pushover          PushoverConfig
 	Readwise          ReadwiseConfig
@@ -32,6 +33,10 @@ type GunslingerConfig struct {
 	LogLevel              string `env:"LOG_LEVEL"`
 	StorageDir            string `env:"STORAGE_DIR"`
 	SuperSecretToken      string `env:"SUPER_SECRET_TOKEN"`
+}
+
+type KagiConfig struct {
+	Token string `env:"KAGI_TOKEN"`
 }
 
 type PlexConfig struct {

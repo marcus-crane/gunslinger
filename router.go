@@ -16,6 +16,8 @@ import (
 	"github.com/marcus-crane/gunslinger/beeminder"
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/events"
+	"github.com/marcus-crane/gunslinger/kagi"
+	"github.com/marcus-crane/gunslinger/obsidian"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/readwise"
 	"github.com/marcus-crane/gunslinger/utils"
@@ -374,6 +376,44 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		}
 		resp += `</ul>`
 		w.Write([]byte(resp))
+	})
+
+	mux.HandleFunc("/obsidian-web-clipper/kagi-summarizer", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.Gunslinger.SuperSecretToken == "" {
+			renderJSONMessage(w, "This endpoint is misconfigured and can not be used currently")
+			return
+		}
+		qVal := r.URL.Query()
+		if !qVal.Has("token") {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if qVal.Get("token") != cfg.Gunslinger.SuperSecretToken {
+			renderJSONMessage(w, "Your request was not authorized")
+			return
+		}
+		if r.Method != http.MethodPost {
+			renderJSONMessage(w, "That method is invalid for this endpoint")
+			return
+		}
+		url, err := obsidian.ExtractURLFromWebClipperRequest(r)
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(500)
+			renderJSONMessage(w, err.Error())
+		}
+		fmt.Printf("got url %s\n", url)
+		summary, err := kagi.SummarizeURL(cfg, url)
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(500)
+			renderJSONMessage(w, err.Error())
+		}
+		res := obsidian.FormatWebClipperResponse(summary)
+		b, _ := json.Marshal(res)
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
 	})
 
 	c := cors.New(cors.Options{
