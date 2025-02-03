@@ -149,8 +149,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 
-	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
-
 	update := playback.Update{
 		MediaItem: playback.MediaItem{
 			Title:           raProfile.LastGame.Title,
@@ -158,26 +156,27 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			Category:        string(playback.Gaming),
 			Duration:        0,
 			Source:          string(playback.RetroAchievements),
-			Image:           imageLocation,
 			DominantColours: domColours,
 		},
 		Status: playback.StatusPlaying,
 	}
 
-	if err := ps.UpdatePlaybackState(update); err != nil {
-		slog.Error("Failed to save RetroAchievements update",
-			slog.String("error", err.Error()),
-			slog.String("title", update.MediaItem.Title))
-		return
-	}
-
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
+	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	if err != nil {
 		slog.Error("Failed to save cover for RetroAchievements",
 			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+	}
+
+	update.MediaItem.Image = coverUrl
+
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save RetroAchievements update",
+			slog.String("error", err.Error()),
+			slog.String("title", update.MediaItem.Title))
 		return
 	}
 }

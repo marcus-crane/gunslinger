@@ -130,7 +130,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			)
 			continue
 		}
-		imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
 		title := mediaItem.Title
 
@@ -167,26 +166,28 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 				Category:        mediaItem.Type,
 				Duration:        mediaItem.Duration,
 				Source:          string(playback.Plex),
-				Image:           imageLocation,
 				DominantColours: domColours,
 			},
 			Elapsed: time.Duration(elapsed),
 			Status:  status,
 		}
 
-		if err := ps.UpdatePlaybackState(update); err != nil {
-			slog.Error("Failed to save Plex update",
-				slog.String("error", err.Error()),
-				slog.String("title", title))
-		}
-
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
+		coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+		if err != nil {
 			slog.Error("Failed to save cover for Plex",
 				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)
+		}
+
+		update.MediaItem.Image = coverUrl
+
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Plex update",
+				slog.String("error", err.Error()),
+				slog.String("title", title))
 		}
 	}
 }

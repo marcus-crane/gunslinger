@@ -109,13 +109,12 @@ type Update struct {
 }
 
 func GenerateMediaID(p *Update) string {
-	hashString := fmt.Sprintf("%s-%s-%s-%d-%s-%s",
+	hashString := fmt.Sprintf("%s-%s-%s-%d-%s",
 		p.MediaItem.Title,
 		p.MediaItem.Subtitle,
 		p.MediaItem.Category,
 		p.MediaItem.Duration,
 		p.MediaItem.Source,
-		p.MediaItem.Image,
 	)
 	return fmt.Sprintf(
 		"%s:%s:%d",

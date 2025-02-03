@@ -199,7 +199,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		)
 		return
 	}
-	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
@@ -225,7 +224,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			Category:        traktResponse.Type,
 			Duration:        duration,
 			Source:          string(playback.Trakt),
-			Image:           imageLocation,
 			DominantColours: domColours,
 		},
 		Elapsed: time.Since(started),
@@ -245,18 +243,21 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		update.MediaItem.Subtitle = traktResponse.Show.Title
 	}
 
-	if err := ps.UpdatePlaybackState(update); err != nil {
-		slog.Error("Failed to save Steam update",
-			slog.String("error", err.Error()),
-			slog.String("title", update.MediaItem.Title))
-	}
-
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
-		slog.Error("Failed to save cover for Steam",
+	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	if err != nil {
+		slog.Error("Failed to save cover for Trakt",
 			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+	}
+
+	update.MediaItem.Image = coverUrl
+
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save Trakt update",
+			slog.String("error", err.Error()),
+			slog.String("title", update.MediaItem.Title))
 	}
 }

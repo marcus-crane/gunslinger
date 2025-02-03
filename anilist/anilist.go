@@ -99,8 +99,6 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 			return
 		}
 
-		discImage, _ := utils.BytesToGUIDLocation(image, extension)
-
 		update := playback.Update{
 			MediaItem: playback.MediaItem{
 				Title:           activity.Progress,
@@ -108,26 +106,28 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 				Category:        string(playback.Manga),
 				Duration:        0,
 				Source:          string(playback.Anilist),
-				Image:           discImage,
 				DominantColours: domColours,
 			},
 			Elapsed: 0,
 			Status:  playback.StatusStopped,
 		}
 
-		if err := ps.UpdatePlaybackState(update); err != nil {
-			slog.Error("Failed to save Anilist update",
-				slog.String("error", err.Error()),
-				slog.String("title", update.MediaItem.Title))
-		}
-
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
+		coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+		if err != nil {
 			slog.Error("Failed to save cover for Anilist",
 				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)
+		}
+
+		update.MediaItem.Image = coverUrl
+
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Anilist update",
+				slog.String("error", err.Error()),
+				slog.String("title", update.MediaItem.Title))
 		}
 	}
 }

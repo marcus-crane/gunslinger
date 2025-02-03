@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"crypto/md5"
 	"fmt"
 	"image"
 	"image/color"
@@ -12,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/models"
 	color_extractor "github.com/marekm4/color-extractor"
@@ -22,14 +20,6 @@ import (
 const (
 	UserAgent = "Gunslinger/1.0 (gunslinger@utf9k.net)"
 )
-
-func BytesToGUIDLocation(image []byte, extension string) (string, uuid.UUID) {
-	imageHash := md5.Sum(image)
-	var genericBytes []byte = imageHash[:] // Disgusting :)
-	guid, _ := uuid.FromBytes(genericBytes)
-	location := fmt.Sprintf("/static/cover.%s.%s", guid, extension)
-	return location, guid
-}
 
 func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableColours, error) {
 	var client http.Client
@@ -101,8 +91,14 @@ func LoadCover(cfg config.Config, hash string, extension string) (string, error)
 	return string(img), nil
 }
 
-func SaveCover(cfg config.Config, hash string, image []byte, extension string) error {
-	coverLocation := fmt.Sprintf("%s/%s.%s", cfg.Gunslinger.StorageDir, strings.ReplaceAll(hash, ":", "."), extension)
+func SaveCover(cfg config.Config, hash string, image []byte, extension string) (string, error) {
+	imageFilename := fmt.Sprintf("%s.%s", strings.ReplaceAll(hash, ":", "."), extension)
+	coverLocation := fmt.Sprintf("%s/%s", cfg.Gunslinger.StorageDir, imageFilename)
+	coverUrl := fmt.Sprintf("/static/%s", imageFilename)
 	slog.With(slog.String("cover_location", coverLocation)).Debug("Saving cover to disc")
-	return os.WriteFile(coverLocation, image, 0644)
+	err := os.WriteFile(coverLocation, image, 0644)
+	if err != nil {
+		return "", err
+	}
+	return coverUrl, nil
 }

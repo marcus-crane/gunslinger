@@ -602,24 +602,25 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			)
 			return
 		}
-		imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
 
 		update.MediaItem.DominantColours = domColours
-		update.MediaItem.Image = imageLocation
-
-		if err := ps.UpdatePlaybackState(update); err != nil {
-			slog.Error("Failed to save Spotify update",
-				slog.String("error", err.Error()),
-				slog.String("title", update.MediaItem.Title))
-		}
 
 		hash := playback.GenerateMediaID(&update)
-		if err := utils.SaveCover(c.cfg, hash, image, extension); err != nil {
+		coverUrl, err := utils.SaveCover(c.cfg, hash, image, extension)
+		if err != nil {
 			slog.Error("Failed to save cover for Spotify",
 				slog.String("error", err.Error()),
 				slog.String("guid", hash),
 				slog.String("title", update.MediaItem.Title),
 			)
+		}
+
+		update.MediaItem.Image = coverUrl
+
+		if err := ps.UpdatePlaybackState(update); err != nil {
+			slog.Error("Failed to save Spotify update",
+				slog.String("error", err.Error()),
+				slog.String("title", update.MediaItem.Title))
 		}
 	}
 }

@@ -148,8 +148,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 
-	imageLocation, _ := utils.BytesToGUIDLocation(image, extension)
-
 	update := playback.Update{
 		MediaItem: playback.MediaItem{
 			Title:           game.Name,
@@ -157,24 +155,26 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			Category:        string(playback.Gaming),
 			Duration:        0,
 			Source:          string(playback.Steam),
-			Image:           imageLocation,
 			DominantColours: domColours,
 		},
 		Status: playback.StatusPlaying,
 	}
 
-	if err := ps.UpdatePlaybackState(update); err != nil {
-		slog.Error("Failed to save Steam update",
-			slog.String("error", err.Error()),
-			slog.String("title", update.MediaItem.Title))
-	}
-
 	hash := playback.GenerateMediaID(&update)
-	if err := utils.SaveCover(cfg, hash, image, extension); err != nil {
+	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	if err != nil {
 		slog.Error("Failed to save cover for Steam",
 			slog.String("error", err.Error()),
 			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+	}
+
+	update.MediaItem.Image = coverUrl
+
+	if err := ps.UpdatePlaybackState(update); err != nil {
+		slog.Error("Failed to save Steam update",
+			slog.String("error", err.Error()),
+			slog.String("title", update.MediaItem.Title))
 	}
 }
