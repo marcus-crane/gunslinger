@@ -24,7 +24,6 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/go-co-op/gocron/v2"
-	"src.elv.sh/pkg/store"
 
 	"github.com/gregdel/pushover"
 	"golang.org/x/exp/rand"
@@ -138,7 +137,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 	client.Run(ps)
 }
 
-func NewClient(cfg config.Config, store store.DBStore, accessToken, refreshToken string) (*Client, error) {
+func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken string) (*Client, error) {
 
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
@@ -307,7 +306,7 @@ func (c *Client) refreshTokens() error {
 	return nil
 }
 
-func (c *Client) tokenRefreshLoop(store store.DBStore) {
+func (c *Client) tokenRefreshLoop(store db.Store) {
 	for {
 		c.mu.Lock()
 		timeUntilExpiry := time.Until(c.tokenExpiry)

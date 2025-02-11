@@ -12,7 +12,6 @@ require (
 	github.com/go-co-op/gocron/v2 v2.15.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.6.0
 	github.com/gregdel/pushover v1.3.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/marekm4/color-extractor v1.2.1
@@ -38,6 +37,7 @@ require (
 	github.com/golobby/cast v1.3.3 // indirect
 	github.com/golobby/dotenv v1.3.2 // indirect
 	github.com/golobby/env/v2 v2.2.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
