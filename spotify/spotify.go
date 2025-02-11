@@ -24,6 +24,7 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/go-co-op/gocron/v2"
+	"src.elv.sh/pkg/store"
 
 	"github.com/gregdel/pushover"
 	"golang.org/x/exp/rand"
@@ -113,7 +114,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 		}
 	}
 
-	client, err = NewClient(cfg, accessToken, refreshToken)
+	client, err = NewClient(cfg, store, accessToken, refreshToken)
 	if err != nil {
 		// we'll try oauth (which will ping my phone + let me auth remote) and see if we make it in time otherwise we'll need manual intervention
 		// also this should be made less repetitive but whatever
@@ -128,7 +129,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
 			slog.With("error", err).Error("failed to save refresh token")
 		}
-		client, err = NewClient(cfg, accessToken, refreshToken)
+		client, err = NewClient(cfg, store, accessToken, refreshToken)
 		if err != nil {
 			slog.With("error", err).Error("failed to create spotify client and fallback to oauth")
 			return
@@ -137,7 +138,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 	client.Run(ps)
 }
 
-func NewClient(cfg config.Config, accessToken, refreshToken string) (*Client, error) {
+func NewClient(cfg config.Config, store store.DBStore, accessToken, refreshToken string) (*Client, error) {
 
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
@@ -163,7 +164,7 @@ func NewClient(cfg config.Config, accessToken, refreshToken string) (*Client, er
 		tokenExpiry:  time.Now().Add(time.Hour), // default is 1 hour
 	}
 
-	go client.tokenRefreshLoop()
+	go client.tokenRefreshLoop(store)
 
 	return client, nil
 }
@@ -306,17 +307,31 @@ func (c *Client) refreshTokens() error {
 	return nil
 }
 
-func (c *Client) tokenRefreshLoop() {
+func (c *Client) tokenRefreshLoop(store store.DBStore) {
 	for {
 		c.mu.Lock()
 		timeUntilExpiry := time.Until(c.tokenExpiry)
 		c.mu.Unlock()
 
 		if timeUntilExpiry <= 5*time.Minute {
+			refreshedTokens := false
 			if err := c.refreshTokens(); err != nil {
 				log.Printf("Failed to refresh token: %v", err)
 				if err := c.reauthenticate(); err != nil {
 					log.Printf("Failed to reauthenticate: %v", err)
+				} else {
+					refreshedTokens = true
+				}
+			} else {
+				refreshedTokens = true
+			}
+			if refreshedTokens {
+				// Refresh our new tokens so if we crash and restart, we should be good to go
+				if err := store.UpsertToken(accessTokenID, c.accessToken); err != nil {
+					slog.With("error", err).Error("failed to save access token")
+				}
+				if err := store.UpsertToken(refreshTokenID, c.refreshToken); err != nil {
+					slog.With("error", err).Error("failed to save refresh token")
 				}
 			}
 		}
