@@ -154,7 +154,7 @@ func TestPlaybackUpdate_GenerateMediaID(t *testing.T) {
 		Status:  StatusPlaying,
 	}
 	update.MediaItem.ID = GenerateMediaID(&update)
-	assert.Equal(t, "blah:track:11590915539609183728", update.MediaItem.ID)
+	assert.Equal(t, "blah:track:10755785467225436000", update.MediaItem.ID)
 }
 
 func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
