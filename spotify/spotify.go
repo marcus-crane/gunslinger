@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -24,6 +25,7 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gregdel/pushover"
 	"golang.org/x/exp/rand"
@@ -138,17 +140,20 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 }
 
 func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken string) (*Client, error) {
-
+	// TODO: Create a slog adapter. This is only here to satisfy librespot's hard dependency on
+	// a logger existing. Without it, getting a token will panic
+	librespotLogger := &LogrusAdapter{logrus.NewEntry(logrus.StandardLogger())}
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
 		DeviceId:   cfg.Spotify.DeviceId,
+		Log:        librespotLogger,
 		Credentials: session.SpotifyTokenCredentials{
 			Username: cfg.Spotify.Username, // You might need to fetch the username separately
 			Token:    accessToken,
 		},
 	}
 
-	sess, err := session.NewSessionFromOptions(opts)
+	sess, err := session.NewSessionFromOptions(context.Background(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %v", err)
 	}
@@ -361,7 +366,7 @@ func (c *Client) reauthenticate() error {
 		},
 	}
 
-	newSess, err := session.NewSessionFromOptions(opts)
+	newSess, err := session.NewSessionFromOptions(context.TODO(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to create new session: %v", err)
 	}
@@ -377,7 +382,7 @@ func (c *Client) reauthenticate() error {
 }
 
 func (c *Client) Run(ps *playback.PlaybackSystem) {
-	if err := c.sess.Dealer().Connect(); err != nil {
+	if err := c.sess.Dealer().Connect(context.TODO()); err != nil {
 		slog.With(slog.String("error", err.Error())).Error("Failed to connect to dealer")
 	}
 	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
@@ -542,7 +547,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 				},
 			},
 		}
-		c.sp.PutConnectState(spotConnId, putStateReq)
+		c.sp.PutConnectState(context.TODO(), spotConnId, putStateReq)
 	}
 	// TODO: Support initialising state as we only get a cluster update after an action happens
 	if strings.HasPrefix(msg.Uri, "hm://connect-state/v1/cluster") {
@@ -556,7 +561,10 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			// This is an ad and we can't do anything with it. In 0.0.18 at least, SpotifyIdFromUri will crash
 			return
 		}
-		spotifyId := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
+		spotifyId, err := golibrespot.SpotifyIdFromUri(clusterUpdate.Cluster.PlayerState.Track.Uri)
+		if err != nil {
+			return
+		}
 
 		status := playback.StatusPlaying
 
@@ -577,7 +585,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 		var coverId string
 
 		if spotifyId.Type() == golibrespot.SpotifyIdTypeTrack {
-			track, err := c.sp.MetadataForTrack(spotifyId)
+			track, err := c.sp.MetadataForTrack(context.TODO(), *spotifyId)
 			if err != nil {
 				return
 			}
@@ -588,7 +596,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 
 			coverId = pullAlbumCoverId(track)
 		} else if spotifyId.Type() == golibrespot.SpotifyIdTypeEpisode {
-			episode, err := c.sp.MetadataForEpisode(spotifyId)
+			episode, err := c.sp.MetadataForEpisode(context.TODO(), *spotifyId)
 			if err != nil {
 				return
 			}

@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/devgianlu/go-librespot v0.0.18-0.20240910113147-9da54b7ae941
+	github.com/devgianlu/go-librespot v0.2.0
 	github.com/go-co-op/gocron/v2 v2.16.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.7.0
@@ -17,6 +17,7 @@ require (
 	github.com/pressly/goose/v3 v3.24.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	google.golang.org/protobuf v1.36.5
@@ -45,8 +46,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/xlab/vorbis-go v0.0.0-20210911202351-b5b85f1ec645 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
