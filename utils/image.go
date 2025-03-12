@@ -61,7 +61,6 @@ func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableCo
 	if err != nil {
 		return []byte{}, "", []string{}, err
 	}
-	fmt.Printf(image.Bounds().String())
 	colours := color_extractor.ExtractColors(image)
 	for _, c := range colours {
 		domColours = append(domColours, colorToHexString(c))
