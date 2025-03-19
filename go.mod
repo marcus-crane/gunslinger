@@ -7,7 +7,7 @@ require (
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/devgianlu/go-librespot v0.2.0
-	github.com/go-co-op/gocron/v2 v2.16.0
+	github.com/go-co-op/gocron/v2 v2.16.1
 	github.com/golobby/config/v3 v3.4.2
 	github.com/google/go-cmp v0.7.0
 	github.com/gregdel/pushover v1.3.1
@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	google.golang.org/protobuf v1.36.5
-	modernc.org/sqlite v1.36.0
+	modernc.org/sqlite v1.36.1
 )
 
 require (
