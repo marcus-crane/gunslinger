@@ -45,3 +45,15 @@ kill_timeout = "5s"
     type = "connections"
     hard_limit = 25
     soft_limit = 20
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8082
+
+  [[services.ports]]
+    port = 8082
+    handlers = ["tls", "http"]
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
