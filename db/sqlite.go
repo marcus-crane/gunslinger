@@ -90,6 +90,15 @@ func (s *SqliteStore) GetTokenByID(id string) string {
 	return t.Value
 }
 
+func (s *SqliteStore) GetTokenMetadataByID(id string) models.TokenMetadata {
+	t := models.TokenMetadata{}
+	err := s.DB.Get(&t, "SELECT * FROM tokenmetadata WHERE id = ?", id)
+	if err != nil {
+		return models.TokenMetadata{}
+	}
+	return t
+}
+
 func (s *SqliteStore) UpsertToken(id, value string) error {
 	query := `
 	INSERT INTO tokens (id, value)
@@ -99,6 +108,19 @@ func (s *SqliteStore) UpsertToken(id, value string) error {
 	WHERE id = ?
 	`
 	_, err := s.DB.Exec(query, id, value, id)
+	return err
+}
+
+func (s *SqliteStore) UpsertTokenMetadata(id string, createdat, expiresin int64) error {
+	query := `
+	INSERT INTO tokenmetadata (id, createdat, expiresin)
+	VALUES (?, ?, ?)
+	ON CONFLICT (id) DO UPDATE SET
+	createdat = excluded.createdat,
+	expiresin = excluded.expiresin
+	WHERE id = ?
+	`
+	_, err := s.DB.Exec(query, id, createdat, expiresin, id)
 	return err
 }
 

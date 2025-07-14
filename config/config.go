@@ -72,9 +72,10 @@ type SteamConfig struct {
 }
 
 type TraktConfig struct {
-	BearerToken string `env:"TRAKT_BEARER_TOKEN"`
-	ClientId    string `env:"TRAKT_CLIENT_ID"`
-	TMDBToken   string `env:"TMDB_TOKEN"`
+	ClientId     string `env:"TRAKT_CLIENT_ID"`
+	ClientSecret string `env:"TRAKT_CLIENT_SECRET"`
+	RedirectUri  string `env:"TRAKT_REDIRECT_URI"`
+	TMDBToken    string `env:"TMDB_TOKEN"`
 }
 
 func (c *Config) GetLogLevel() slog.Leveler {

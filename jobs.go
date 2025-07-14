@@ -38,7 +38,7 @@ func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.
 
 	s.NewJob(
 		gocron.DurationJob(time.Second*15),
-		gocron.NewTask(anilist.GetRecentlyReadManga, ps, store, client), // Rate limit: 90 req/sec
+		gocron.NewTask(anilist.GetRecentlyReadManga, cfg, ps, store, client), // Rate limit: 90 req/sec
 	)
 
 	s.NewJob(
@@ -48,7 +48,13 @@ func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.
 
 	s.NewJob(
 		gocron.DurationJob(time.Second*15),
-		gocron.NewTask(trakt.GetCurrentlyPlaying, cfg, ps, client),
+		gocron.NewTask(trakt.GetCurrentlyPlaying, cfg, ps, client, store),
+		gocron.WithSingletonMode(gocron.LimitModeReschedule), // Make sure we block while waiting for a token on startup instead of closing the server with a new job
+	)
+
+	s.NewJob(
+		gocron.DurationJob(time.Hour*6),
+		gocron.NewTask(trakt.CheckForTokenRefresh, cfg, store),
 	)
 
 	// If we're redeployed, we'll populate the latest state

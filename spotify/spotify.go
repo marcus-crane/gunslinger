@@ -28,12 +28,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/gregdel/pushover"
-	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/shared"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
@@ -79,14 +79,6 @@ type Client struct {
 	mu           sync.Mutex
 }
 
-type TokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-	Scope        string `json:"scope"`
-}
-
 func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) {
 	var client *Client
 	var err error
@@ -102,16 +94,19 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 
 	if accessToken == "" || refreshToken == "" {
 		// Locally support using oauth instead of having a token (for server side)
-		accessToken, refreshToken, err = performOAuth2Flow(cfg, 8081)
+		token, err := performOAuth2Flow(cfg, 8081)
 		if err != nil {
 			slog.With("error", err).Error("failed to generate access tokens")
 		}
 		// Save our newly generated token
-		if err := store.UpsertToken(accessTokenID, accessToken); err != nil {
+		if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
 			slog.With("error", err).Error("failed to save access token")
 		}
-		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
+		if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
 			slog.With("error", err).Error("failed to save refresh token")
+		}
+		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
+			slog.With("error", err).Error("failed to save access token metadata")
 		}
 	}
 
@@ -119,16 +114,19 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 	if err != nil {
 		// we'll try oauth (which will ping my phone + let me auth remote) and see if we make it in time otherwise we'll need manual intervention
 		// also this should be made less repetitive but whatever
-		accessToken, refreshToken, err = performOAuth2Flow(cfg, 8081)
+		token, err := performOAuth2Flow(cfg, 8081)
 		if err != nil {
 			slog.With("error", err).Error("failed to perform oauth flow as fallback")
 			return
 		}
-		if err := store.UpsertToken(accessTokenID, accessToken); err != nil {
+		if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
 			slog.With("error", err).Error("failed to save access token")
 		}
-		if err := store.UpsertToken(refreshTokenID, refreshToken); err != nil {
+		if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
 			slog.With("error", err).Error("failed to save refresh token")
+		}
+		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
+			slog.With("error", err).Error("failed to save access token metadata")
 		}
 		client, err = NewClient(cfg, store, accessToken, refreshToken)
 		if err != nil {
@@ -173,9 +171,9 @@ func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken stri
 	return client, nil
 }
 
-func performOAuth2Flow(cfg config.Config, port int) (string, string, error) {
-	state := generateRandomString(16)
-	ch := make(chan *TokenResponse)
+func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, error) {
+	state := shared.GenerateRandomString(16)
+	ch := make(chan *shared.TokenResponse)
 	var srv *http.Server
 
 	pushoverApp := pushover.New(cfg.Pushover.Token)
@@ -226,14 +224,14 @@ func performOAuth2Flow(cfg config.Config, port int) (string, string, error) {
 	_, err := pushoverApp.SendMessage(message, recipient)
 	if err != nil {
 		fmt.Println(err)
-		return "", "", fmt.Errorf("failed to notify about oauth request")
+		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
 	}
 
 	token := <-ch
-	return token.AccessToken, token.RefreshToken, nil
+	return token, nil
 }
 
-func exchangeCodeForToken(cfg config.Config, code string) (*TokenResponse, error) {
+func exchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
@@ -258,7 +256,7 @@ func exchangeCodeForToken(cfg config.Config, code string) (*TokenResponse, error
 		return nil, err
 	}
 
-	var token TokenResponse
+	var token shared.TokenResponse
 	err = json.Unmarshal(body, &token)
 	if err != nil {
 		return nil, err
@@ -294,7 +292,7 @@ func (c *Client) refreshTokens() error {
 		return err
 	}
 
-	var newTokens TokenResponse
+	var newTokens shared.TokenResponse
 	err = json.Unmarshal(body, &newTokens)
 	if err != nil {
 		return err
@@ -319,6 +317,7 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 
 		if timeUntilExpiry <= 5*time.Minute {
 			refreshedTokens := false
+			// TODO: Return shared tokens here and save results
 			if err := c.refreshTokens(); err != nil {
 				log.Printf("Failed to refresh token: %v", err)
 				if err := c.reauthenticate(); err != nil {
@@ -345,7 +344,7 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 }
 
 func (c *Client) reauthenticate() error {
-	accessToken, refreshToken, err := performOAuth2Flow(c.cfg, 8888)
+	token, err := performOAuth2Flow(c.cfg, 8888)
 	if err != nil {
 		return fmt.Errorf("failed to reauthenticate: %v", err)
 	}
@@ -353,9 +352,9 @@ func (c *Client) reauthenticate() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.accessToken = accessToken
-	c.refreshToken = refreshToken
-	c.tokenExpiry = time.Now().Add(time.Hour) // Assume 1 hour expiry, adjust as needed
+	c.accessToken = token.AccessToken
+	c.refreshToken = token.RefreshToken
+	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(token.ExpiresIn))
 
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
@@ -645,16 +644,6 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 				slog.String("title", update.MediaItem.Title))
 		}
 	}
-}
-
-func generateRandomString(length int) string {
-	rand.Seed(uint64(time.Now().UnixNano()))
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b)
 }
 
 func pullAlbumCoverId(track *metadatapb.Track) string {

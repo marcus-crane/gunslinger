@@ -23,5 +23,7 @@ type Store interface {
 	GetCustom(query string, args ...interface{}) (models.ComboDBMediaItem, error)
 	ExecCustom(query string, args ...interface{}) error
 	GetTokenByID(id string) string
+	GetTokenMetadataByID(id string) models.TokenMetadata
 	UpsertToken(id, value string) error
+	UpsertTokenMetadata(id string, createdat, expiresin int64) error
 }

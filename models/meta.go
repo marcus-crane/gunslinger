@@ -109,3 +109,9 @@ type Token struct {
 	ID    string `db:"id"`
 	Value string `db:"value"`
 }
+
+type TokenMetadata struct {
+	ID        string `db:"id"`
+	CreatedAt int64  `db:"createdat"`
+	ExpiresIn int64  `db:"expiresin"`
+}

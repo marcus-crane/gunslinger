@@ -1,22 +1,31 @@
 package trakt
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/gregdel/pushover"
 	"github.com/marcus-crane/gunslinger/config"
+	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
+	"github.com/marcus-crane/gunslinger/shared"
 	"github.com/marcus-crane/gunslinger/utils"
 )
 
-var (
-	traktPlayingEndpoint = "https://api.trakt.tv/users/sentry/watching"
-	tmdbMovieEndpoint    = "https://api.themoviedb.org/3/movie/%d/images"
-	tmdbEpisodeEndpoint  = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
+const (
+	accessTokenID           = "trakt:accesstoken"
+	refreshTokenID          = "trakt:refreshtoken"
+	traktOAuthAuthEndpoint  = "https://api.trakt.tv/oauth/authorize"
+	traktOAuthTokenEndpoint = "https://api.trakt.tv/oauth/token"
+	traktPlayingEndpoint    = "https://api.trakt.tv/users/sentry/watching"
+	tmdbMovieEndpoint       = "https://api.themoviedb.org/3/movie/%d/images"
+	tmdbEpisodeEndpoint     = "https://api.themoviedb.org/3/tv/%d/season/%d/episode/%d/images"
 )
 
 type NowPlayingResponse struct {
@@ -71,6 +80,206 @@ type TMDBImage struct {
 	FilePath string `json:"file_path"`
 }
 
+type TraktAccessTokenPayload struct {
+	Code         string `json:"code"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectUri  string `json:"redirect_uri"`
+	GrantType    string `json:"grant_type"`
+}
+
+type TraktRefreshTokenPayload struct {
+	RefreshToken string `json:"refresh_token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectUri  string `json:"redirect_uri"`
+	GrantType    string `json:"grant_type"`
+}
+
+func CheckForTokenRefresh(cfg config.Config, store db.Store) error {
+	// TODO: Probably make this into some sort of scheduler for Trakt but
+	// it'll do for now as we only need to refresh the token weekly
+	tokenMetadata := store.GetTokenMetadataByID(accessTokenID)
+	timeRemaining := time.Unix(tokenMetadata.CreatedAt, 0).Add(time.Second * time.Duration(tokenMetadata.ExpiresIn))
+	// If the token is going to expire 1 day from now or less, we'll refresh early
+	if time.Now().Add(time.Hour * 24).After(timeRemaining) {
+		// Always assume token exists but we should not
+		existingRefreshToken := store.GetTokenByID(refreshTokenID)
+		token, err := refreshTokens(cfg, existingRefreshToken)
+		if err != nil {
+			slog.With("error", err).Error("failed to generate access tokens")
+			return err
+		}
+		// Save our newly generated token
+		if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
+			slog.With("error", err).Error("failed to save access token")
+			return err
+		}
+		if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
+			slog.With("error", err).Error("failed to save refresh token")
+			return err
+		}
+		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
+			slog.With("error", err).Error("failed to save access token metadata")
+			return err
+		}
+	}
+	return nil
+}
+
+func initialTokenFetch(cfg config.Config, store db.Store) (string, error) {
+	token, err := performOAuth2Flow(cfg, 8082)
+	if err != nil {
+		slog.With("error", err).Error("failed to generate access tokens")
+		return "", err
+	}
+	// Save our newly generated token
+	if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
+		slog.With("error", err).Error("failed to save access token")
+		return "", err
+	}
+	if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
+		slog.With("error", err).Error("failed to save refresh token")
+		return "", err
+	}
+	if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
+		slog.With("error", err).Error("failed to save access token metadata")
+		return "", err
+	}
+	return token.AccessToken, nil
+}
+
+func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, error) {
+	state := shared.GenerateRandomString(16)
+	ch := make(chan *shared.TokenResponse) // TODO: Make this shared
+	var srv *http.Server
+
+	pushoverApp := pushover.New(cfg.Pushover.Token)
+	recipient := pushover.NewRecipient(cfg.Pushover.Recipient)
+
+	// TODO: Ideally integrate with existing router to make life easier + support
+	// possibly oauth refreshing server side (for bootstrapping)
+	http.HandleFunc("/trakt/callback", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("state") != state {
+			http.Error(w, "State mismatch", http.StatusBadRequest)
+			return
+		}
+		code := r.URL.Query().Get("code")
+		token, err := exchangeCodeForToken(cfg, code)
+		if err != nil {
+			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
+			return
+		}
+		ch <- token
+		fmt.Fprintf(w, "Authentication successful! You can close this window.")
+		go func() {
+			time.Sleep(time.Second)
+			srv.Shutdown(r.Context())
+		}()
+	})
+
+	srv = &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	go func() { _ = srv.ListenAndServe() }()
+
+	url := fmt.Sprintf("%s?response_type=code&client_id=%s&redirect_uri=%s&state=%s",
+		traktOAuthAuthEndpoint, cfg.Trakt.ClientId, url.QueryEscape(cfg.Trakt.RedirectUri), state)
+
+	slog.With(slog.String("url", url)).Info("Please open the following URL in your browser")
+	message := &pushover.Message{
+		Message:    "Refresh token has expired + you probably redeployed so we need to manually reauth",
+		Title:      "Please auth with Trakt for Gunslinger",
+		Priority:   pushover.PriorityHigh,
+		URL:        url,
+		URLTitle:   "Auth with Trakt",
+		Timestamp:  time.Now().Unix(),
+		DeviceName: "Gunslinger",
+	}
+	_, err := pushoverApp.SendMessage(message, recipient)
+	if err != nil {
+		fmt.Println(err)
+		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
+	}
+
+	token := <-ch
+	return token, nil
+}
+
+func exchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse, error) {
+	payload := TraktAccessTokenPayload{
+		Code:         code,
+		ClientID:     cfg.Trakt.ClientId,
+		ClientSecret: cfg.Trakt.ClientSecret,
+		RedirectUri:  cfg.Trakt.RedirectUri,
+		GrantType:    "authorization_code",
+	}
+
+	b, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", traktOAuthTokenEndpoint, bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var token shared.TokenResponse
+	err = json.Unmarshal(body, &token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token, nil
+}
+
+func refreshTokens(cfg config.Config, refreshToken string) (shared.TokenResponse, error) {
+	payload := TraktRefreshTokenPayload{
+		RefreshToken: refreshToken,
+		ClientID:     cfg.Trakt.ClientId,
+		ClientSecret: cfg.Trakt.ClientSecret,
+		RedirectUri:  cfg.Trakt.RedirectUri,
+		GrantType:    "refresh_token",
+	}
+
+	b, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", traktOAuthAuthEndpoint, bytes.NewReader(b))
+	if err != nil {
+		return shared.TokenResponse{}, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return shared.TokenResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return shared.TokenResponse{}, err
+	}
+
+	var newTokens shared.TokenResponse
+	err = json.Unmarshal(body, &newTokens)
+	if err != nil {
+		return shared.TokenResponse{}, err
+	}
+
+	return newTokens, nil
+}
+
 func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, error) {
 	url := ""
 	if traktResponse.Type == "movie" {
@@ -106,7 +315,18 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 	return fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", imagePath), nil
 }
 
-func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
+func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client http.Client, store db.Store) {
+	accessToken := store.GetTokenByID(accessTokenID)
+	// We don't have an access token so let's request one
+	if accessToken == "" {
+		slog.Info("No trakt token found so prompting to OAuth")
+		newAccessToken, err := initialTokenFetch(cfg, store)
+		if err != nil {
+			slog.Error("Failed to populate initial Trakt token", slog.String("error", err.Error()))
+			return
+		}
+		accessToken = newAccessToken
+	}
 	req, err := http.NewRequest("HEAD", traktPlayingEndpoint, nil)
 	if err != nil {
 		slog.Error("Failed to build HEAD request for Trakt", slog.String("error", err.Error()))
@@ -114,7 +334,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	req.Header = http.Header{
 		"Accept":            []string{"application/json"},
-		"Authorization":     []string{fmt.Sprintf("Bearer %s", cfg.Trakt.BearerToken)},
+		"Authorization":     []string{fmt.Sprintf("Bearer %s", accessToken)},
 		"Content-Type":      []string{"application/json"},
 		"trakt-api-version": []string{"2"},
 		"trakt-api-key":     []string{cfg.Trakt.ClientId},
