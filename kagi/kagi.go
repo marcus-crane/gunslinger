@@ -23,7 +23,7 @@ var (
 )
 
 func SummarizeURL(cfg config.Config, summaryUrl string) (string, error) {
-	kagiUrl := fmt.Sprintf("%s?url=%s&summary_type=summary", KagiSummarizerURL, url.QueryEscape(summaryUrl))
+	kagiUrl := fmt.Sprintf("%s?url=%s&summary_type=takeaway", KagiSummarizerURL, url.QueryEscape(summaryUrl))
 	req, err := http.NewRequest("POST", kagiUrl, nil)
 	if err != nil {
 		return "", err
