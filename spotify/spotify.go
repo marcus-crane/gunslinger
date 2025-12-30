@@ -108,6 +108,8 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
 			slog.With("error", err).Error("failed to save access token metadata")
 		}
+		accessToken = token.AccessToken
+		refreshToken = token.RefreshToken
 	}
 
 	client, err = NewClient(cfg, store, accessToken, refreshToken)
