@@ -64,6 +64,7 @@ func SubmitDatapoint(cfg config.Config, goalName string, value string, comment s
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		return nil
 	}

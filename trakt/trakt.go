@@ -294,6 +294,7 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -348,6 +349,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		)
 		return
 	}
+	defer res.Body.Close()
 
 	// Nothing is playing so we don't need to do any further work
 	if res.StatusCode == 204 {
@@ -367,6 +369,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		slog.Error("Failed to make GET request for Trakt", slog.String("error", err.Error()))
 		return
 	}
+	defer res2.Body.Close()
 
 	// Nothing is playing so we should check if anything needs to be cleaned up
 	// or if we need to do a state transition
