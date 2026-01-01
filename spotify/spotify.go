@@ -267,7 +267,7 @@ func exchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse
 	return &token, nil
 }
 
-func (c *Client) refreshTokens() error {
+func (c *Client) refreshTokens() (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -277,7 +277,7 @@ func (c *Client) refreshTokens() error {
 
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -285,19 +285,19 @@ func (c *Client) refreshTokens() error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var newTokens shared.TokenResponse
 	err = json.Unmarshal(body, &newTokens)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	c.accessToken = newTokens.AccessToken
@@ -308,7 +308,7 @@ func (c *Client) refreshTokens() error {
 
 	slog.Info("Successfully refreshed tokens")
 
-	return nil
+	return newTokens.ExpiresIn, nil
 }
 
 func (c *Client) tokenRefreshLoop(store db.Store) {
@@ -318,17 +318,19 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 		c.mu.Unlock()
 
 		if timeUntilExpiry <= 5*time.Minute {
+			var expiresIn int64
 			refreshedTokens := false
-			// TODO: Return shared tokens here and save results
-			if err := c.refreshTokens(); err != nil {
+			if expiry, err := c.refreshTokens(); err != nil {
 				log.Printf("Failed to refresh token: %v", err)
-				if err := c.reauthenticate(); err != nil {
+				if expiry, err := c.reauthenticate(); err != nil {
 					log.Printf("Failed to reauthenticate: %v", err)
 				} else {
 					refreshedTokens = true
+					expiresIn = expiry
 				}
 			} else {
 				refreshedTokens = true
+				expiresIn = expiry
 			}
 			if refreshedTokens {
 				// Refresh our new tokens so if we crash and restart, we should be good to go
@@ -338,6 +340,9 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 				if err := store.UpsertToken(refreshTokenID, c.refreshToken); err != nil {
 					slog.With("error", err).Error("failed to save refresh token")
 				}
+				if err := store.UpsertTokenMetadata(accessTokenID, time.Now().Unix(), expiresIn); err != nil {
+					slog.With("error", err).Error("failed to save access token metadata")
+				}
 			}
 		}
 
@@ -345,10 +350,10 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 	}
 }
 
-func (c *Client) reauthenticate() error {
+func (c *Client) reauthenticate() (int64, error) {
 	token, err := performOAuth2Flow(c.cfg, 8888)
 	if err != nil {
-		return fmt.Errorf("failed to reauthenticate: %v", err)
+		return 0, fmt.Errorf("failed to reauthenticate: %v", err)
 	}
 
 	c.mu.Lock()
@@ -369,7 +374,7 @@ func (c *Client) reauthenticate() error {
 
 	newSess, err := session.NewSessionFromOptions(context.TODO(), opts)
 	if err != nil {
-		return fmt.Errorf("failed to create new session: %v", err)
+		return 0, fmt.Errorf("failed to create new session: %v", err)
 	}
 
 	c.sess.Close()
@@ -379,7 +384,7 @@ func (c *Client) reauthenticate() error {
 
 	slog.Info("Successfully recreated session with refreshed tokens")
 
-	return nil
+	return token.ExpiresIn, nil
 }
 
 func (c *Client) Run(ps *playback.PlaybackSystem) {
