@@ -59,9 +59,10 @@ type PlaybackEntry struct {
 	CreatedAt time.Time `db:"created_at"`
 	Elapsed   int       `db:"elapsed"` // milliseconds
 	Status    Status    `db:"status"`
-	IsActive  bool      `db:"is_active"`
-	UpdatedAt time.Time `db:"updated_at"`
-	Source    Source    `db:"source"`
+	IsActive       bool      `db:"is_active"`
+	UpdatedAt      time.Time `db:"updated_at"`
+	StateChangedAt time.Time `db:"state_changed_at"`
+	Source         Source    `db:"source"`
 }
 
 // MediaItem stores metadata about each piece of media that is played ie; movies, tv series, games
@@ -98,8 +99,9 @@ type FullPlaybackEntry struct {
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	Elapsed    int       `db:"elapsed" json:"elapsed_ms"` // TODO: Drop _ms suffix
 	Status     Status    `db:"status" json:"status"`
-	IsActive   bool      `db:"is_active" json:"is_active"`
-	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+	IsActive       bool      `db:"is_active" json:"is_active"`
+	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
+	StateChangedAt time.Time `db:"state_changed_at" json:"state_changed_at"`
 }
 
 type Update struct {

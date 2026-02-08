@@ -57,7 +57,7 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 
 	var existingEntry PlaybackEntry
 	err = tx.Get(&existingEntry, `
-	  SELECT id, media_id, elapsed, status, is_active
+	  SELECT id, media_id, elapsed, status, is_active, state_changed_at
 	  FROM playback_entries
 	  WHERE category = ? AND source = ?
 	  ORDER BY updated_at DESC LIMIT 1`,
@@ -72,21 +72,29 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 		if existingEntry.MediaID != update.MediaItem.ID {
 			// We now have a newly active entry so let's ensure the current one
 			// is deactivated if it isn't already
-			_, err := tx.Exec(`
-			  UPDATE playback_entries
-			  SET is_active = FALSE, status = ?, updated_at = ?
-			  WHERE id = ?`,
-				StatusStopped, time.Now(), existingEntry.ID)
-			if err != nil {
-				return fmt.Errorf("failed to deactivate old entry: %+v", err)
+			if existingEntry.IsActive {
+				now := time.Now()
+				_, err := tx.Exec(`
+				  UPDATE playback_entries
+				  SET is_active = FALSE, status = ?, updated_at = ?, state_changed_at = ?
+				  WHERE id = ?`,
+					StatusStopped, now, now, existingEntry.ID)
+				if err != nil {
+					return fmt.Errorf("failed to deactivate old entry: %+v", err)
+				}
 			}
 		} else {
 			if existingEntry.Status != update.Status || existingEntry.Elapsed != elapsed {
+				now := time.Now()
+				stateChangedAt := existingEntry.StateChangedAt
+				if existingEntry.Status != update.Status {
+					stateChangedAt = now
+				}
 				_, err := tx.Exec(`
 				UPDATE playback_entries
-				SET elapsed = ?, status = ?, is_active = ?, updated_at = ?
+				SET elapsed = ?, status = ?, is_active = ?, updated_at = ?, state_changed_at = ?
 				WHERE id = ?`,
-					elapsed, update.Status, update.Status == StatusPlaying, time.Now(), existingEntry.ID)
+					elapsed, update.Status, update.Status == StatusPlaying, now, stateChangedAt, existingEntry.ID)
 				if err != nil {
 					return err
 				}
@@ -120,11 +128,12 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 	}
 
 	// Now we can insert our playback entry and wrap up the update process
+	now := time.Now()
 	_, err = tx.Exec(`
 	  INSERT INTO playback_entries
-	  (media_id, category, created_at, elapsed, status, is_active, updated_at, source)
-	  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		update.MediaItem.ID, update.MediaItem.Category, time.Now(), elapsed, update.Status, update.Status == StatusPlaying, time.Now(), update.MediaItem.Source)
+	  (media_id, category, created_at, elapsed, status, is_active, updated_at, state_changed_at, source)
+	  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		update.MediaItem.ID, update.MediaItem.Category, now, elapsed, update.Status, update.Status == StatusPlaying, now, now, update.MediaItem.Source)
 	if err != nil {
 		return fmt.Errorf("failed to insert new playback entry: %+v", err)
 	}
@@ -172,7 +181,7 @@ func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 	err := ps.db.Select(&results, `
 	  SELECT
 	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
-		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at, p.state_changed_at
 	  FROM media_items m
 	  JOIN playback_entries p ON m.id = p.media_id
 	  WHERE p.is_active = TRUE
@@ -188,7 +197,7 @@ func (ps *PlaybackSystem) GetActivePlaybackBySource(source string) ([]FullPlayba
 	err := ps.db.Select(&results, `
 	  SELECT
 	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
-		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at, p.state_changed_at
 	  FROM media_items m
 	  JOIN playback_entries p ON m.id = p.media_id
 	  WHERE p.is_active = TRUE AND m.source = ?
@@ -213,13 +222,14 @@ func (ps *PlaybackSystem) DeactivateBySource(source string) error {
 		}
 	}()
 
+	now := time.Now()
 	_, err = tx.Exec(`
 		UPDATE playback_entries
-		SET is_active = FALSE, status = ?, updated_at = ?
+		SET is_active = FALSE, status = ?, updated_at = ?, state_changed_at = ?
 		WHERE is_active = TRUE AND media_id IN (
 			SELECT id FROM media_items WHERE source = ?
 		)
-	`, StatusStopped, time.Now(), source)
+	`, StatusStopped, now, now, source)
 
 	if err != nil {
 		return err
@@ -242,11 +252,11 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 	err := ps.db.Select(&results, `
 	  SELECT
 	    m.id, m.title, m.subtitle, m.category, m.duration, m.source, m.image, m.dominant_colours,
-		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at
+		p.id as playback_id, p.created_at, p.elapsed, p.status, p.is_active, p.updated_at, p.state_changed_at
 	  FROM media_items m
 	  JOIN playback_entries p ON m.id = p.media_id
 	  WHERE p.is_active = FALSE
-	  ORDER BY p.updated_at DESC
+	  ORDER BY p.state_changed_at DESC
 	  LIMIT ?
 	`, limit)
 

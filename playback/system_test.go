@@ -154,7 +154,7 @@ func TestPlaybackUpdate_GenerateMediaID(t *testing.T) {
 		Status:  StatusPlaying,
 	}
 	update.MediaItem.ID = GenerateMediaID(&update)
-	assert.Equal(t, "blah:track:10755785467225436000", update.MediaItem.ID)
+	assert.Equal(t, "blah:track:17060175293592783387", update.MediaItem.ID)
 }
 
 func TestPlaybackSystem_GetActivePlayback(t *testing.T) {
@@ -416,6 +416,86 @@ func TestPlaybackSystem_GetHistory(t *testing.T) {
 
 	_, err = ps.GetHistory(-1)
 	assert.Error(t, err)
+}
+
+func TestPlaybackSystem_CategorySwitchDoesNotBumpHistory(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	// 1. Play a track from plex, then stop it
+	trackUpdate := Update{
+		MediaItem: MediaItem{
+			Title:           "old song",
+			Subtitle:        "old artist",
+			Category:        string(Track),
+			Duration:        180000,
+			Source:          string(Plex),
+			Image:           "https://example.com/track.jpg",
+			DominantColours: models.SerializableColours{"#aaa"},
+		},
+		Elapsed: 30 * time.Second,
+		Status:  StatusPlaying,
+	}
+	err := ps.UpdatePlaybackState(trackUpdate)
+	require.NoError(t, err)
+
+	// Stop the track so it becomes inactive
+	trackUpdate.Status = StatusStopped
+	trackUpdate.Elapsed = 60 * time.Second
+	err = ps.UpdatePlaybackState(trackUpdate)
+	require.NoError(t, err)
+
+	// Record the state_changed_at of the stopped track
+	var stoppedEntry PlaybackEntry
+	trackID := GenerateMediaID(&trackUpdate)
+	err = db.Get(&stoppedEntry, "SELECT * FROM playback_entries WHERE media_id = ?", trackID)
+	require.NoError(t, err)
+	assert.False(t, stoppedEntry.IsActive)
+	originalStateChangedAt := stoppedEntry.StateChangedAt
+
+	// Small delay to ensure timestamps differ
+	time.Sleep(10 * time.Millisecond)
+
+	// 2. Now start a movie from the same source (plex) — different category
+	movieUpdate := Update{
+		MediaItem: MediaItem{
+			Title:           "new movie",
+			Subtitle:        "director",
+			Category:        string(Movie),
+			Duration:        7200000,
+			Source:          string(Plex),
+			Image:           "https://example.com/movie.jpg",
+			DominantColours: models.SerializableColours{"#bbb"},
+		},
+		Elapsed: 10 * time.Second,
+		Status:  StatusPlaying,
+	}
+	err = ps.UpdatePlaybackState(movieUpdate)
+	require.NoError(t, err)
+
+	// Stop the movie so it shows up in history
+	movieUpdate.Status = StatusStopped
+	movieUpdate.Elapsed = 20 * time.Second
+	err = ps.UpdatePlaybackState(movieUpdate)
+	require.NoError(t, err)
+
+	// 3. Verify the old track's state_changed_at was NOT bumped
+	err = db.Get(&stoppedEntry, "SELECT * FROM playback_entries WHERE media_id = ?", trackID)
+	require.NoError(t, err)
+	assert.Equal(t, originalStateChangedAt, stoppedEntry.StateChangedAt,
+		"state_changed_at of already-inactive entry should not change when a different category starts")
+
+	// 4. Verify GetHistory returns items in correct order:
+	//    movie (stopped more recently) should come before the track
+	history, err := ps.GetHistory(10)
+	require.NoError(t, err)
+	require.Len(t, history, 2)
+
+	movieID := GenerateMediaID(&movieUpdate)
+	assert.Equal(t, movieID, history[0].ID, "movie should appear first in history (stopped more recently)")
+	assert.Equal(t, trackID, history[1].ID, "track should appear second in history (stopped earlier)")
 }
 
 func TestPlaybackSystem_DeleteItem(t *testing.T) {
