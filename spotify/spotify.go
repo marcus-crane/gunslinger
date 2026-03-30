@@ -20,6 +20,7 @@ import (
 	"github.com/devgianlu/go-librespot/ap"
 	"github.com/devgianlu/go-librespot/dealer"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
+	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
@@ -553,7 +554,11 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 				},
 			},
 		}
-		c.sp.PutConnectState(context.TODO(), spotConnId, putStateReq)
+		if err := c.sp.PutConnectState(context.TODO(), spotConnId, putStateReq); err != nil {
+			slog.Error("Failed to put connect state",
+				slog.String("error", err.Error()),
+				slog.String("connection_id", spotConnId))
+		}
 	}
 	// TODO: Support initialising state as we only get a cluster update after an action happens
 	if strings.HasPrefix(msg.Uri, "hm://connect-state/v1/cluster") {
@@ -591,8 +596,8 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 		var coverId string
 
 		if spotifyId.Type() == golibrespot.SpotifyIdTypeTrack {
-			track, err := c.sp.MetadataForTrack(context.TODO(), *spotifyId)
-			if err != nil {
+			var track metadatapb.Track
+			if err := c.sp.ExtendedMetadataSimple(context.TODO(), *spotifyId, extmetadatapb.ExtensionKind_TRACK_V4, &track); err != nil {
 				return
 			}
 
@@ -600,10 +605,10 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			update.MediaItem.Subtitle = track.GetArtist()[0].GetName()
 			update.MediaItem.Category = "track"
 
-			coverId = pullAlbumCoverId(track)
+			coverId = pullAlbumCoverId(&track)
 		} else if spotifyId.Type() == golibrespot.SpotifyIdTypeEpisode {
-			episode, err := c.sp.MetadataForEpisode(context.TODO(), *spotifyId)
-			if err != nil {
+			var episode metadatapb.Episode
+			if err := c.sp.ExtendedMetadataSimple(context.TODO(), *spotifyId, extmetadatapb.ExtensionKind_EPISODE_V4, &episode); err != nil {
 				return
 			}
 
@@ -611,7 +616,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 			update.MediaItem.Subtitle = episode.GetShow().GetName()
 			update.MediaItem.Category = "podcast_episode"
 
-			coverId = pullEpisodeCoverId(episode)
+			coverId = pullEpisodeCoverId(&episode)
 		} else {
 			// no idea what type this is
 			return
