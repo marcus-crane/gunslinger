@@ -253,7 +253,7 @@ func refreshTokens(cfg config.Config, refreshToken string) (shared.TokenResponse
 
 	b, _ := json.Marshal(payload)
 
-	req, err := http.NewRequest("POST", traktOAuthAuthEndpoint, bytes.NewReader(b))
+	req, err := http.NewRequest("POST", traktOAuthTokenEndpoint, bytes.NewReader(b))
 	if err != nil {
 		return shared.TokenResponse{}, err
 	}
