@@ -422,6 +422,9 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 
 	debugHandler := debug.NewHandler(cfg, ps, store)
 	mux.HandleFunc("/debug", debugHandler.ServeDebugPage)
+	mux.HandleFunc("/oauth/reauth", debugHandler.ServeReauth)
+	mux.HandleFunc("/oauth/spotify/callback", debugHandler.ServeOAuthCallback)
+	mux.HandleFunc("/oauth/trakt/callback", debugHandler.ServeOAuthCallback)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},

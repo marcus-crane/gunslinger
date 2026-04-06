@@ -186,7 +186,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 			return
 		}
 		code := r.URL.Query().Get("code")
-		token, err := exchangeCodeForToken(cfg, code)
+		token, err := ExchangeCodeForToken(cfg, code)
 		if err != nil {
 			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
 			return
@@ -230,7 +230,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 	return token, nil
 }
 
-func exchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse, error) {
+func ExchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)

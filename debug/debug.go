@@ -3,6 +3,7 @@ package debug
 import (
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/marcus-crane/gunslinger/config"
@@ -19,6 +20,7 @@ type IntegrationStatus struct {
 	Name         string
 	Configured   bool
 	HasOAuth     bool
+	ProviderKey  string
 	TokenExpiry  *time.Time
 	TokenExpired bool
 }
@@ -27,18 +29,21 @@ type DebugPageData struct {
 	Integrations  []IntegrationStatus
 	PlaybackState []playback.FullPlaybackEntry
 	Token         string
+	Status        string
+	StatusProvider string
 }
 
 type Handler struct {
-	cfg   config.Config
-	ps    *playback.PlaybackSystem
-	store db.Store
-	tmpl  *template.Template
+	cfg         config.Config
+	ps          *playback.PlaybackSystem
+	store       db.Store
+	tmpl        *template.Template
+	oauthStates *oauthStateStore
 }
 
 func NewHandler(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) *Handler {
 	tmpl := template.Must(template.New("debug").Parse(pageTmpl))
-	return &Handler{cfg: cfg, ps: ps, store: store, tmpl: tmpl}
+	return &Handler{cfg: cfg, ps: ps, store: store, tmpl: tmpl, oauthStates: newOAuthStateStore()}
 }
 
 func (h *Handler) authorized(r *http.Request) bool {
@@ -52,12 +57,12 @@ func (h *Handler) ServeDebugPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := h.buildPageData(r.URL.Query().Get("token"))
+	data := h.buildPageData(r.URL.Query().Get("token"), r.URL.Query().Get("status"), r.URL.Query().Get("provider"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.tmpl.Execute(w, data)
 }
 
-func (h *Handler) buildPageData(token string) DebugPageData {
+func (h *Handler) buildPageData(token, status, statusProvider string) DebugPageData {
 	cfg := h.cfg
 
 	integrations := []IntegrationStatus{
@@ -70,14 +75,16 @@ func (h *Handler) buildPageData(token string) DebugPageData {
 	}
 
 	return DebugPageData{
-		Integrations:  integrations,
-		PlaybackState: h.ps.State,
-		Token:         token,
+		Integrations:   integrations,
+		PlaybackState:  h.ps.State,
+		Token:          token,
+		Status:         status,
+		StatusProvider: statusProvider,
 	}
 }
 
 func (h *Handler) oauthStatus(name string, configured bool, tokenID string) IntegrationStatus {
-	s := IntegrationStatus{Name: name, Configured: configured, HasOAuth: true}
+	s := IntegrationStatus{Name: name, Configured: configured, HasOAuth: true, ProviderKey: strings.ToLower(name)}
 	if !configured {
 		return s
 	}
@@ -108,10 +115,21 @@ const pageTmpl = `<!DOCTYPE html>
   .warn { color: orange; }
   .bad  { color: red; }
   .dim  { color: #999; }
+  .banner { padding: 0.6rem 1rem; margin-bottom: 1rem; border: 1px solid; }
+  .banner.ok { border-color: green; background: #e6ffe6; }
+  .banner.bad { border-color: red; background: #ffe6e6; }
+  button.reauth { font-family: monospace; padding: 0.2rem 0.6rem; cursor: pointer; }
 </style>
 </head>
 <body>
 <h1>Gunslinger Debug</h1>
+
+{{if eq .Status "ok"}}
+<div class="banner ok">Successfully reauthorized {{.StatusProvider}}.</div>
+{{end}}
+{{if eq .Status "error"}}
+<div class="banner bad">Failed to reauthorize {{.StatusProvider}}. Check logs for details.</div>
+{{end}}
 
 <h2>Integrations</h2>
 <table>
@@ -120,6 +138,7 @@ const pageTmpl = `<!DOCTYPE html>
       <th>Integration</th>
       <th>Configured</th>
       <th>Token Expires</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -140,6 +159,15 @@ const pageTmpl = `<!DOCTYPE html>
           {{end}}
         {{else}}
           <span class="dim">n/a</span>
+        {{end}}
+      </td>
+      <td>
+        {{if and .HasOAuth .Configured}}
+        <form method="POST" action="/oauth/reauth" style="margin:0">
+          <input type="hidden" name="provider" value="{{.ProviderKey}}">
+          <input type="hidden" name="token" value="{{$.Token}}">
+          <button type="submit" class="reauth">Reauth</button>
+        </form>
         {{end}}
       </td>
     </tr>
