@@ -8,7 +8,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -319,9 +318,9 @@ func (c *Client) tokenRefreshLoop(store db.Store) {
 			var expiresIn int64
 			refreshedTokens := false
 			if expiry, err := c.refreshTokens(); err != nil {
-				log.Printf("Failed to refresh token: %v", err)
+				slog.Error("Failed to refresh token", slog.String("error", err.Error()))
 				if expiry, err := c.reauthenticate(); err != nil {
-					log.Printf("Failed to reauthenticate: %v", err)
+					slog.Error("Failed to reauthenticate", slog.String("error", err.Error()))
 				} else {
 					refreshedTokens = true
 					expiresIn = expiry
@@ -471,7 +470,7 @@ func (c *Client) handleDealerRequest(req dealer.Request, ps *playback.PlaybackSy
 	case "hm://connect-state/v1/player/command":
 		c.handlePlayerCommand(req.Payload, ps)
 	default:
-		slog.With(slog.String("ident", req.MessageIdent)).Warn("unknown dealer request: %s")
+		slog.Warn("unknown dealer request", slog.String("ident", req.MessageIdent))
 	}
 }
 

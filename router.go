@@ -403,6 +403,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			slog.Error("Failed to extract URL from web clipper request", slog.String("error", err.Error()))
 			w.WriteHeader(500)
 			renderJSONMessage(w, err.Error())
+			return
 		}
 		slog.Debug("Received Kagi summarization request", slog.String("url", url))
 		summary, err := kagi.SummarizeURL(cfg, url)
@@ -410,6 +411,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			slog.Error("Failed to summarize URL via Kagi", slog.String("error", err.Error()))
 			w.WriteHeader(500)
 			renderJSONMessage(w, err.Error())
+			return
 		}
 		res := obsidian.FormatWebClipperResponse(summary)
 		b, _ := json.Marshal(res)

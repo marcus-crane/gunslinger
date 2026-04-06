@@ -36,7 +36,7 @@ func SummarizeURL(cfg config.Config, summaryUrl string) (string, error) {
 	}
 	slog.Debug("Kagi response", slog.Int("status", resp.StatusCode))
 	if resp.StatusCode != 200 {
-		return "", err
+		return "", fmt.Errorf("kagi api returned status %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
 

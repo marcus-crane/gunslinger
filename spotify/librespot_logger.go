@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -12,11 +13,15 @@ type SlogAdapter struct {
 }
 
 func (a SlogAdapter) Tracef(format string, args ...interface{}) {
-	a.log.Debug(fmt.Sprintf(format, args...))
+	if a.log.Enabled(context.Background(), slog.LevelDebug) {
+		a.log.Debug(fmt.Sprintf(format, args...))
+	}
 }
 
 func (a SlogAdapter) Debugf(format string, args ...interface{}) {
-	a.log.Debug(fmt.Sprintf(format, args...))
+	if a.log.Enabled(context.Background(), slog.LevelDebug) {
+		a.log.Debug(fmt.Sprintf(format, args...))
+	}
 }
 
 func (a SlogAdapter) Infof(format string, args ...interface{}) {
@@ -32,11 +37,15 @@ func (a SlogAdapter) Errorf(format string, args ...interface{}) {
 }
 
 func (a SlogAdapter) Trace(args ...interface{}) {
-	a.log.Debug(fmt.Sprint(args...))
+	if a.log.Enabled(context.Background(), slog.LevelDebug) {
+		a.log.Debug(fmt.Sprint(args...))
+	}
 }
 
 func (a SlogAdapter) Debug(args ...interface{}) {
-	a.log.Debug(fmt.Sprint(args...))
+	if a.log.Enabled(context.Background(), slog.LevelDebug) {
+		a.log.Debug(fmt.Sprint(args...))
+	}
 }
 
 func (a SlogAdapter) Info(args ...interface{}) {
