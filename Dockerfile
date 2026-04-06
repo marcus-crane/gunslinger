@@ -2,7 +2,7 @@ FROM golang:1.24.2-bookworm AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y libvorbis-dev libogg-dev
+RUN apt-get update && apt-get install -y libvorbis-dev libogg-dev libflac-dev libasound2-dev
 
 COPY . .
 RUN go mod download
