@@ -80,14 +80,14 @@ type TraktConfig struct {
 
 func (c *Config) GetLogLevel() slog.Leveler {
 	logLevel := strings.ToLower(c.Gunslinger.LogLevel)
+	if logLevel == "" || logLevel == "info" {
+		return slog.LevelInfo
+	}
 	if logLevel == "error" {
 		return slog.LevelError
 	}
 	if logLevel == "warning" {
 		return slog.LevelWarn
-	}
-	if logLevel == "info" {
-		return slog.LevelInfo
 	}
 	if logLevel == "debug" {
 		return slog.LevelDebug
