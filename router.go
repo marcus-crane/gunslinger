@@ -15,6 +15,8 @@ import (
 
 	"github.com/marcus-crane/gunslinger/beeminder"
 	"github.com/marcus-crane/gunslinger/config"
+	"github.com/marcus-crane/gunslinger/db"
+	"github.com/marcus-crane/gunslinger/debug"
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/kagi"
 	"github.com/marcus-crane/gunslinger/obsidian"
@@ -47,7 +49,7 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.PlaybackSystem) http.Handler {
+func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.PlaybackSystem, store db.Store) http.Handler {
 
 	events.Server.CreateStream("playback")
 
@@ -415,6 +417,9 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(b)
 	})
+
+	debugHandler := debug.NewHandler(cfg, ps, store)
+	mux.HandleFunc("/debug", debugHandler.ServeDebugPage)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://utf9k.net", "http://localhost:1313", "https://b.utf9k.net", "https://next.utf9k.net"},

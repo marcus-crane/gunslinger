@@ -87,7 +87,7 @@ func main() {
 
 	events.Init()
 
-	router := RegisterRoutes(http.NewServeMux(), cfg, ps)
+	router := RegisterRoutes(http.NewServeMux(), cfg, ps, &store)
 
 	slog.Info("Gunslinger is running at http://localhost:8080")
 
