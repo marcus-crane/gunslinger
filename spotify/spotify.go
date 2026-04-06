@@ -26,7 +26,6 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
 	"github.com/go-co-op/gocron/v2"
-	"github.com/sirupsen/logrus"
 
 	"github.com/gregdel/pushover"
 	"google.golang.org/protobuf/proto"
@@ -141,9 +140,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 }
 
 func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken string) (*Client, error) {
-	// TODO: Create a slog adapter. This is only here to satisfy librespot's hard dependency on
-	// a logger existing. Without it, getting a token will panic
-	librespotLogger := &LogrusAdapter{logrus.NewEntry(logrus.StandardLogger())}
+	librespotLogger := &SlogAdapter{slog.Default()}
 	opts := &session.Options{
 		DeviceType: devicespb.DeviceType_SMARTWATCH,
 		DeviceId:   cfg.Spotify.DeviceId,
@@ -226,7 +223,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 	}
 	_, err := pushoverApp.SendMessage(message, recipient)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to send Pushover notification for Spotify auth", slog.String("error", err.Error()))
 		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
 	}
 
@@ -564,7 +561,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 	if strings.HasPrefix(msg.Uri, "hm://connect-state/v1/cluster") {
 		var clusterUpdate connectpb.ClusterUpdate
 		if err := proto.Unmarshal(msg.Payload, &clusterUpdate); err != nil {
-			fmt.Printf("failed to unmarshal cluster update %+v", err)
+			slog.Error("Failed to unmarshal cluster update", slog.String("error", err.Error()))
 			return
 		}
 		// TODO: Check if newer versions of golibrespot handle this

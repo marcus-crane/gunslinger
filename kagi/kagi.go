@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -33,7 +34,7 @@ func SummarizeURL(cfg config.Config, summaryUrl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("status %d\n", resp.StatusCode)
+	slog.Debug("Kagi response", slog.Int("status", resp.StatusCode))
 	if resp.StatusCode != 200 {
 		return "", err
 	}

@@ -400,14 +400,14 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		}
 		url, err := obsidian.ExtractURLFromWebClipperRequest(r)
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Failed to extract URL from web clipper request", slog.String("error", err.Error()))
 			w.WriteHeader(500)
 			renderJSONMessage(w, err.Error())
 		}
-		fmt.Printf("got url %s\n", url)
+		slog.Debug("Received Kagi summarization request", slog.String("url", url))
 		summary, err := kagi.SummarizeURL(cfg, url)
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Failed to summarize URL via Kagi", slog.String("error", err.Error()))
 			w.WriteHeader(500)
 			renderJSONMessage(w, err.Error())
 		}

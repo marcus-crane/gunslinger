@@ -1,58 +1,60 @@
 package spotify
 
 import (
+	"fmt"
+	"log/slog"
+
 	librespot "github.com/devgianlu/go-librespot"
-	"github.com/sirupsen/logrus"
 )
 
-type LogrusAdapter struct {
-	Log *logrus.Entry
+type SlogAdapter struct {
+	log *slog.Logger
 }
 
-func (l LogrusAdapter) Tracef(format string, args ...interface{}) {
-	l.Log.Tracef(format, args...)
+func (a SlogAdapter) Tracef(format string, args ...interface{}) {
+	a.log.Debug(fmt.Sprintf(format, args...))
 }
 
-func (l LogrusAdapter) Debugf(format string, args ...interface{}) {
-	l.Log.Debugf(format, args...)
+func (a SlogAdapter) Debugf(format string, args ...interface{}) {
+	a.log.Debug(fmt.Sprintf(format, args...))
 }
 
-func (l LogrusAdapter) Infof(format string, args ...interface{}) {
-	l.Log.Infof(format, args...)
+func (a SlogAdapter) Infof(format string, args ...interface{}) {
+	a.log.Info(fmt.Sprintf(format, args...))
 }
 
-func (l LogrusAdapter) Warnf(format string, args ...interface{}) {
-	l.Log.Warnf(format, args...)
+func (a SlogAdapter) Warnf(format string, args ...interface{}) {
+	a.log.Warn(fmt.Sprintf(format, args...))
 }
 
-func (l LogrusAdapter) Errorf(format string, args ...interface{}) {
-	l.Log.Errorf(format, args...)
+func (a SlogAdapter) Errorf(format string, args ...interface{}) {
+	a.log.Error(fmt.Sprintf(format, args...))
 }
 
-func (l LogrusAdapter) Trace(args ...interface{}) {
-	l.Log.Trace(args...)
+func (a SlogAdapter) Trace(args ...interface{}) {
+	a.log.Debug(fmt.Sprint(args...))
 }
 
-func (l LogrusAdapter) Debug(args ...interface{}) {
-	l.Log.Debug(args...)
+func (a SlogAdapter) Debug(args ...interface{}) {
+	a.log.Debug(fmt.Sprint(args...))
 }
 
-func (l LogrusAdapter) Info(args ...interface{}) {
-	l.Log.Info(args...)
+func (a SlogAdapter) Info(args ...interface{}) {
+	a.log.Info(fmt.Sprint(args...))
 }
 
-func (l LogrusAdapter) Warn(args ...interface{}) {
-	l.Log.Warn(args...)
+func (a SlogAdapter) Warn(args ...interface{}) {
+	a.log.Warn(fmt.Sprint(args...))
 }
 
-func (l LogrusAdapter) Error(args ...interface{}) {
-	l.Log.Error(args...)
+func (a SlogAdapter) Error(args ...interface{}) {
+	a.log.Error(fmt.Sprint(args...))
 }
 
-func (l LogrusAdapter) WithField(key string, value interface{}) librespot.Logger {
-	return LogrusAdapter{l.Log.WithField(key, value)}
+func (a SlogAdapter) WithField(key string, value interface{}) librespot.Logger {
+	return SlogAdapter{a.log.With(key, value)}
 }
 
-func (l LogrusAdapter) WithError(err error) librespot.Logger {
-	return LogrusAdapter{l.Log.WithError(err)}
+func (a SlogAdapter) WithError(err error) librespot.Logger {
+	return SlogAdapter{a.log.With("error", err)}
 }

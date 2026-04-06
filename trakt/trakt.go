@@ -196,7 +196,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 	}
 	_, err := pushoverApp.SendMessage(message, recipient)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to send Pushover notification for Trakt auth", slog.String("error", err.Error()))
 		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
 	}
 
