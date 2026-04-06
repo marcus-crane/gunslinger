@@ -38,7 +38,7 @@ func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.
 
 	s.NewJob(
 		gocron.DurationJob(time.Second*15),
-		gocron.NewTask(anilist.GetRecentlyReadManga, cfg, ps, store, client), // Rate limit: 90 req/sec
+		gocron.NewTask(anilist.GetRecentlyReadManga, cfg, ps, client), // Rate limit: 90 req/sec
 	)
 
 	s.NewJob(

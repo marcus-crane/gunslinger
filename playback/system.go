@@ -263,6 +263,12 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 	return results, err
 }
 
+func (ps *PlaybackSystem) HasPlaybackEntry(mediaID string) (bool, error) {
+	var count int
+	err := ps.db.Get(&count, `SELECT COUNT(*) FROM playback_entries WHERE media_id = ?`, mediaID)
+	return count > 0, err
+}
+
 func (ps *PlaybackSystem) DeleteItem(playback_id int) error {
 	if _, err := ps.db.Exec(`DELETE FROM playback_entries WHERE id = ?`, playback_id); err != nil {
 		return err

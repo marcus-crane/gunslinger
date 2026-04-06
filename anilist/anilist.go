@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/marcus-crane/gunslinger/config"
-	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/utils"
 )
@@ -53,7 +52,7 @@ type MangaCover struct {
 	ExtraLarge string `json:"extraLarge"`
 }
 
-func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store db.Store, client http.Client) {
+func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, client http.Client) {
 	payload := strings.NewReader("{\"query\":\"query Test {\\n  Page(page: 1, perPage: 10) {\\n    activities(\\n\\t\\t\\tuserId: 6111545\\n      type: MANGA_LIST\\n      sort: ID_DESC\\n    ) {\\n      ... on ListActivity {\\n        id\\n        status\\n\\t\\t\\t\\tprogress\\n        createdAt\\n        media {\\n          chapters\\n          id\\n          title {\\n            userPreferred\\n          }\\n          coverImage {\\n            extraLarge\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\",\"variables\":{}}")
 	req, err := http.NewRequest("POST", anilistGraphqlEndpoint, payload)
 	if err != nil {
@@ -87,37 +86,46 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, store 
 
 	if len(anilistResponse.Data.Page.Activities) == 0 {
 		slog.Warn("Found no activities for Anilist")
+		return
 	}
 
 	for _, activity := range anilistResponse.Data.Page.Activities {
+		update := playback.Update{
+			MediaItem: playback.MediaItem{
+				Title:    activity.Progress,
+				Subtitle: activity.Media.Title.UserPreferred,
+				Category: string(playback.Manga),
+				Source:   string(playback.Anilist),
+			},
+			Status: playback.StatusStopped,
+		}
+
+		mediaID := playback.GenerateMediaID(&update)
+		exists, err := ps.HasPlaybackEntry(mediaID)
+		if err != nil {
+			slog.Error("Failed to check Anilist entry existence", slog.String("error", err.Error()))
+			continue
+		}
+		if exists {
+			continue
+		}
+
 		image, extension, domColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
 		if err != nil {
 			slog.Error("Failed to extract image content",
 				slog.String("error", err.Error()),
 				slog.String("image_url", activity.Media.CoverImage.ExtraLarge),
 			)
-			return
+			continue
 		}
 
-		update := playback.Update{
-			MediaItem: playback.MediaItem{
-				Title:           activity.Progress,
-				Subtitle:        activity.Media.Title.UserPreferred,
-				Category:        string(playback.Manga),
-				Duration:        0,
-				Source:          string(playback.Anilist),
-				DominantColours: domColours,
-			},
-			Elapsed: 0,
-			Status:  playback.StatusStopped,
-		}
+		update.MediaItem.DominantColours = domColours
 
-		hash := playback.GenerateMediaID(&update)
-		coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+		coverUrl, err := utils.SaveCover(cfg, mediaID, image, extension)
 		if err != nil {
 			slog.Error("Failed to save cover for Anilist",
 				slog.String("error", err.Error()),
-				slog.String("guid", hash),
+				slog.String("guid", mediaID),
 				slog.String("title", update.MediaItem.Title),
 			)
 		}
