@@ -113,23 +113,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 			continue
 		}
 		mediaItem := plexResponse.MediaContainer.Metadata[idx]
-		thumbnail := mediaItem.Thumb
-
-		// Tracks generally don't have a unique cover so we should use the album cover instead
-		// This should hold true even for singles though
-		if mediaItem.Type == "track" {
-			thumbnail = mediaItem.ParentThumb
-		}
-
-		thumbnailUrl := buildPlexURL(cfg, thumbnail)
-		image, extension, domColours, err := utils.ExtractImageContent(thumbnailUrl)
-		if err != nil {
-			slog.Error("Failed to extract image content",
-				slog.String("error", err.Error()),
-				slog.String("image_url", thumbnailUrl),
-			)
-			continue
-		}
 
 		title := mediaItem.Title
 
@@ -161,28 +144,35 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 		update := playback.Update{
 			MediaItem: playback.MediaItem{
-				Title:           title,
-				Subtitle:        subtitle,
-				Category:        mediaItem.Type,
-				Duration:        mediaItem.Duration,
-				Source:          string(playback.Plex),
-				DominantColours: domColours,
+				Title:    title,
+				Subtitle: subtitle,
+				Category: mediaItem.Type,
+				Duration: mediaItem.Duration,
+				Source:   string(playback.Plex),
 			},
 			Elapsed: time.Duration(elapsed),
 			Status:  status,
 		}
 
 		hash := playback.GenerateMediaID(&update)
-		coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
-		if err != nil {
-			slog.Error("Failed to save cover for Plex",
-				slog.String("error", err.Error()),
-				slog.String("guid", hash),
-				slog.String("title", update.MediaItem.Title),
-			)
+
+		thumbnail := mediaItem.Thumb
+		// Tracks generally don't have a unique cover so we should use the album cover instead
+		// This should hold true even for singles though
+		if mediaItem.Type == "track" {
+			thumbnail = mediaItem.ParentThumb
 		}
 
+		coverUrl, domColours, err := ps.ResolveCover(cfg, hash, buildPlexURL(cfg, thumbnail))
+		if err != nil {
+			slog.Error("Failed to resolve cover for Plex",
+				slog.String("error", err.Error()),
+				slog.String("title", title),
+			)
+			continue
+		}
 		update.MediaItem.Image = coverUrl
+		update.MediaItem.DominantColours = domColours
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Plex update",

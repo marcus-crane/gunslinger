@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -537,4 +538,40 @@ func TestPlaybackSystem_DeleteItem(t *testing.T) {
 
 	history, err = ps.GetHistory(1)
 	assert.Len(t, history, 0)
+}
+
+func TestPlaybackSystem_GetMediaItemByID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ps := &PlaybackSystem{db: db}
+
+	update := Update{
+		MediaItem: MediaItem{
+			Title:           "a good movie",
+			Subtitle:        "a director",
+			Category:        string(Movie),
+			Duration:        7200000,
+			Source:          string(Plex),
+			Image:           "/static/plex.abc.jpg",
+			DominantColours: models.SerializableColours{"#112233", "#445566"},
+		},
+		Elapsed: 45 * time.Second,
+		Status:  StatusPlaying,
+	}
+
+	err := ps.UpdatePlaybackState(update)
+	require.NoError(t, err)
+
+	id := GenerateMediaID(&update)
+	item, err := ps.GetMediaItemByID(id)
+	assert.NoError(t, err)
+	assert.Equal(t, id, item.ID)
+	assert.Equal(t, "a good movie", item.Title)
+	assert.Equal(t, "a director", item.Subtitle)
+	assert.Equal(t, "/static/plex.abc.jpg", item.Image)
+	assert.Equal(t, models.SerializableColours{"#112233", "#445566"}, item.DominantColours)
+
+	_, err = ps.GetMediaItemByID("plex:movie:does-not-exist")
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 }

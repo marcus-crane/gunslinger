@@ -110,27 +110,16 @@ func GetRecentlyReadManga(cfg config.Config, ps *playback.PlaybackSystem, client
 			continue
 		}
 
-		image, extension, domColours, err := utils.ExtractImageContent(activity.Media.CoverImage.ExtraLarge)
+		coverUrl, domColours, err := ps.ResolveCover(cfg, mediaID, activity.Media.CoverImage.ExtraLarge)
 		if err != nil {
-			slog.Error("Failed to extract image content",
+			slog.Error("Failed to resolve cover for Anilist",
 				slog.String("error", err.Error()),
-				slog.String("image_url", activity.Media.CoverImage.ExtraLarge),
+				slog.String("title", update.MediaItem.Title),
 			)
 			continue
 		}
-
-		update.MediaItem.DominantColours = domColours
-
-		coverUrl, err := utils.SaveCover(cfg, mediaID, image, extension)
-		if err != nil {
-			slog.Error("Failed to save cover for Anilist",
-				slog.String("error", err.Error()),
-				slog.String("guid", mediaID),
-				slog.String("title", update.MediaItem.Title),
-			)
-		}
-
 		update.MediaItem.Image = coverUrl
+		update.MediaItem.DominantColours = domColours
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Anilist update",

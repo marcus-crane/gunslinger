@@ -33,7 +33,6 @@ import (
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
 	"github.com/marcus-crane/gunslinger/shared"
-	"github.com/marcus-crane/gunslinger/utils"
 )
 
 const (
@@ -622,29 +621,17 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 		// playbacks and resume them again. It might even be this one but that's ok.
 		ps.DeactivateBySource(string(playback.Spotify))
 
-		imageUrl := c.prodInfo.ImageUrl(coverId)
-		image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
+		hash := playback.GenerateMediaID(&update)
+		coverUrl, domColours, err := ps.ResolveCover(c.cfg, hash, c.prodInfo.ImageUrl(coverId))
 		if err != nil {
-			slog.Error("Failed to extract image content",
+			slog.Error("Failed to resolve cover for Spotify",
 				slog.String("error", err.Error()),
-				slog.String("image_url", imageUrl),
+				slog.String("title", update.MediaItem.Title),
 			)
 			return
 		}
-
-		update.MediaItem.DominantColours = domColours
-
-		hash := playback.GenerateMediaID(&update)
-		coverUrl, err := utils.SaveCover(c.cfg, hash, image, extension)
-		if err != nil {
-			slog.Error("Failed to save cover for Spotify",
-				slog.String("error", err.Error()),
-				slog.String("guid", hash),
-				slog.String("title", update.MediaItem.Title),
-			)
-		}
-
 		update.MediaItem.Image = coverUrl
+		update.MediaItem.DominantColours = domColours
 
 		if err := ps.UpdatePlaybackState(update); err != nil {
 			slog.Error("Failed to save Spotify update",

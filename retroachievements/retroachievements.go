@@ -140,38 +140,28 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	imageUrl := fmt.Sprintf("https://media.retroachievements.org%s", raProfile.LastGame.ImageBoxArt)
 	slog.With(slog.String("image_url", imageUrl)).Info("Built image link")
 
-	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
-	if err != nil {
-		slog.Error("Failed to extract image content",
-			slog.String("error", err.Error()),
-			slog.String("image_url", imageUrl),
-		)
-		return
-	}
-
 	update := playback.Update{
 		MediaItem: playback.MediaItem{
-			Title:           raProfile.LastGame.Title,
-			Subtitle:        raProfile.LastGame.Developer,
-			Category:        string(playback.Gaming),
-			Duration:        0,
-			Source:          string(playback.RetroAchievements),
-			DominantColours: domColours,
+			Title:    raProfile.LastGame.Title,
+			Subtitle: raProfile.LastGame.Developer,
+			Category: string(playback.Gaming),
+			Duration: 0,
+			Source:   string(playback.RetroAchievements),
 		},
 		Status: playback.StatusPlaying,
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	coverUrl, domColours, err := ps.ResolveCover(cfg, hash, imageUrl)
 	if err != nil {
-		slog.Error("Failed to save cover for RetroAchievements",
+		slog.Error("Failed to resolve cover for RetroAchievements",
 			slog.String("error", err.Error()),
-			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+		return
 	}
-
 	update.MediaItem.Image = coverUrl
+	update.MediaItem.DominantColours = domColours
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save RetroAchievements update",

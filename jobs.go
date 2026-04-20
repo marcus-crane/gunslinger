@@ -22,7 +22,7 @@ func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.
 		return nil, err
 	}
 
-	client := http.Client{}
+	client := http.Client{Timeout: 10 * time.Second}
 
 	go spotify.SetupSpotifyPoller(cfg, ps, store)
 
@@ -34,6 +34,7 @@ func SetupInBackground(cfg config.Config, ps *playback.PlaybackSystem, store db.
 	s.NewJob(
 		gocron.DurationJob(time.Second),
 		gocron.NewTask(plex.GetCurrentlyPlaying, cfg, ps, client),
+		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 	)
 
 	s.NewJob(

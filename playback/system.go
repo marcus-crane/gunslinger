@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/events"
+	"github.com/marcus-crane/gunslinger/models"
+	"github.com/marcus-crane/gunslinger/utils"
 	"github.com/r3labs/sse/v2"
 )
 
@@ -261,6 +264,29 @@ func (ps *PlaybackSystem) GetHistory(limit int) ([]FullPlaybackEntry, error) {
 	`, limit)
 
 	return results, err
+}
+
+func (ps *PlaybackSystem) GetMediaItemByID(id string) (MediaItem, error) {
+	var item MediaItem
+	err := ps.db.Get(&item, `
+	  SELECT id, title, subtitle, category, duration, source, image, dominant_colours
+	  FROM media_items WHERE id = ?`, id)
+	return item, err
+}
+
+func (ps *PlaybackSystem) ResolveCover(cfg config.Config, hash, imageURL string) (string, models.SerializableColours, error) {
+	if existing, err := ps.GetMediaItemByID(hash); err == nil {
+		return existing.Image, existing.DominantColours, nil
+	}
+	image, extension, domColours, err := utils.ExtractImageContent(imageURL)
+	if err != nil {
+		return "", nil, err
+	}
+	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	if err != nil {
+		return "", nil, err
+	}
+	return coverUrl, domColours, nil
 }
 
 func (ps *PlaybackSystem) HasPlaybackEntry(mediaID string) (bool, error) {

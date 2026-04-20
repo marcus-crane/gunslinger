@@ -139,38 +139,28 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		developer = game.Developers[0]
 	}
 
-	image, extension, domColours, err := utils.ExtractImageContent(game.HeaderImage)
-	if err != nil {
-		slog.Error("Failed to extract image content",
-			slog.String("error", err.Error()),
-			slog.String("image_url", game.HeaderImage),
-		)
-		return
-	}
-
 	update := playback.Update{
 		MediaItem: playback.MediaItem{
-			Title:           game.Name,
-			Subtitle:        developer,
-			Category:        string(playback.Gaming),
-			Duration:        0,
-			Source:          string(playback.Steam),
-			DominantColours: domColours,
+			Title:    game.Name,
+			Subtitle: developer,
+			Category: string(playback.Gaming),
+			Duration: 0,
+			Source:   string(playback.Steam),
 		},
 		Status: playback.StatusPlaying,
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+	coverUrl, domColours, err := ps.ResolveCover(cfg, hash, game.HeaderImage)
 	if err != nil {
-		slog.Error("Failed to save cover for Steam",
+		slog.Error("Failed to resolve cover for Steam",
 			slog.String("error", err.Error()),
-			slog.String("guid", hash),
 			slog.String("title", update.MediaItem.Title),
 		)
+		return
 	}
-
 	update.MediaItem.Image = coverUrl
+	update.MediaItem.DominantColours = domColours
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save Steam update",

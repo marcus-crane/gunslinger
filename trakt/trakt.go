@@ -407,22 +407,6 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		return
 	}
 
-	imageUrl, err := getArtFromTMDB(cfg.Trakt.TMDBToken, traktResponse)
-	if err != nil {
-		slog.Error("Failed to retrieve art from TMDB",
-			slog.String("error", err.Error()),
-		)
-		return
-	}
-	image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
-	if err != nil {
-		slog.Error("Failed to extract image content",
-			slog.String("error", err.Error()),
-			slog.String("image_url", imageUrl),
-		)
-		return
-	}
-
 	started, err := time.Parse("2006-01-02T15:04:05.999Z", traktResponse.StartedAt)
 	if err != nil {
 		slog.Error("Failed to parse Trakt start time",
@@ -444,10 +428,9 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 
 	update := playback.Update{
 		MediaItem: playback.MediaItem{
-			Category:        traktResponse.Type,
-			Duration:        duration,
-			Source:          string(playback.Trakt),
-			DominantColours: domColours,
+			Category: traktResponse.Type,
+			Duration: duration,
+			Source:   string(playback.Trakt),
 		},
 		Elapsed: time.Since(started),
 		Status:  playback.StatusPlaying,
@@ -467,16 +450,38 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 
 	hash := playback.GenerateMediaID(&update)
-	coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
-	if err != nil {
-		slog.Error("Failed to save cover for Trakt",
-			slog.String("error", err.Error()),
-			slog.String("guid", hash),
-			slog.String("title", update.MediaItem.Title),
-		)
-	}
 
-	update.MediaItem.Image = coverUrl
+	if existing, err := ps.GetMediaItemByID(hash); err == nil {
+		update.MediaItem.Image = existing.Image
+		update.MediaItem.DominantColours = existing.DominantColours
+	} else {
+		imageUrl, err := getArtFromTMDB(cfg.Trakt.TMDBToken, traktResponse)
+		if err != nil {
+			slog.Error("Failed to retrieve art from TMDB",
+				slog.String("error", err.Error()),
+			)
+			return
+		}
+		image, extension, domColours, err := utils.ExtractImageContent(imageUrl)
+		if err != nil {
+			slog.Error("Failed to extract image content for Trakt",
+				slog.String("error", err.Error()),
+				slog.String("image_url", imageUrl),
+			)
+			return
+		}
+		coverUrl, err := utils.SaveCover(cfg, hash, image, extension)
+		if err != nil {
+			slog.Error("Failed to save cover for Trakt",
+				slog.String("error", err.Error()),
+				slog.String("guid", hash),
+				slog.String("title", update.MediaItem.Title),
+			)
+			return
+		}
+		update.MediaItem.Image = coverUrl
+		update.MediaItem.DominantColours = domColours
+	}
 
 	if err := ps.UpdatePlaybackState(update); err != nil {
 		slog.Error("Failed to save Trakt update",
