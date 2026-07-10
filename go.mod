@@ -15,7 +15,6 @@ require (
 	github.com/marekm4/color-extractor v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.27
 	github.com/pressly/goose/v3 v3.24.2
-	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/protobuf v1.36.6
@@ -56,7 +55,6 @@ require (
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

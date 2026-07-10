@@ -51,8 +51,6 @@ func renderJSONMessage(w http.ResponseWriter, message string) {
 
 func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.PlaybackSystem, store db.Store) http.Handler {
 
-	events.Server.CreateStream("playback")
-
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, "Welcome to Gunslinger, my handy do-everything API.\nYou can find the source code on <a href=\"https://github.com/marcus-crane/gunslinger\">Github</a>\n")

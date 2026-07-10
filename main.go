@@ -14,7 +14,6 @@ import (
 
 	"github.com/marcus-crane/gunslinger/config"
 	gdb "github.com/marcus-crane/gunslinger/db"
-	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/playback"
 )
@@ -88,8 +87,6 @@ func main() {
 	} else {
 		slog.Debug("Background jobs are disabled.")
 	}
-
-	events.Init()
 
 	router := RegisterRoutes(http.NewServeMux(), cfg, ps, &store)
 

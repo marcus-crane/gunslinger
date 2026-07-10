@@ -1,15 +1,15 @@
 package events
 
 import (
+	"fmt"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/r3labs/sse/v2"
 )
 
 var (
-	Server         *sse.Server
+	Server         = NewBroker()
 	SessionsSeen   atomic.Int64
 	ActiveSessions atomic.Int64
 )
@@ -19,42 +19,77 @@ type Sessions struct {
 	ActiveSessions int64 `json:"active_sessions"`
 }
 
-func Init() {
-	server := sse.New()
-	server.AutoReplay = false
-	server.OnSubscribe = countSession
-	server.OnUnsubscribe = sessionClosed
-	Server = server
+type Broker struct {
+	mu          sync.Mutex
+	subscribers map[chan []byte]struct{}
 }
 
-func countSession(streamID string, sub *sse.Subscriber) {
+func NewBroker() *Broker {
+	return &Broker{subscribers: make(map[chan []byte]struct{})}
+}
+
+func (b *Broker) Publish(data []byte) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for ch := range b.subscribers {
+		select {
+		case ch <- data:
+		default:
+		}
+	}
+}
+
+func (b *Broker) subscribe() chan []byte {
+	ch := make(chan []byte, 8)
+	b.mu.Lock()
+	b.subscribers[ch] = struct{}{}
+	b.mu.Unlock()
 	SessionsSeen.Add(1)
 	ActiveSessions.Add(1)
+	return ch
 }
 
-func sessionClosed(streamID string, sub *sse.Subscriber) {
+func (b *Broker) unsubscribe(ch chan []byte) {
+	b.mu.Lock()
+	delete(b.subscribers, ch)
+	b.mu.Unlock()
 	ActiveSessions.Add(-1)
 }
 
 func ServeSSE(w http.ResponseWriter, r *http.Request) {
-	dw := &deadlineWriter{w: w, rc: http.NewResponseController(w)}
-	Server.ServeHTTP(dw, r)
-}
+	rc := http.NewResponseController(w)
 
-type deadlineWriter struct {
-	w  http.ResponseWriter
-	rc *http.ResponseController
-}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	if err := rc.Flush(); err != nil {
+		return
+	}
 
-func (d *deadlineWriter) Header() http.Header { return d.w.Header() }
+	ch := Server.subscribe()
+	defer Server.unsubscribe(ch)
 
-func (d *deadlineWriter) WriteHeader(statusCode int) { d.w.WriteHeader(statusCode) }
+	heartbeat := time.NewTicker(20 * time.Second)
+	defer heartbeat.Stop()
 
-func (d *deadlineWriter) Write(b []byte) (int, error) {
-	_ = d.rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
-	return d.w.Write(b)
-}
-
-func (d *deadlineWriter) Flush() {
-	_ = d.rc.Flush()
+	for {
+		var err error
+		select {
+		case <-r.Context().Done():
+			return
+		case data := <-ch:
+			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
+			_, err = fmt.Fprintf(w, "data: %s\n\n", data)
+		case <-heartbeat.C:
+			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
+			_, err = fmt.Fprint(w, ": ping\n\n")
+		}
+		if err != nil {
+			return
+		}
+		if err := rc.Flush(); err != nil {
+			return
+		}
+	}
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/migrations"
 	"github.com/marcus-crane/gunslinger/models"
 	_ "github.com/mattn/go-sqlite3"
@@ -27,9 +26,6 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 
 	err = goose.Up(db.DB, ".")
 	require.NoError(t, err)
-
-	// Gross, PlaybackSystem should handle this
-	events.Init()
 
 	return db
 }

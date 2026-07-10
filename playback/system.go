@@ -13,7 +13,6 @@ import (
 	"github.com/marcus-crane/gunslinger/events"
 	"github.com/marcus-crane/gunslinger/models"
 	"github.com/marcus-crane/gunslinger/utils"
-	"github.com/r3labs/sse/v2"
 )
 
 type PlaybackSystem struct {
@@ -168,7 +167,7 @@ func (ps *PlaybackSystem) broadcastEvent() {
 	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
 	// to ensure a transition between animations rather than fully re-rendering them from scratch
 	jsonState, _ := json.Marshal(ps.GetState())
-	events.Server.Publish("playback", &sse.Event{Data: jsonState})
+	events.Server.Publish(jsonState)
 }
 
 func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
