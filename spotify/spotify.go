@@ -53,13 +53,11 @@ type ProductInfo struct {
 	} `xml:"product"`
 }
 
-func (pi ProductInfo) ImageUrl(fileId string) string {
-	var imagePrefix string
-	if len(pi.Products) != 0 {
+func (pi *ProductInfo) ImageUrl(fileId string) string {
+	// If we boot up too fast or something, just fallback to what we assume the default value is
+	imagePrefix := "https://i.scdn.co/image/{file_id}"
+	if pi != nil && len(pi.Products) != 0 {
 		imagePrefix = pi.Products[0].ImageUrl
-	} else {
-		// If we boot up too fast or something, just fallback to what we assume the default value is
-		imagePrefix = "https://i.scdn.co/image/{file_id}"
 	}
 	return strings.Replace(imagePrefix, "{file_id}", strings.ToLower(fileId), 1)
 }
@@ -128,7 +126,7 @@ func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db
 		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
 			slog.With("error", err).Error("failed to save access token metadata")
 		}
-		client, err = NewClient(cfg, store, accessToken, refreshToken)
+		client, err = NewClient(cfg, store, token.AccessToken, token.RefreshToken)
 		if err != nil {
 			slog.With("error", err).Error("failed to create spotify client and fallback to oauth")
 			return
@@ -171,7 +169,7 @@ func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken stri
 
 func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, error) {
 	state := shared.GenerateRandomString(16)
-	ch := make(chan *shared.TokenResponse)
+	ch := make(chan *shared.TokenResponse, 1)
 	var srv *http.Server
 
 	pushoverApp := pushover.New(cfg.Pushover.Token)
@@ -179,7 +177,8 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 
 	// TODO: Ideally integrate with existing router to make life easier + support
 	// possibly oauth refreshing server side (for bootstrapping)
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("state") != state {
 			http.Error(w, "State mismatch", http.StatusBadRequest)
 			return
@@ -190,15 +189,18 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
 			return
 		}
-		ch <- token
+		select {
+		case ch <- token:
+		default:
+		}
 		fmt.Fprintf(w, "Authentication successful! You can close this window.")
 		go func() {
 			time.Sleep(time.Second)
-			srv.Shutdown(r.Context())
+			_ = srv.Close()
 		}()
 	})
 
-	srv = &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	go func() { _ = srv.ListenAndServe() }()
 
 	// TODO: Extend when fetching initial state via API
@@ -222,6 +224,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 	_, err := pushoverApp.SendMessage(message, recipient)
 	if err != nil {
 		slog.Error("Failed to send Pushover notification for Spotify auth", slog.String("error", err.Error()))
+		_ = srv.Close()
 		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
 	}
 
@@ -384,13 +387,6 @@ func (c *Client) reauthenticate() (int64, error) {
 }
 
 func (c *Client) Run(ps *playback.PlaybackSystem) {
-	if err := c.sess.Dealer().Connect(context.TODO()); err != nil {
-		slog.With(slog.String("error", err.Error())).Error("Failed to connect to dealer")
-	}
-	apRecv := c.sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
-	msgChan := c.dealer.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
-	reqRecv := c.sess.Dealer().ReceiveRequest("hm://connect-state/v1/player/command")
-
 	// Not sure if there is a way to poll Spotify for live state so instead we'll just
 	// fake it by incrementing in the background. Could do this client side but less
 	// futzing with Javascript if we just do it this side and kinda nicer API experience.
@@ -404,15 +400,87 @@ func (c *Client) Run(ps *playback.PlaybackSystem) {
 	s.Start()
 
 	for {
-		select {
-		case pkt := <-apRecv:
-			c.handleAccessPointPacket(pkt.Type, pkt.Payload)
-		case msg := <-msgChan:
-			c.handleMessage(msg, ps)
-		case req := <-reqRecv:
-			c.handleDealerRequest(req, ps)
+		c.mu.Lock()
+		sess := c.sess
+		dlr := c.dealer
+		c.mu.Unlock()
+
+		if err := dlr.Connect(context.TODO()); err != nil {
+			slog.With(slog.String("error", err.Error())).Error("Failed to connect to dealer")
+			time.Sleep(time.Minute)
+			continue
+		}
+
+		apRecv := sess.Accesspoint().Receive(ap.PacketTypeProductInfo, ap.PacketTypeCountryCode)
+		msgChan := dlr.ReceiveMessage("hm://pusher/v1/connections/", "hm://connect-state/v1/")
+		reqRecv := dlr.ReceiveRequest("hm://connect-state/v1/player/command")
+
+	recv:
+		for {
+			select {
+			case pkt, ok := <-apRecv:
+				if !ok {
+					break recv
+				}
+				c.handleAccessPointPacket(pkt.Type, pkt.Payload)
+			case msg, ok := <-msgChan:
+				if !ok {
+					break recv
+				}
+				c.handleMessage(msg, ps)
+			case req, ok := <-reqRecv:
+				if !ok {
+					break recv
+				}
+				c.handleDealerRequest(req, ps)
+			}
+		}
+
+		slog.Warn("Spotify dealer channels closed, moving to a fresh session")
+		for {
+			c.mu.Lock()
+			replaced := c.dealer != dlr
+			c.mu.Unlock()
+			if replaced {
+				break
+			}
+			if err := c.rebuildSession(); err != nil {
+				slog.Error("Failed to rebuild Spotify session", slog.String("error", err.Error()))
+				time.Sleep(time.Minute)
+				continue
+			}
+			break
 		}
 	}
+}
+
+func (c *Client) rebuildSession() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	opts := &session.Options{
+		DeviceType: devicespb.DeviceType_SMARTWATCH,
+		DeviceId:   c.cfg.Spotify.DeviceId,
+		Log:        &SlogAdapter{slog.Default()},
+		Credentials: session.SpotifyTokenCredentials{
+			Username: c.cfg.Spotify.Username,
+			Token:    c.accessToken,
+		},
+	}
+
+	newSess, err := session.NewSessionFromOptions(context.Background(), opts)
+	if err != nil {
+		return err
+	}
+
+	oldSess := c.sess
+	go oldSess.Close()
+
+	c.sess = newSess
+	c.dealer = newSess.Dealer()
+	c.sp = newSess.Spclient()
+
+	return nil
 }
 
 func (c *Client) rehydratePlaybackState(ps *playback.PlaybackSystem) {

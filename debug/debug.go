@@ -76,7 +76,7 @@ func (h *Handler) buildPageData(token, status, statusProvider string) DebugPageD
 
 	return DebugPageData{
 		Integrations:   integrations,
-		PlaybackState:  h.ps.State,
+		PlaybackState:  h.ps.GetState(),
 		Token:          token,
 		Status:         status,
 		StatusProvider: statusProvider,

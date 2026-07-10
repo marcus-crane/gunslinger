@@ -40,7 +40,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 
 	ps := &PlaybackSystem{db: db}
 
-	assert.Len(t, ps.State, 0)
+	assert.Len(t, ps.GetState(), 0)
 
 	// 1. Persisting a new media item + playback entry
 	category := string(Track)
@@ -87,9 +87,10 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.Equal(t, true, playbackEntry.IsActive)
 
 	// 1c. Confirm that the PlaybackSystem has fresh state
-	assert.Len(t, ps.State, 1)
-	assert.Equal(t, ps.State[0].Title, mediaItem.Title)
-	assert.Equal(t, ps.State[0].Elapsed, 30000)
+	state := ps.GetState()
+	assert.Len(t, state, 1)
+	assert.Equal(t, state[0].Title, mediaItem.Title)
+	assert.Equal(t, state[0].Elapsed, 30000)
 
 	// 2. Update existing playback entry
 	update.Elapsed = 60 * time.Second
@@ -101,7 +102,7 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2a. Confirm that PlaybackSystem state is updated
-	assert.Len(t, ps.State, 0)
+	assert.Len(t, ps.GetState(), 0)
 	assert.Equal(t, 60000, playbackEntry.Elapsed)
 	assert.Equal(t, false, playbackEntry.IsActive)
 
@@ -135,8 +136,9 @@ func TestPlaybackSystem_UpdatePlaybackState(t *testing.T) {
 	assert.Equal(t, true, playbackEntry.IsActive)
 
 	// 3c. Check that PlaybackSystem has updated
-	assert.Len(t, ps.State, 1)
-	assert.Equal(t, ps.State[0].Title, "a better song")
+	state = ps.GetState()
+	assert.Len(t, state, 1)
+	assert.Equal(t, state[0].Title, "a better song")
 }
 
 func TestPlaybackUpdate_GenerateMediaID(t *testing.T) {

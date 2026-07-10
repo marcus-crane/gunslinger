@@ -83,7 +83,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		}
 		w.Header().Set("Cache-Control", "public, max-age=31622400")
 		w.Header().Set("Content-Type", fmt.Sprintf("image/%s", extension))
-		w.Write([]byte(image))
+		w.Write(image)
 	})
 
 	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +158,8 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if len(ps.State) == 0 {
+		state := ps.GetState()
+		if len(state) == 0 {
 			// If nothing is playing, we'll return the most recent item
 			// TODO: Should return all that were playing? Maybe not
 			results, err := ps.GetHistory(1)
@@ -176,11 +177,10 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 			json.NewEncoder(w).Encode(results)
 			return
 		}
-		mutatingState := ps.State
-		for i, result := range mutatingState {
-			mutatingState[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+		for i, result := range state {
+			state[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
 		}
-		json.NewEncoder(w).Encode(mutatingState)
+		json.NewEncoder(w).Encode(state)
 	})
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
@@ -322,7 +322,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 		w.WriteHeader(200)
 	})
 
-	mux.HandleFunc("/events", events.Server.ServeHTTP)
+	mux.HandleFunc("/events", events.ServeSSE)
 
 	mux.HandleFunc("/glance", func(w http.ResponseWriter, r *http.Request) {
 		renderJSONMessage(w, "This is the glance endpoint of the API")

@@ -151,7 +151,7 @@ func initialTokenFetch(cfg config.Config, store db.Store) (string, error) {
 
 func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, error) {
 	state := shared.GenerateRandomString(16)
-	ch := make(chan *shared.TokenResponse) // TODO: Make this shared
+	ch := make(chan *shared.TokenResponse, 1) // TODO: Make this shared
 	var srv *http.Server
 
 	pushoverApp := pushover.New(cfg.Pushover.Token)
@@ -159,7 +159,8 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 
 	// TODO: Ideally integrate with existing router to make life easier + support
 	// possibly oauth refreshing server side (for bootstrapping)
-	http.HandleFunc("/trakt/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/trakt/callback", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("state") != state {
 			http.Error(w, "State mismatch", http.StatusBadRequest)
 			return
@@ -170,15 +171,18 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
 			return
 		}
-		ch <- token
+		select {
+		case ch <- token:
+		default:
+		}
 		fmt.Fprintf(w, "Authentication successful! You can close this window.")
 		go func() {
 			time.Sleep(time.Second)
-			srv.Shutdown(r.Context())
+			_ = srv.Close()
 		}()
 	})
 
-	srv = &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	go func() { _ = srv.ListenAndServe() }()
 
 	url := fmt.Sprintf("%s?response_type=code&client_id=%s&redirect_uri=%s&state=%s",
@@ -197,6 +201,7 @@ func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, erro
 	_, err := pushoverApp.SendMessage(message, recipient)
 	if err != nil {
 		slog.Error("Failed to send Pushover notification for Trakt auth", slog.String("error", err.Error()))
+		_ = srv.Close()
 		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
 	}
 
@@ -308,8 +313,14 @@ func getArtFromTMDB(apiKey string, traktResponse NowPlayingResponse) (string, er
 
 	imagePath := ""
 	if traktResponse.Type == "movie" {
+		if len(tmdbImageResponse.Posters) == 0 {
+			return "", fmt.Errorf("TMDB returned no posters for %s", traktResponse.Movie.Title)
+		}
 		imagePath = tmdbImageResponse.Posters[0].FilePath
 	} else {
+		if len(tmdbImageResponse.Stills) == 0 {
+			return "", fmt.Errorf("TMDB returned no stills for %s", traktResponse.Show.Title)
+		}
 		imagePath = tmdbImageResponse.Stills[0].FilePath
 	}
 
@@ -343,10 +354,7 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		slog.Error("Failed to make HEAD request to Trakt",
-			slog.String("error", err.Error()),
-			slog.String("code", res.Status),
-		)
+		slog.Error("Failed to make HEAD request to Trakt", slog.String("error", err.Error()))
 		return
 	}
 	defer res.Body.Close()

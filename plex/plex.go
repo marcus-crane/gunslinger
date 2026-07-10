@@ -128,7 +128,9 @@ func GetCurrentlyPlaying(cfg config.Config, ps *playback.PlaybackSystem, client 
 		var subtitle string
 
 		if mediaItem.Type == "movie" {
-			subtitle = mediaItem.Director[0].Name
+			if len(mediaItem.Director) > 0 {
+				subtitle = mediaItem.Director[0].Name
+			}
 		} else {
 			subtitle = mediaItem.GrandparentTitle
 		}

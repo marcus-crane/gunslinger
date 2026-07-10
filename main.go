@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	glc "github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
@@ -43,19 +45,21 @@ func main() {
 	slog.SetDefault(slog.New(h))
 	slog.With(slog.String("log_level", logLevel.Level().String())).Debug("Initialised logger")
 
-	db, err := sqlx.Connect("sqlite", cfg.Gunslinger.DbPath)
+	// See https://blog.pecar.me/sqlite-prod
+	dsn := fmt.Sprintf("file:%s?%s", cfg.Gunslinger.DbPath, strings.Join([]string{
+		"_pragma=busy_timeout(5000)",
+		"_pragma=journal_mode(WAL)",
+		"_pragma=foreign_keys(1)",
+		"_pragma=synchronous(NORMAL)",
+		"_pragma=mmap_size(134217728)",
+		"_pragma=journal_size_limit(27103364)",
+		"_pragma=cache_size(2000)",
+	}, "&"))
+	db, err := sqlx.Connect("sqlite", dsn)
 	if err != nil {
 		slog.Error("Failed to create connection to DB", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-
-	// See https://blog.pecar.me/sqlite-prod
-	db.Exec("PRAGMA foreign_keys = ON")
-	db.Exec("PRAGMA journal_mode = WAL")
-	db.Exec("PRAGMA synchronous = NORMAL")
-	db.Exec("PRAGMA mmap_size = 134217728")
-	db.Exec("PRAGMA journal_size_limit = 27103364")
-	db.Exec("PRAGMA cache_size = 2000")
 
 	ps := playback.NewPlaybackSystem(db)
 	store := gdb.SqliteStore{DB: db}

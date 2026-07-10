@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/models"
@@ -22,7 +23,7 @@ const (
 )
 
 func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableColours, error) {
-	var client http.Client
+	client := http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", imageUrl, nil)
 	if err != nil {
 		return []byte{}, "", []string{}, err
@@ -36,10 +37,7 @@ func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableCo
 	}
 	defer res.Body.Close()
 
-	var buf bytes.Buffer
-	tee := io.TeeReader(res.Body, &buf)
-
-	body, err := io.ReadAll(tee)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return []byte{}, "", []string{}, err
 	}
@@ -57,11 +55,11 @@ func ExtractImageContent(imageUrl string) ([]byte, string, models.SerializableCo
 
 	var domColours []string
 
-	image, _, err := image.Decode(&buf)
+	img, _, err := image.Decode(bytes.NewReader(body))
 	if err != nil {
 		return []byte{}, "", []string{}, err
 	}
-	colours := color_extractor.ExtractColors(image)
+	colours := color_extractor.ExtractColors(img)
 	for _, c := range colours {
 		domColours = append(domColours, colorToHexString(c))
 	}
@@ -75,7 +73,7 @@ func colorToHexString(c color.Color) string {
 	return fmt.Sprintf("#%.2x%.2x%.2x", rgba.R, rgba.G, rgba.B)
 }
 
-func LoadCover(cfg config.Config, hash string, extension string) (string, error) {
+func LoadCover(cfg config.Config, hash string, extension string) ([]byte, error) {
 	// TODO: Properly standardise on webp or something
 	if strings.Contains(hash, "retroachievements") {
 		extension = "png"
@@ -85,9 +83,9 @@ func LoadCover(cfg config.Config, hash string, extension string) (string, error)
 	img, err := os.ReadFile(coverLocation)
 	if err != nil {
 		slog.With(slog.String("error", err.Error())).Error("Failed to load image")
-		return "", err
+		return nil, err
 	}
-	return string(img), nil
+	return img, nil
 }
 
 func SaveCover(cfg config.Config, hash string, image []byte, extension string) (string, error) {

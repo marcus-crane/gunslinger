@@ -17,16 +17,24 @@ import (
 )
 
 type PlaybackSystem struct {
-	State []FullPlaybackEntry
+	state []FullPlaybackEntry
 	db    *sqlx.DB
 	m     sync.RWMutex
 }
 
 func NewPlaybackSystem(db *sqlx.DB) *PlaybackSystem {
 	return &PlaybackSystem{
-		State: []FullPlaybackEntry{},
+		state: []FullPlaybackEntry{},
 		db:    db,
 	}
+}
+
+func (ps *PlaybackSystem) GetState() []FullPlaybackEntry {
+	ps.m.RLock()
+	defer ps.m.RUnlock()
+	state := make([]FullPlaybackEntry, len(ps.state))
+	copy(state, ps.state)
+	return state
 }
 
 func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
@@ -159,7 +167,7 @@ func (ps *PlaybackSystem) broadcastEvent() {
 	// Just enough to ping the client to rehydrate itself
 	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
 	// to ensure a transition between animations rather than fully re-rendering them from scratch
-	jsonState, _ := json.Marshal(ps.State)
+	jsonState, _ := json.Marshal(ps.GetState())
 	events.Server.Publish("playback", &sse.Event{Data: jsonState})
 }
 
@@ -172,12 +180,12 @@ func (ps *PlaybackSystem) RefreshCurrentPlayback() error {
 	ps.m.Lock()
 	defer ps.m.Unlock()
 
-	ps.State = entries
+	ps.state = entries
 
 	return nil
 }
 
-// ps.State is expected to always be up to date
+// ps.state is expected to always be up to date
 func (ps *PlaybackSystem) GetActivePlayback() ([]FullPlaybackEntry, error) {
 	var results []FullPlaybackEntry
 
