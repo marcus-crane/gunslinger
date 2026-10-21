@@ -183,7 +183,7 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		results, err := ps.GetHistory(7)
+		results, err := ps.GetHistory(50)
 		// If nothing is playing, the "now playing" will likely be the same as the
 		// first history item so we skip it if now playing and index 0 of history match.
 		// We don't fully do an offset jump though as an item is only committed to the DB
