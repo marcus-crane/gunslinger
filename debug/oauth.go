@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/marcus-crane/gunslinger/shared"
-	"github.com/marcus-crane/gunslinger/spotify"
 	"github.com/marcus-crane/gunslinger/trakt"
 )
 
@@ -74,13 +73,6 @@ func (h *Handler) ServeReauth(w http.ResponseWriter, r *http.Request) {
 
 	var authURL string
 	switch provider {
-	case "spotify":
-		authURL = fmt.Sprintf("%s?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&state=",
-			"https://accounts.spotify.com/authorize",
-			h.cfg.Spotify.ClientId,
-			url.QueryEscape("streaming"),
-			url.QueryEscape(h.cfg.Spotify.RedirectUri),
-		)
 	case "trakt":
 		authURL = fmt.Sprintf("%s?response_type=code&client_id=%s&redirect_uri=%s&state=",
 			"https://api.trakt.tv/oauth/authorize",
@@ -117,10 +109,6 @@ func (h *Handler) ServeOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	var accessTokenID, refreshTokenID string
 
 	switch pending.provider {
-	case "spotify":
-		token, err = spotify.ExchangeCodeForToken(h.cfg, code)
-		accessTokenID = "spotify:accesstoken"
-		refreshTokenID = "spotify:refreshtoken"
 	case "trakt":
 		token, err = trakt.ExchangeCodeForToken(h.cfg, code)
 		accessTokenID = "trakt:accesstoken"

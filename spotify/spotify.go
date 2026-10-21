@@ -4,13 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +15,7 @@ import (
 	golibrespot "github.com/devgianlu/go-librespot"
 	"github.com/devgianlu/go-librespot/ap"
 	"github.com/devgianlu/go-librespot/dealer"
+	"github.com/devgianlu/go-librespot/login5"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
@@ -32,14 +30,11 @@ import (
 	"github.com/marcus-crane/gunslinger/config"
 	"github.com/marcus-crane/gunslinger/db"
 	"github.com/marcus-crane/gunslinger/playback"
-	"github.com/marcus-crane/gunslinger/shared"
 )
 
 const (
-	authURL        = "https://accounts.spotify.com/authorize"
-	tokenURL       = "https://accounts.spotify.com/api/token"
-	accessTokenID  = "spotify:accesstoken"
-	refreshTokenID = "spotify:refreshtoken"
+	usernameID          = "spotify:username"
+	storedCredentialsID = "spotify:storedcredentials"
 )
 
 type ProductInfo struct {
@@ -63,327 +58,110 @@ func (pi *ProductInfo) ImageUrl(fileId string) string {
 }
 
 type Client struct {
-	cfg          config.Config
-	sess         *session.Session
-	dealer       *dealer.Dealer
-	sp           *spclient.Spclient
-	prodInfo     *ProductInfo
-	countryCode  string
-	refreshToken string
-	accessToken  string
-	tokenExpiry  time.Time
-	mu           sync.Mutex
+	cfg         config.Config
+	store       db.Store
+	sess        *session.Session
+	dealer      *dealer.Dealer
+	sp          *spclient.Spclient
+	prodInfo    *ProductInfo
+	countryCode string
+	mu          sync.Mutex
 }
 
 func SetupSpotifyPoller(cfg config.Config, ps *playback.PlaybackSystem, store db.Store) {
-	var client *Client
-	var err error
-
-	redirectUri := cfg.Spotify.RedirectUri
-
-	if redirectUri == "" {
-		panic("Empty redirect URI configured")
-	}
-
-	accessToken := store.GetTokenByID(accessTokenID)
-	refreshToken := store.GetTokenByID(refreshTokenID)
-
-	if accessToken == "" || refreshToken == "" {
-		// Locally support using oauth instead of having a token (for server side)
-		token, err := performOAuth2Flow(cfg, 8081)
-		if err != nil {
-			slog.With("error", err).Error("failed to generate access tokens")
-		}
-		// Save our newly generated token
-		if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
-			slog.With("error", err).Error("failed to save access token")
-		}
-		if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
-			slog.With("error", err).Error("failed to save refresh token")
-		}
-		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
-			slog.With("error", err).Error("failed to save access token metadata")
-		}
-		accessToken = token.AccessToken
-		refreshToken = token.RefreshToken
-	}
-
-	client, err = NewClient(cfg, store, accessToken, refreshToken)
+	client := &Client{cfg: cfg, store: store}
+	sess, err := client.newSession()
 	if err != nil {
-		// we'll try oauth (which will ping my phone + let me auth remote) and see if we make it in time otherwise we'll need manual intervention
-		// also this should be made less repetitive but whatever
-		token, err := performOAuth2Flow(cfg, 8081)
-		if err != nil {
-			slog.With("error", err).Error("failed to perform oauth flow as fallback")
-			return
-		}
-		if err := store.UpsertToken(accessTokenID, token.AccessToken); err != nil {
-			slog.With("error", err).Error("failed to save access token")
-		}
-		if err := store.UpsertToken(refreshTokenID, token.RefreshToken); err != nil {
-			slog.With("error", err).Error("failed to save refresh token")
-		}
-		if err := store.UpsertTokenMetadata(accessTokenID, token.CreatedAt, token.ExpiresIn); err != nil {
-			slog.With("error", err).Error("failed to save access token metadata")
-		}
-		client, err = NewClient(cfg, store, token.AccessToken, token.RefreshToken)
-		if err != nil {
-			slog.With("error", err).Error("failed to create spotify client and fallback to oauth")
-			return
-		}
+		slog.With("error", err).Error("failed to create spotify session")
+		return
 	}
+	client.sess = sess
+	client.dealer = sess.Dealer()
+	client.sp = sess.Spclient()
 	client.Run(ps)
 }
 
-func NewClient(cfg config.Config, store db.Store, accessToken, refreshToken string) (*Client, error) {
-	librespotLogger := &SlogAdapter{slog.Default()}
-	opts := &session.Options{
-		DeviceType: devicespb.DeviceType_SMARTWATCH,
-		DeviceId:   cfg.Spotify.DeviceId,
-		Log:        librespotLogger,
-		Credentials: session.SpotifyTokenCredentials{
-			Username: cfg.Spotify.Username, // You might need to fetch the username separately
-			Token:    accessToken,
-		},
+// newSession logs in with the credentials saved from the last session. If
+// Spotify rejects them, or none are saved, it falls back to pairing this
+// device, which sends a link to approve the login over Pushover and waits
+// until it is approved or the code expires.
+func (c *Client) newSession() (*session.Session, error) {
+	username := c.store.GetTokenByID(usernameID)
+	stored := c.store.GetTokenByID(storedCredentialsID)
+	if username != "" && stored != "" {
+		data, err := base64.StdEncoding.DecodeString(stored)
+		if err != nil {
+			return nil, fmt.Errorf("failed decoding saved credentials: %w", err)
+		}
+		sess, err := c.connect(session.StoredCredentials{Username: username, Data: data})
+		if err == nil {
+			c.saveCredentials(sess)
+			return sess, nil
+		}
+		if !credentialsRejected(err) {
+			return nil, err
+		}
+		slog.With("error", err).Warn("Spotify rejected the saved credentials so pairing again")
 	}
 
-	sess, err := session.NewSessionFromOptions(context.Background(), opts)
+	sess, err := c.connect(session.DeviceAuthCredentials{OnCode: c.sendPairingCode})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %v", err)
+		return nil, err
 	}
-
-	client := &Client{
-		cfg:          cfg,
-		sess:         sess,
-		dealer:       sess.Dealer(),
-		sp:           sess.Spclient(),
-		accessToken:  accessToken,
-		refreshToken: refreshToken,
-		tokenExpiry:  time.Now().Add(time.Hour), // default is 1 hour
-	}
-
-	go client.tokenRefreshLoop(store)
-
-	return client, nil
+	c.saveCredentials(sess)
+	return sess, nil
 }
 
-func performOAuth2Flow(cfg config.Config, port int) (*shared.TokenResponse, error) {
-	state := shared.GenerateRandomString(16)
-	ch := make(chan *shared.TokenResponse, 1)
-	var srv *http.Server
-
-	pushoverApp := pushover.New(cfg.Pushover.Token)
-	recipient := pushover.NewRecipient(cfg.Pushover.Recipient)
-
-	// TODO: Ideally integrate with existing router to make life easier + support
-	// possibly oauth refreshing server side (for bootstrapping)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("state") != state {
-			http.Error(w, "State mismatch", http.StatusBadRequest)
-			return
-		}
-		code := r.URL.Query().Get("code")
-		token, err := ExchangeCodeForToken(cfg, code)
-		if err != nil {
-			http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
-			return
-		}
-		select {
-		case ch <- token:
-		default:
-		}
-		fmt.Fprintf(w, "Authentication successful! You can close this window.")
-		go func() {
-			time.Sleep(time.Second)
-			_ = srv.Close()
-		}()
-	})
-
-	srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
-	go func() { _ = srv.ListenAndServe() }()
-
-	// TODO: Extend when fetching initial state via API
-	scopes := []string{
-		"streaming",
+func (c *Client) connect(creds any) (*session.Session, error) {
+	opts := &session.Options{
+		DeviceType:  devicespb.DeviceType_SMARTWATCH,
+		DeviceId:    c.cfg.Spotify.DeviceId,
+		Log:         &SlogAdapter{slog.Default()},
+		Credentials: creds,
 	}
+	sess, err := session.NewSessionFromOptions(context.Background(), opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+	return sess, nil
+}
 
-	url := fmt.Sprintf("%s?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&state=%s",
-		authURL, cfg.Spotify.ClientId, url.QueryEscape(strings.Join(scopes, " ")), url.QueryEscape(cfg.Spotify.RedirectUri), state)
+// credentialsRejected separates Spotify refusing the credentials from network
+// failures, so that a blip while rebuilding a session doesn't start pairing.
+func credentialsRejected(err error) bool {
+	var apErr *ap.AccesspointLoginError
+	var login5Err *login5.LoginError
+	return errors.As(err, &apErr) || errors.As(err, &login5Err)
+}
 
-	slog.With(slog.String("url", url)).Info("Please open the following URL in your browser")
+func (c *Client) saveCredentials(sess *session.Session) {
+	if err := c.store.UpsertToken(usernameID, sess.Username()); err != nil {
+		slog.With("error", err).Error("failed to save spotify username")
+	}
+	stored := base64.StdEncoding.EncodeToString(sess.StoredCredentials())
+	if err := c.store.UpsertToken(storedCredentialsID, stored); err != nil {
+		slog.With("error", err).Error("failed to save spotify credentials")
+	}
+}
+
+func (c *Client) sendPairingCode(code *session.DeviceAuthCode) {
+	// The session calls this again with nil once the code is used or expires.
+	if code == nil {
+		return
+	}
 	message := &pushover.Message{
-		Message:    "Refresh token has expired + you probably redeployed so we need to manually reauth",
+		Message:    fmt.Sprintf("Approve the login and enter %s if asked. The code expires at %s.", code.UserCode, code.ExpiresAt.Format(time.Kitchen)),
 		Title:      "Please auth with Spotify for Gunslinger",
 		Priority:   pushover.PriorityHigh,
-		URL:        url,
+		URL:        code.VerificationUrl,
 		URLTitle:   "Auth with Spotify",
 		Timestamp:  time.Now().Unix(),
 		DeviceName: "Gunslinger",
 	}
-	_, err := pushoverApp.SendMessage(message, recipient)
-	if err != nil {
-		slog.Error("Failed to send Pushover notification for Spotify auth", slog.String("error", err.Error()))
-		_ = srv.Close()
-		return &shared.TokenResponse{}, fmt.Errorf("failed to notify about oauth request")
+	recipient := pushover.NewRecipient(c.cfg.Pushover.Recipient)
+	if _, err := pushover.New(c.cfg.Pushover.Token).SendMessage(message, recipient); err != nil {
+		slog.With("error", err).Error("failed to send pushover notification for spotify auth")
 	}
-
-	token := <-ch
-	return token, nil
-}
-
-func ExchangeCodeForToken(cfg config.Config, code string) (*shared.TokenResponse, error) {
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("code", code)
-	data.Set("redirect_uri", cfg.Spotify.RedirectUri)
-
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(cfg.Spotify.ClientId+":"+cfg.Spotify.ClientSecret)))
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var token shared.TokenResponse
-	err = json.Unmarshal(body, &token)
-	if err != nil {
-		return nil, err
-	}
-
-	return &token, nil
-}
-
-func (c *Client) refreshTokens() (int64, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", c.refreshToken)
-
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return 0, err
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(c.cfg.Spotify.ClientId+":"+c.cfg.Spotify.ClientSecret)))
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-
-	var newTokens shared.TokenResponse
-	err = json.Unmarshal(body, &newTokens)
-	if err != nil {
-		return 0, err
-	}
-
-	c.accessToken = newTokens.AccessToken
-	if newTokens.RefreshToken != "" {
-		c.refreshToken = newTokens.RefreshToken
-	}
-	c.tokenExpiry = time.Now().Add(time.Duration(newTokens.ExpiresIn) * time.Second)
-
-	slog.Info("Successfully refreshed tokens")
-
-	return newTokens.ExpiresIn, nil
-}
-
-func (c *Client) tokenRefreshLoop(store db.Store) {
-	for {
-		c.mu.Lock()
-		timeUntilExpiry := time.Until(c.tokenExpiry)
-		c.mu.Unlock()
-
-		if timeUntilExpiry <= 5*time.Minute {
-			var expiresIn int64
-			refreshedTokens := false
-			if expiry, err := c.refreshTokens(); err != nil {
-				slog.Error("Failed to refresh token", slog.String("error", err.Error()))
-				if expiry, err := c.reauthenticate(); err != nil {
-					slog.Error("Failed to reauthenticate", slog.String("error", err.Error()))
-				} else {
-					refreshedTokens = true
-					expiresIn = expiry
-				}
-			} else {
-				refreshedTokens = true
-				expiresIn = expiry
-			}
-			if refreshedTokens {
-				// Refresh our new tokens so if we crash and restart, we should be good to go
-				if err := store.UpsertToken(accessTokenID, c.accessToken); err != nil {
-					slog.With("error", err).Error("failed to save access token")
-				}
-				if err := store.UpsertToken(refreshTokenID, c.refreshToken); err != nil {
-					slog.With("error", err).Error("failed to save refresh token")
-				}
-				if err := store.UpsertTokenMetadata(accessTokenID, time.Now().Unix(), expiresIn); err != nil {
-					slog.With("error", err).Error("failed to save access token metadata")
-				}
-			}
-		}
-
-		time.Sleep(1 * time.Minute)
-	}
-}
-
-func (c *Client) reauthenticate() (int64, error) {
-	token, err := performOAuth2Flow(c.cfg, 8888)
-	if err != nil {
-		return 0, fmt.Errorf("failed to reauthenticate: %v", err)
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.accessToken = token.AccessToken
-	c.refreshToken = token.RefreshToken
-	c.tokenExpiry = time.Now().Add(time.Second * time.Duration(token.ExpiresIn))
-
-	opts := &session.Options{
-		DeviceType: devicespb.DeviceType_SMARTWATCH,
-		DeviceId:   c.cfg.Spotify.DeviceId,
-		Credentials: session.SpotifyTokenCredentials{
-			Username: c.cfg.Spotify.Username,
-			Token:    c.accessToken,
-		},
-	}
-
-	newSess, err := session.NewSessionFromOptions(context.TODO(), opts)
-	if err != nil {
-		return 0, fmt.Errorf("failed to create new session: %v", err)
-	}
-
-	c.sess.Close()
-	c.sess = newSess
-	c.dealer = newSess.Dealer()
-	c.sp = newSess.Spclient()
-
-	slog.Info("Successfully recreated session with refreshed tokens")
-
-	return token.ExpiresIn, nil
 }
 
 func (c *Client) Run(ps *playback.PlaybackSystem) {
@@ -458,17 +236,7 @@ func (c *Client) rebuildSession() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	opts := &session.Options{
-		DeviceType: devicespb.DeviceType_SMARTWATCH,
-		DeviceId:   c.cfg.Spotify.DeviceId,
-		Log:        &SlogAdapter{slog.Default()},
-		Credentials: session.SpotifyTokenCredentials{
-			Username: c.cfg.Spotify.Username,
-			Token:    c.accessToken,
-		},
-	}
-
-	newSess, err := session.NewSessionFromOptions(context.Background(), opts)
+	newSess, err := c.newSession()
 	if err != nil {
 		return err
 	}
@@ -617,7 +385,7 @@ func (c *Client) handleMessage(msg dealer.Message, ps *playback.PlaybackSystem) 
 				},
 			},
 		}
-		if err := c.sp.PutConnectState(context.TODO(), spotConnId, putStateReq); err != nil {
+		if _, err := c.sp.PutConnectState(context.TODO(), spotConnId, putStateReq); err != nil {
 			slog.Error("Failed to put connect state",
 				slog.String("error", err.Error()),
 				slog.String("connection_id", spotConnId))
