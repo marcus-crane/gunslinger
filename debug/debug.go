@@ -11,10 +11,7 @@ import (
 	"github.com/marcus-crane/gunslinger/playback"
 )
 
-const (
-	spotifyAccessTokenID = "spotify:accesstoken"
-	traktAccessTokenID   = "trakt:accesstoken"
-)
+const traktAccessTokenID = "trakt:accesstoken"
 
 type IntegrationStatus struct {
 	Name         string
@@ -66,7 +63,7 @@ func (h *Handler) buildPageData(token, status, statusProvider string) DebugPageD
 	cfg := h.cfg
 
 	integrations := []IntegrationStatus{
-		h.oauthStatus("Spotify", cfg.Spotify.ClientId != "", spotifyAccessTokenID),
+		{Name: "Spotify", Configured: cfg.Spotify.DeviceId != ""},
 		h.oauthStatus("Trakt", cfg.Trakt.ClientId != "", traktAccessTokenID),
 		{Name: "Plex", Configured: cfg.Plex.Token != ""},
 		{Name: "Steam", Configured: cfg.Steam.Token != ""},
