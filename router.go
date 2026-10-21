@@ -156,29 +156,16 @@ func RegisterRoutes(mux *http.ServeMux, cfg config.Config, ps *playback.Playback
 
 	mux.HandleFunc("/api/v4/playing", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		state := ps.GetState()
-		if len(state) == 0 {
-			// If nothing is playing, we'll return the most recent item
-			// TODO: Should return all that were playing? Maybe not
-			results, err := ps.GetHistory(1)
-			if err != nil {
-				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-				return
-			}
-			if len(results) == 0 {
-				json.NewEncoder(w).Encode([]string{})
-				return
-			}
-			for i, result := range results {
-				results[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
-			}
-			json.NewEncoder(w).Encode(results)
+		current, err := ps.CurrentPlayback()
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
-		for i, result := range state {
-			state[i].Image = "/static/" + strings.ReplaceAll(result.ID, ":", ".") + ".jpeg"
+		if len(current) == 0 {
+			json.NewEncoder(w).Encode([]string{})
+			return
 		}
-		json.NewEncoder(w).Encode(state)
+		json.NewEncoder(w).Encode(current)
 	})
 
 	mux.HandleFunc("/api/v4/history", func(w http.ResponseWriter, r *http.Request) {

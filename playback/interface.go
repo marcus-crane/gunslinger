@@ -15,6 +15,7 @@ type System interface {
 	GetActivePlaybackBySource(source string) ([]FullPlaybackEntry, error)
 	DeactivateBySource(source string) error
 	GetHistory(limit int) ([]FullPlaybackEntry, error)
+	CurrentPlayback() ([]FullPlaybackEntry, error)
 	GetMediaItemByID(id string) (MediaItem, error)
 }
 

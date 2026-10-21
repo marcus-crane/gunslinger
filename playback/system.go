@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -161,12 +162,31 @@ func (ps *PlaybackSystem) UpdatePlaybackState(update Update) error {
 type Event struct {
 }
 
+// CurrentPlayback is what a client should show right now: the active items, or when nothing is
+// active, the most recent item so a pause or stop still has something to describe. The playing
+// endpoint and the event stream both use it, so a client sees the same shape from either.
+func (ps *PlaybackSystem) CurrentPlayback() ([]FullPlaybackEntry, error) {
+	state := ps.GetState()
+	if len(state) == 0 {
+		var err error
+		state, err = ps.GetHistory(1)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for i, entry := range state {
+		state[i].Image = "/static/" + strings.ReplaceAll(entry.ID, ":", ".") + ".jpeg"
+	}
+	return state, nil
+}
+
 func (ps *PlaybackSystem) broadcastEvent() {
-	// We don't really need to send the payload and attempt anything super complex.
-	// Just enough to ping the client to rehydrate itself
-	// 2024-07-21: Probably should send diff fragments because then the UI will need to keep track of previous state
-	// to ensure a transition between animations rather than fully re-rendering them from scratch
-	jsonState, _ := json.Marshal(ps.GetState())
+	current, err := ps.CurrentPlayback()
+	if err != nil {
+		slog.Error("Failed to load current playback for broadcast", slog.String("error", err.Error()))
+		return
+	}
+	jsonState, _ := json.Marshal(current)
 	events.Server.Publish(jsonState)
 }
 
